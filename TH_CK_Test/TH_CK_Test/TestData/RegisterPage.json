@@ -1,0 +1,30 @@
+[
+    {
+        "TestID": "TC_F1.1",
+        "Module": "F1. Authentication",
+        "TestName": "Đăng ký thành công với đầy đủ thông tin hợp lệ",
+        "Action": "Nhập đầy đủ thông tin vào các trường (First Name, Last Name, Address...) và Click Register",
+        "ExpectedResult": "Chuyển sang màn hình Welcome"
+    },
+    {
+        "TestID": "TC_F1.2",
+        "Module": "F1. Authentication",
+        "TestName": "Đăng ký thất bại khi để trống các trường bắt buộc",
+        "Action": "Để trống toàn bộ các trường nhập liệu và Click Register",
+        "ExpectedResult": "Thông báo lỗi 'First name is required', 'Last name is required'... hiển thị"
+    },
+    {
+        "TestID": "TC_F1.3",
+        "Module": "F1. Authentication",
+        "TestName": "Kiểm tra thông báo lỗi khi nhập Confirm Password không khớp",
+        "Action": "Nhập trường Confirm Password khác với Password và Click Register",
+        "ExpectedResult": "Thông báo 'Passwords did not match'"
+    },
+    {
+        "TestID": "TC_F1.4",
+        "Module": "F1. Authentication",
+        "TestName": "Kiểm tra đăng ký với Username đã tồn tại",
+        "Action": "Tại trường Username nhập lại username đã tồn tại và Click Register",
+        "ExpectedResult": "Thông báo 'This username already exists'"
+    }
+]

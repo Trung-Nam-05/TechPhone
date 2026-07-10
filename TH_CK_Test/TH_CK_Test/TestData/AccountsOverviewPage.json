@@ -1,0 +1,30 @@
+[
+    {
+        "TestID": "TC_F2.1",
+        "Module": "F2. Accounts Overview",
+        "TestName": "Hiển thị đúng danh sách các tài khoản",
+        "Action": "Click menu Accounts Overview và quan sát bảng dữ liệu",
+        "ExpectedResult": "Hiển thị đủ các cột Account, Balance, Available Amount"
+    },
+    {
+        "TestID": "TC_F2.2",
+        "Module": "F2. Accounts Overview",
+        "TestName": "Kiểm tra số dư (Balance) hiển thị chính xác",
+        "Action": "So sánh số liệu ở cột Balance với số tiền thực tế nạp vào",
+        "ExpectedResult": "Số tiền hiển thị khớp hoàn toàn"
+    },
+    {
+        "TestID": "TC_F2.3",
+        "Module": "F2. Accounts Overview",
+        "TestName": "Kiểm tra tổng số dư (Total Balance)",
+        "Action": "Cộng tay tất cả các giá trị ở cột Balance",
+        "ExpectedResult": "Khớp với con số ở dòng Total"
+    },
+    {
+        "TestID": "TC_F2.4",
+        "Module": "F2. Accounts Overview",
+        "TestName": "Click số tài khoản để xem chi tiết lịch sử",
+        "Action": "Click vào một số Account dạng link màu xanh",
+        "ExpectedResult": "Chuyển hướng thành công sang trang Account Details"
+    }
+]

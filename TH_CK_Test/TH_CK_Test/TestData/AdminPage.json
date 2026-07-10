@@ -1,0 +1,65 @@
+[
+    {
+        "TestID": "TC_F7.1",
+        "Module": "F7. Admin Dashboard",
+        "TestName": "Khởi tạo lại CSDL (Initialize)",
+        "Action": "Tại khung Database, click nút INITIALIZE",
+        "ExpectedResult": "Database được khôi phục, báo 'Database Initialized'"
+    },
+    {
+        "TestID": "TC_F7.2",
+        "Module": "F7. Admin Dashboard",
+        "TestName": "Xóa sạch CSDL (Clean)",
+        "Action": "Tại khung Database, click nút CLEAN",
+        "ExpectedResult": "Toàn bộ dữ liệu user (trừ Admin) bị xóa trắng"
+    },
+    {
+        "TestID": "TC_F7.5",
+        "Module": "F7. Admin Dashboard",
+        "TestName": "Đổi Data Access Mode sang SOAP",
+        "Action": "Click radio button SOAP và click Submit",
+        "ExpectedResult": "Hệ thống Call API theo chuẩn SOAP"
+    },
+    {
+        "TestID": "TC_F7.8",
+        "Module": "F7. Admin Dashboard",
+        "TestName": "Đổi Data Access Mode sang JDBC (Default)",
+        "Action": "Click radio button JDBC* và click Submit",
+        "ExpectedResult": "Hệ thống dùng truy vấn trực tiếp DB"
+    },
+    {
+        "TestID": "TC_F7.20",
+        "Module": "F7. Admin Dashboard",
+        "TestName": "Đặt Init Balance là số dương nguyên",
+        "Action": "Nhập vào ô Init. Balance số 500 và click Submit",
+        "ExpectedResult": "TK mở mới sẽ có sẵn $500"
+    },
+    {
+        "TestID": "TC_F7.22",
+        "Module": "F7. Admin Dashboard",
+        "TestName": "Đặt Init Balance bằng 0 (Zero Boundary)",
+        "Action": "Nhập giá trị 0 và click Submit",
+        "ExpectedResult": "Lưu thành công. Mở TK mới sẽ có $0"
+    },
+    {
+        "TestID": "TC_F7.23",
+        "Module": "F7. Admin Dashboard",
+        "TestName": "Đặt Init Balance là số âm",
+        "Action": "Nhập số âm (-100) và click Submit",
+        "ExpectedResult": "Báo lỗi không cho thiết lập âm"
+    },
+    {
+        "TestID": "TC_F7.34",
+        "Module": "F7. Admin Dashboard",
+        "TestName": "Thiết lập Threshold ở mức 0% (Min boundary)",
+        "Action": "Nhập vào ô Threshold giá trị 0 và click Submit",
+        "ExpectedResult": "Chấp nhận mốc 0%"
+    },
+    {
+        "TestID": "TC_F7.35",
+        "Module": "F7. Admin Dashboard",
+        "TestName": "Thiết lập Threshold ở mức 100% (Max boundary)",
+        "Action": "Nhập giá trị 100 và click Submit",
+        "ExpectedResult": "Chấp nhận mốc 100%"
+    }
+]

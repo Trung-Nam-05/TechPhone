@@ -1,0 +1,42 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+.env
+.env.*
+!.env.example
+
+# IDE / build artifacts
+.vs/
+build_error.txt
+temp-dev-err.txt
+temp-dev-out.txt
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+!TechPhoneE2E/TechPhoneE2E.sln
+*.sw?
+
+# C# E2E (NUnit + Selenium)
+TechPhoneE2E/**/bin/
+TechPhoneE2E/**/obj/
+TH_CK_Test/**/bin/
+TH_CK_Test/**/obj/
+TH_CK_Test/.vs/
+test/e2e-screenshots/

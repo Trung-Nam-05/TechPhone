@@ -1,0 +1,44 @@
+[
+    {
+        "TestID": "TC_F5.1",
+        "Module": "F5. Bill Pay",
+        "TestName": "Thanh toán hóa đơn thành công",
+        "Action": "Điền đầy đủ thông tin vào Form (Payee, Addr, City, State, Zip, Phone, Acc, Amount) và Send",
+        "ExpectedResult": "Thanh toán thành công, hiển thị biên lai hoàn tất"
+    },
+    {
+        "TestID": "TC_F5.2",
+        "Module": "F5. Bill Pay",
+        "TestName": "Lỗi khi để trống thông tin người thụ hưởng",
+        "Action": "Bỏ trống Payee Name và Address, Click Send Payment",
+        "ExpectedResult": "Hệ thống báo lỗi thiếu thông tin bắt buộc"
+    },
+    {
+        "TestID": "TC_F5.3",
+        "Module": "F5. Bill Pay",
+        "TestName": "Thanh toán thất bại khi số tiền vượt số dư",
+        "Action": "Tại Amount nhập số lớn hơn số dư, Click Send Payment",
+        "ExpectedResult": "Báo lỗi không đủ tiền"
+    },
+    {
+        "TestID": "TC_F5.4",
+        "Module": "F5. Bill Pay",
+        "TestName": "Kiểm tra Account và Verify Account khớp nhau",
+        "Action": "Nhập giống hệt nhau vào trường Account và Verify Account",
+        "ExpectedResult": "Cho phép gửi lệnh thanh toán"
+    },
+    {
+        "TestID": "TC_F5.5",
+        "Module": "F5. Bill Pay",
+        "TestName": "Lỗi khi Verify Account KHÔNG khớp Account",
+        "Action": "Nhập số khác đi vào trường Verify Account và Click Send Payment",
+        "ExpectedResult": "Báo lỗi Mismatch"
+    },
+    {
+        "TestID": "TC_F5.7",
+        "Module": "F5. Bill Pay",
+        "TestName": "Nhập số âm vào Amount",
+        "Action": "Tại ô Amount nhập số âm và Click Send Payment",
+        "ExpectedResult": "Báo lỗi số tiền không hợp lệ"
+    }
+]

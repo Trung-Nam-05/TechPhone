@@ -1,0 +1,253 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+
+.tp-coupon-page {
+  min-height: 100vh;
+  background: #f3f4f6;
+  font-family: 'Roboto', 'Segoe UI', Arial, sans-serif;
+  padding-bottom: 96px;
+}
+
+.tp-coupon-header {
+  height: 64px;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+}
+
+.tp-coupon-header h1 {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.tp-coupon-header button {
+  color: #111827;
+  display: inline-flex;
+}
+
+.tp-coupon-section {
+  max-width: 760px;
+  margin: 12px auto 0;
+  padding: 0 12px;
+}
+
+.tp-coupon-section h2 {
+  font-size: 32px;
+  margin-bottom: 6px;
+}
+
+.tp-coupon-input-row {
+  width: 100%;
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  padding: 0 12px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  color: #374151;
+}
+
+.tp-coupon-list {
+  display: grid;
+  gap: 6px;
+}
+
+.tp-coupon-item {
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
+  position: relative;
+}
+
+.tp-coupon-item::after {
+  content: '';
+  position: absolute;
+  right: 46px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: repeating-linear-gradient(
+    to bottom,
+    #e5e7eb 0px,
+    #e5e7eb 8px,
+    transparent 8px,
+    transparent 13px
+  );
+}
+
+.tp-coupon-item-disabled {
+  opacity: 0.65;
+}
+
+.tp-coupon-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #ef4444;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.tp-coupon-item h3 {
+  font-size: 16px;
+  color: #111827;
+  line-height: 1.4;
+}
+
+.tp-coupon-item p {
+  margin-top: 2px;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.tp-coupon-rule {
+  color: #b45309 !important;
+}
+
+.tp-coupon-check {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 2px solid #d1d5db;
+  background: #fff;
+  color: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.tp-coupon-check:disabled {
+  cursor: not-allowed;
+}
+
+.tp-coupon-check-active {
+  background: #e11d21;
+  border-color: #e11d21;
+  color: #fff;
+}
+
+.tp-coupon-more {
+  margin-top: 8px;
+  color: #2563eb;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 15px;
+}
+
+.tp-coupon-more-up {
+  transform: rotate(180deg);
+}
+
+.tp-coupon-footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #fff;
+  border-top: 1px solid #e5e7eb;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 16px;
+  z-index: 20;
+}
+
+.tp-coupon-footer p {
+  font-size: 14px;
+  color: #334155;
+  margin-bottom: 2px;
+}
+
+.tp-coupon-footer strong {
+  display: block;
+  color: #cb1c22;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.tp-coupon-footer span {
+  color: #ef4444;
+  font-size: 13px;
+}
+
+.tp-coupon-footer button {
+  min-width: 170px;
+  height: 48px;
+  border-radius: 10px;
+  background: #e11d21;
+  color: #fff;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .tp-coupon-header {
+    height: 54px;
+    padding: 0 12px;
+  }
+
+  .tp-coupon-header h1 {
+    font-size: 24px;
+  }
+
+  .tp-coupon-section {
+    margin-top: 8px;
+    padding: 0 10px;
+  }
+
+  .tp-coupon-section h2 {
+    font-size: 20px;
+  }
+
+  .tp-coupon-input-row {
+    font-size: 15px;
+    min-height: 40px;
+    padding: 0 10px;
+  }
+
+  .tp-coupon-item h3 {
+    font-size: 15px;
+  }
+
+  .tp-coupon-item p {
+    font-size: 12px;
+  }
+
+  .tp-coupon-check {
+    width: 30px;
+    height: 30px;
+  }
+
+  .tp-coupon-footer {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
+  .tp-coupon-footer strong {
+    font-size: 21px;
+  }
+
+  .tp-coupon-footer button {
+    min-width: 128px;
+    height: 42px;
+    font-size: 18px;
+  }
+}

@@ -1,0 +1,44 @@
+[
+    {
+        "TestID": "TC_F6.1",
+        "Module": "F6. Find Transactions",
+        "TestName": "Tìm kiếm giao dịch theo Transaction ID tồn tại",
+        "Action": "Click menu 'Find Transactions' -> Chọn Account cần tìm -> Nhập ID giao dịch có thực vào ô Find by ID (VD: 12345) -> Click 'Find Transactions'",
+        "ExpectedResult": "Trả về 1 dòng chi tiết giao dịch duy nhất"
+    },
+    {
+        "TestID": "TC_F6.2",
+        "Module": "F6. Find Transactions",
+        "TestName": "Tìm kiếm giao dịch theo Ngày chính xác",
+        "Action": "Tại mục Find by Date, nhập ngày (VD: 12/1/2023) -> Click nút Find tương ứng",
+        "ExpectedResult": "Trả về danh sách các giao dịch trong ngày đó"
+    },
+    {
+        "TestID": "TC_F6.3",
+        "Module": "F6. Find Transactions",
+        "TestName": "Tìm kiếm giao dịch theo Khoảng giá trị (Amount)",
+        "Action": "Tại mục Find by Amount, nhập số tiền (VD: 50) -> Click nút Find tương ứng",
+        "ExpectedResult": "Trả về list giao dịch có giá trị đó"
+    },
+    {
+        "TestID": "TC_F6.4",
+        "Module": "F6. Find Transactions",
+        "TestName": "Thông báo không tìm thấy giao dịch phù hợp",
+        "Action": "Nhập vào ô ID hoặc Date một dữ liệu ảo (VD: 999999) -> Click Find",
+        "ExpectedResult": "Thông báo rõ ràng \"No transactions found\""
+    },
+    {
+        "TestID": "TC_F6.5",
+        "Module": "F6. Find Transactions",
+        "TestName": "Tìm kiếm ID với ký tự đặc biệt / chữ cái",
+        "Action": "Nhập vào ô ID chuỗi ký tự lạ (VD: ID@123) -> Click Find",
+        "ExpectedResult": "Báo lỗi Validation"
+    },
+    {
+        "TestID": "TC_F6.6",
+        "Module": "F6. Find Transactions",
+        "TestName": "Nhập sai định dạng Ngày (VD: DD-MM-YYYY)",
+        "Action": "Nhập ngày theo định dạng Việt Nam (VD: 31-12-2023) -> Click Find",
+        "ExpectedResult": "Lỗi yêu cầu định dạng chuẩn MM-DD-YYYY"
+    },
+]

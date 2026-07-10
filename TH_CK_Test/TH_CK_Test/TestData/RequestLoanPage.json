@@ -1,0 +1,37 @@
+[
+    {
+        "TestID": "TC_F9.1",
+        "Module": "F9. Request Loan",
+        "TestName": "Yêu cầu vay với số tiền nhỏ, cọc cao (Từ chối)",
+        "Action": "Nhập Down Payment lớn hơn số dư của tài khoản nguồn và Click Apply Now",
+        "ExpectedResult": "Hệ thống từ chối do không đủ tiền trả cọc"
+    },
+    {
+        "TestID": "TC_F9.2",
+        "Module": "F9. Request Loan",
+        "TestName": "Yêu cầu vay bị từ chối do số tiền vay quá lớn",
+        "Action": "Nhập số tiền vay lớn bất thường và Click Apply Now",
+        "ExpectedResult": "Hệ thống từ chối duyệt khoản vay này"
+    },
+    {
+        "TestID": "TC_F9.3",
+        "Module": "F9. Request Loan",
+        "TestName": "Kiểm tra tài khoản nhận tiền vay",
+        "Action": "Lấy số New Account ID ở màn hình kết quả và Click vào xem chi tiết",
+        "ExpectedResult": "Thấy khoản tiền vay đã được cộng vào Balance"
+    },
+    {
+        "TestID": "TC_F9.4",
+        "Module": "F9. Request Loan",
+        "TestName": "Cố ý nhập Down Payment là số âm",
+        "Action": "Nhập vào ô Down Payment một số âm và Click Apply Now",
+        "ExpectedResult": "Báo lỗi giá trị số tiền không hợp lệ"
+    },
+    {
+        "TestID": "TC_F9.5",
+        "Module": "F9. Request Loan",
+        "TestName": "Cố ý bỏ trống ô Loan Amount",
+        "Action": "Bỏ trống hoàn toàn ô Loan Amount và Click Apply Now",
+        "ExpectedResult": "Focus báo lỗi vào ô bị trống"
+    }
+]

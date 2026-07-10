@@ -1,0 +1,37 @@
+[
+    {
+        "TestID": "TC_F3.1",
+        "Module": "F3. Open New Account",
+        "TestName": "Mở tài khoản Savings thành công",
+        "Action": "Chọn Type SAVINGS, chọn tài khoản nguồn và Click Open New Account",
+        "ExpectedResult": "Thông báo 'Account Opened!' kèm Account Number mới"
+    },
+    {
+        "TestID": "TC_F3.2",
+        "Module": "F3. Open New Account",
+        "TestName": "Mở tài khoản Checking thành công",
+        "Action": "Chọn Type CHECKING, chọn tài khoản nguồn và click Submit",
+        "ExpectedResult": "Mở thành công Account ID mới"
+    },
+    {
+        "TestID": "TC_F3.3",
+        "Module": "F3. Open New Account",
+        "TestName": "Kiểm tra xem TK mới xuất hiện trong Overview",
+        "Action": "Nhớ số Account ID vừa tạo, vào Accounts Overview tìm số ID đó",
+        "ExpectedResult": "Số ID xuất hiện ở cuối bảng với số dư khởi tạo"
+    },
+    {
+        "TestID": "TC_F3.5",
+        "Module": "F3. Open New Account",
+        "TestName": "Mở tài khoản khi nguồn không đủ tiền",
+        "Action": "Chọn From Account đang có số dư thấp (< $100) và Click Open New Account",
+        "ExpectedResult": "Hệ thống báo lỗi không đủ tiền tối thiểu"
+    },
+    {
+        "TestID": "TC_F3.9",
+        "Module": "F3. Open New Account",
+        "TestName": "Chọn From Account là chuỗi rỗng",
+        "Action": "Bỏ chọn From Account và Click Open New Account",
+        "ExpectedResult": "Báo lỗi yêu cầu chọn tài khoản trích tiền"
+    }
+]

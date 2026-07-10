@@ -1,0 +1,388 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+
+.tp-detail-page {
+  padding-top: 18px;
+  padding-bottom: 28px;
+  font-family: 'Roboto', 'Segoe UI', Arial, sans-serif;
+}
+
+.tp-detail-breadcrumb {
+  font-size: 14px;
+  color: #64748b;
+  margin-bottom: 10px;
+}
+
+.tp-detail-breadcrumb span {
+  color: #334155;
+}
+
+.tp-detail-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 390px;
+  gap: 18px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.tp-detail-left {
+  min-width: 0;
+}
+
+.tp-detail-main-image {
+  border-radius: 10px;
+  background: #f5f7fa;
+  overflow: hidden;
+  position: relative;
+  height: 390px;
+}
+
+.tp-detail-main-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.tp-detail-main-image button {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.35);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tp-detail-thumb-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  overflow-x: auto;
+  padding: 10px 0 2px;
+}
+
+.tp-detail-static-thumb {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.tp-detail-thumb {
+  min-width: 54px;
+  width: 54px;
+  height: 54px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.tp-detail-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tp-detail-thumb-active {
+  border-color: #cb1c22;
+}
+
+.tp-detail-specs {
+  margin-top: 10px;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.tp-detail-specs article {
+  border-right: 1px solid #e5e7eb;
+  padding-right: 8px;
+}
+
+.tp-detail-specs article:last-child {
+  border-right: 0;
+}
+
+.tp-detail-specs span {
+  display: block;
+  color: #6b7280;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.tp-detail-specs strong {
+  font-size: 18px;
+}
+
+.tp-detail-right {
+  border-left: 1px solid #e5e7eb;
+  padding-left: 14px;
+}
+
+.tp-detail-badge {
+  display: inline-block;
+  font-size: 12px;
+  background: #111827;
+  color: #fef08a;
+  border-radius: 999px;
+  padding: 3px 10px;
+  margin-bottom: 8px;
+}
+
+.tp-detail-right h1 {
+  font-size: 29px;
+  margin-bottom: 6px;
+}
+
+.tp-detail-meta {
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.tp-detail-option {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.tp-detail-option label {
+  font-size: 14px;
+  color: #374151;
+}
+
+.tp-detail-option div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tp-detail-option button {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  padding: 8px 10px;
+  font-size: 14px;
+}
+
+.tp-option-color {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px !important;
+}
+
+.tp-option-color img {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.tp-option-active {
+  border-color: #cb1c22 !important;
+  box-shadow: inset 0 0 0 1px #cb1c22;
+}
+
+.tp-detail-right-banner {
+  width: 100%;
+  border-radius: 8px;
+  margin-top: 6px;
+  margin-bottom: 10px;
+}
+
+.tp-detail-price-box {
+  background: #f9f5e8;
+  border: 1px solid #e5d9b6;
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.tp-detail-price {
+  font-size: 36px;
+  color: #111827;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.tp-detail-old-price {
+  color: #6b7280;
+  font-size: 15px;
+  text-decoration: line-through;
+}
+
+.tp-detail-installment {
+  text-align: right;
+}
+
+.tp-detail-installment span {
+  display: block;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.tp-detail-installment strong {
+  font-size: 20px;
+}
+
+.tp-detail-promos {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+.tp-detail-promos h3 {
+  font-size: 16px;
+  padding: 8px 10px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f8fafc;
+}
+
+.tp-detail-promos ul {
+  list-style: disc;
+  padding: 10px 22px 12px;
+  color: #334155;
+  font-size: 14px;
+}
+
+.tp-detail-promos li + li {
+  margin-top: 6px;
+}
+
+.tp-detail-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.tp-detail-actions .btn {
+  width: 100%;
+  min-height: 46px;
+  font-weight: 700;
+}
+
+.tp-detail-bottom {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 290px;
+  gap: 18px;
+  margin-top: 12px;
+}
+
+.tp-detail-description {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.tp-detail-description h2 {
+  font-size: 34px;
+  margin-bottom: 8px;
+}
+
+.tp-detail-description h3 {
+  font-size: 24px;
+  margin-top: 12px;
+  margin-bottom: 6px;
+}
+
+.tp-detail-description p {
+  line-height: 1.6;
+  color: #1f2937;
+}
+
+.tp-detail-news {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.tp-detail-news h3 {
+  font-size: 34px;
+  margin-bottom: 8px;
+}
+
+.tp-detail-news article {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.tp-detail-news img {
+  width: 92px;
+  height: 78px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.tp-detail-news p {
+  font-size: 14px;
+  color: #334155;
+  line-height: 1.4;
+}
+
+.tp-detail-news a {
+  color: #2563eb;
+  font-size: 14px;
+}
+
+@media (max-width: 1024px) {
+  .tp-detail-main {
+    grid-template-columns: 1fr;
+  }
+
+  .tp-detail-right {
+    border-left: 0;
+    border-top: 1px solid #e5e7eb;
+    padding-left: 0;
+    padding-top: 12px;
+  }
+
+  .tp-detail-bottom {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .tp-detail-main-image {
+    height: 300px;
+  }
+
+  .tp-detail-right h1,
+  .tp-detail-description h2,
+  .tp-detail-news h3 {
+    font-size: 24px;
+  }
+
+  .tp-detail-price {
+    font-size: 29px;
+  }
+
+  .tp-detail-option {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .tp-detail-actions {
+    grid-template-columns: 1fr;
+  }
+}

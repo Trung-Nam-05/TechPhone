@@ -1,0 +1,156 @@
+.tp-hero-carousel {
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  height: clamp(240px, 26vw, 370px);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.2);
+  background: #f8fafc;
+}
+
+.tp-hero-slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1000ms ease;
+  z-index: 0;
+}
+
+.tp-hero-slide-active {
+  opacity: 1;
+  z-index: 1;
+  pointer-events: auto;
+}
+
+.tp-hero-slide-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  image-rendering: -webkit-optimize-contrast;
+}
+
+.tp-hero-slide-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-right: 0;
+  z-index: 1;
+}
+
+.tp-hero-slide-main {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  image-rendering: -webkit-optimize-contrast;
+}
+
+.tp-hero-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.85);
+  color: #111827;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 200ms ease;
+  z-index: 3;
+}
+
+.tp-hero-arrow:hover {
+  background: #fff;
+}
+
+.tp-hero-carousel:hover .tp-hero-arrow {
+  opacity: 1;
+}
+
+.tp-hero-arrow-prev {
+  left: 12px;
+}
+
+.tp-hero-arrow-prev svg {
+  transform: rotate(180deg);
+}
+
+.tp-hero-arrow-next {
+  right: 12px;
+}
+
+.tp-hero-dots {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 10px;
+  display: flex;
+  gap: 8px;
+  z-index: 4;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.28);
+}
+
+.tp-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.tp-dot-active {
+  width: 22px;
+  background: #fff;
+}
+
+@media (max-width: 1024px) {
+  .tp-hero-carousel {
+    height: clamp(180px, 34vw, 285px);
+  }
+
+  .tp-hero-arrow {
+    opacity: 1;
+    width: 34px;
+    height: 34px;
+  }
+
+  .tp-hero-slide-inner {
+    justify-content: center;
+    padding-right: 0;
+  }
+
+  .tp-hero-slide-main {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+}
+
+@media (max-width: 640px) {
+  .tp-hero-carousel {
+    height: 180px;
+    border-radius: 12px;
+  }
+
+  .tp-hero-slide-main {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .tp-hero-arrow {
+    width: 30px;
+    height: 30px;
+  }
+}

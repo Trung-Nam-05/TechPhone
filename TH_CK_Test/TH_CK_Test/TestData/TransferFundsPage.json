@@ -1,0 +1,58 @@
+[
+    {
+        "TestID": "TC_F4.1",
+        "Module": "F4. Transfer Funds",
+        "TestName": "Chuyển tiền thành công nội bộ",
+        "Action": "Nhập số tiền hợp lệ, chọn tài khoản nguồn, đích và Click Transfer",
+        "ExpectedResult": "Thông báo chuyển khoản thành công"
+    },
+    {
+        "TestID": "TC_F4.2",
+        "Module": "F4. Transfer Funds",
+        "TestName": "Chuyển toàn bộ số dư tài khoản",
+        "Action": "Nhập chính xác số dư hiện có và Click Transfer",
+        "ExpectedResult": "Thành công, số dư tài khoản nguồn = 0"
+    },
+    {
+        "TestID": "TC_F4.3",
+        "Module": "F4. Transfer Funds",
+        "TestName": "Lỗi chuyển tiền bằng 0 hoặc số âm",
+        "Action": "Nhập vào ô Amount giá trị 0 hoặc số âm (-50)",
+        "ExpectedResult": "Chặn thao tác"
+    },
+    {
+        "TestID": "TC_F4.4",
+        "Module": "F4. Transfer Funds",
+        "TestName": "Nhập số tiền ký tự chữ/đặc biệt",
+        "Action": "Nhập chữ cái hoặc ký tự đặc biệt vào ô Amount",
+        "ExpectedResult": "Hệ thống cảnh báo định dạng"
+    },
+    {
+        "TestID": "TC_F4.6",
+        "Module": "F4. Transfer Funds",
+        "TestName": "Chuyển số tiền vượt Available Amount",
+        "Action": "Nhập Amount lớn hơn số dư và Click Transfer",
+        "ExpectedResult": "Hệ thống chặn và báo lỗi Insufficient funds"
+    },
+    {
+        "TestID": "TC_F4.7",
+        "Module": "F4. Transfer Funds",
+        "TestName": "Chuyển tiền với From Acc trùng To Acc",
+        "Action": "Chọn dropdown From Account và To Account giống nhau và Click Transfer",
+        "ExpectedResult": "Báo lỗi không thể chuyển tiền cho chính mình"
+    },
+    {
+        "TestID": "TC_F4.8",
+        "Module": "F4. Transfer Funds",
+        "TestName": "Bỏ trống trường Amount",
+        "Action": "Để trống ô Amount và Click Transfer",
+        "ExpectedResult": "Focus lỗi yêu cầu điền số tiền"
+    },
+    {
+        "TestID": "TC_F4.11",
+        "Module": "F4. Transfer Funds",
+        "TestName": "Thử XSS injection vào ô Amount",
+        "Action": "Dán mã script <script>alert(1)</script> vào ô Amount và Click Transfer",
+        "ExpectedResult": "Mã độc không chạy, báo lỗi định dạng số"
+    }
+]
