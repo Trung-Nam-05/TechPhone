@@ -8,9 +8,9 @@ import { INSTALLMENT_STATUS } from '../utils/installment.js';
 import { restoreInventoryForCancelledOrder } from '../services/orderCancel.js';
 import { ORDER_STATUS_SET } from '../constants/orderStatus.js';
 import {
-  createGhtkShipmentForOrder,
-  cancelGhtkShipmentForOrder,
-} from '../services/ghtkShipment.js';
+  createGhnShipmentForOrder,
+  cancelGhnShipmentForOrder,
+} from '../services/ghnShipment.js';
 import ShipmentEvent from '../models/ShipmentEvent.js';
 import { validateAdminStatusChange } from '../services/orderStateMachine.js';
 
@@ -86,11 +86,11 @@ router.get('/:id/shipment-events', async (req, res, next) => {
   }
 });
 
-router.post('/:id/ghtk/retry', async (req, res, next) => {
+router.post('/:id/ghn/retry', async (req, res, next) => {
   try {
-    const result = await createGhtkShipmentForOrder(req.params.id, { force: true });
+    const result = await createGhnShipmentForOrder(req.params.id, { force: true });
     if (!result.ok) {
-      return res.status(400).json({ message: result.reason || 'GHTK submit failed', error: result.error });
+      return res.status(400).json({ message: result.reason || 'GHN submit failed', error: result.error });
     }
     return res.json({ order: result.order, labelId: result.labelId });
   } catch (error) {
@@ -98,11 +98,11 @@ router.post('/:id/ghtk/retry', async (req, res, next) => {
   }
 });
 
-router.post('/:id/ghtk/cancel', async (req, res, next) => {
+router.post('/:id/ghn/cancel', async (req, res, next) => {
   try {
-    const result = await cancelGhtkShipmentForOrder(req.params.id);
+    const result = await cancelGhnShipmentForOrder(req.params.id);
     if (!result.ok) {
-      return res.status(400).json({ message: result.reason || 'GHTK cancel failed', error: result.error });
+      return res.status(400).json({ message: result.reason || 'GHN cancel failed', error: result.error });
     }
     return res.json({ order: result.order });
   } catch (error) {
@@ -335,9 +335,9 @@ router.patch('/:id/cancellation', async (req, res, next) => {
 
     if (action === 'approve' && payload?.shipment?.labelId) {
       try {
-        await cancelGhtkShipmentForOrder(id);
+        await cancelGhnShipmentForOrder(id);
       } catch (err) {
-        console.error(`[admin] GHTK cancel after approve failed for ${id}:`, err.message);
+        console.error(`[admin] GHN cancel after approve failed for ${id}:`, err.message);
       }
       const refreshed = await Order.findById(id).lean();
       if (refreshed) payload = refreshed;

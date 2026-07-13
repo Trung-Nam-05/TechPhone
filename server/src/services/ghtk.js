@@ -6,6 +6,7 @@
 function getConfig() {
   return {
     enabled: process.env.GHTK_ENABLED === 'true',
+    mockEnabled: process.env.GHTK_MOCK_ENABLED === 'true',
     apiToken: String(process.env.GHTK_API_TOKEN || '').trim(),
     partnerCode: String(process.env.GHTK_PARTNER_CODE || '').trim(),
     apiUrl: String(process.env.GHTK_API_URL || 'https://services.giaohangtietkiem.vn').replace(/\/$/, ''),
@@ -18,11 +19,37 @@ function getConfig() {
   };
 }
 
+/** Chế độ giả lập — không gọi API GHTK thật (giống tinh thần VNPAY sandbox). */
+export function isGhtkMockEnabled() {
+  return process.env.GHTK_ENABLED === 'true' && process.env.GHTK_MOCK_ENABLED === 'true';
+}
+
+/** URL staging — test API, khong co shipper that. */
+export function isGhtkStagingApi() {
+  const url = String(process.env.GHTK_API_URL || '');
+  return url.includes('staging') || url.includes('ghtklab');
+}
+
+/** URL production — đơn tạo ra sẽ có shipper thật đến lấy hàng. */
+export function isGhtkProductionApi() {
+  const url = String(process.env.GHTK_API_URL || 'https://services.giaohangtietkiem.vn');
+  return url.includes('giaohangtietkiem.vn') && !isGhtkStagingApi();
+}
+
+/** Chi cho phep goi API khi staging hoac mock; production can flag rieng. */
+export function isGhtkApiAllowed() {
+  if (!isGhtkConfigured()) return false;
+  if (isGhtkMockEnabled()) return true;
+  if (isGhtkStagingApi()) return true;
+  return process.env.GHTK_ALLOW_PRODUCTION === 'true';
+}
+
 export function isGhtkConfigured() {
+  if (process.env.GHTK_ENABLED !== 'true') return false;
+  if (isGhtkMockEnabled()) return true;
   const cfg = getConfig();
   return Boolean(
-    cfg.enabled &&
-      cfg.apiToken &&
+    cfg.apiToken &&
       cfg.partnerCode &&
       cfg.pickTel &&
       cfg.pickAddress &&
@@ -76,6 +103,11 @@ async function ghtkRequest(path, { method = 'GET', body } = {}) {
   const cfg = getConfig();
   if (!cfg.apiToken || !cfg.partnerCode) {
     throw new Error('GHTK_NOT_CONFIGURED');
+  }
+  if (!isGhtkMockEnabled() && isGhtkProductionApi() && process.env.GHTK_ALLOW_PRODUCTION !== 'true') {
+    throw new Error(
+      'GHTK_PRODUCTION_BLOCKED: Dung GHTK_API_URL=https://services-staging.ghtklab.com khi dev.',
+    );
   }
 
   const url = `${cfg.apiUrl}${path.startsWith('/') ? path : `/${path}`}`;
@@ -171,6 +203,17 @@ export function buildGhtkOrderPayload(order) {
 }
 
 export async function submitOrder(order) {
+  if (isGhtkMockEnabled()) {
+    const suffix = String(order._id).slice(-8).toUpperCase();
+    const labelId = `MOCK-${suffix}`;
+    return {
+      labelId,
+      partnerId: String(order._id),
+      fee: 25000,
+      raw: { success: true, mock: true, order: { label: labelId, partner_id: String(order._id) } },
+    };
+  }
+
   const payload = buildGhtkOrderPayload(order);
   const data = await ghtkRequest('/services/shipment/order?ver=1.5', {
     method: 'POST',
@@ -186,6 +229,10 @@ export async function submitOrder(order) {
 }
 
 export async function cancelShipment(order) {
+  if (isGhtkMockEnabled()) {
+    return { success: true, mock: true, message: 'Mock cancel OK' };
+  }
+
   const partnerId = order.shipment?.partnerId || String(order._id);
   const labelId = order.shipment?.labelId;
   const path = labelId
@@ -195,6 +242,10 @@ export async function cancelShipment(order) {
 }
 
 export async function getOrderStatus(order) {
+  if (isGhtkMockEnabled()) {
+    return null;
+  }
+
   const labelId = order.shipment?.labelId;
   const partnerId = order.shipment?.partnerId || String(order._id);
   const path = labelId

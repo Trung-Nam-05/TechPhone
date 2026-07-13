@@ -11,8 +11,8 @@ import { calculatePricing, consumeCouponsUsage, PricingError } from '../services
 import { calculateInstallmentPlan, normalizeInstallmentInput } from '../utils/installment.js';
 import { restoreInventoryForCancelledOrder } from '../services/orderCancel.js';
 import { buildVnpayPaymentUrl, isVnpayConfigured } from '../services/vnpay.js';
-import { ensureGhtkShipmentForOrder, applyGhtkStatusUpdate } from '../services/ghtkShipment.js';
-import { getOrderStatus, isGhtkConfigured } from '../services/ghtk.js';
+import { ensureGhnShipmentForOrder, syncGhnOrderFromApi } from '../services/ghnShipment.js';
+import { isGhnConfigured } from '../services/ghn.js';
 import ShipmentEvent from '../models/ShipmentEvent.js';
 import { requireAuth } from '../middleware/auth.js';
 import { buildOrderTimeline } from '../services/orderTimeline.js';
@@ -312,8 +312,8 @@ router.post('/', async (req, res, next) => {
     }
 
     if (paymentMethod === 'cod' && createdOrder) {
-      ensureGhtkShipmentForOrder(String(createdOrder._id)).catch((err) => {
-        console.error(`[orders] GHTK create failed for ${createdOrder._id}:`, err.message);
+      ensureGhnShipmentForOrder(String(createdOrder._id)).catch((err) => {
+        console.error(`[orders] GHN create failed for ${createdOrder._id}:`, err.message);
       });
     }
 
@@ -408,27 +408,16 @@ router.post('/:id/refresh-shipment', requireAuth, async (req, res, next) => {
       return res.status(404).json({ message: 'Order not found.' });
     }
 
-    if (!isGhtkConfigured() || !order.shipment?.labelId) {
+    if (!isGhnConfigured() || !order.shipment?.labelId) {
       const timeline = await buildOrderTimeline(order.toObject());
       return res.json({ refreshed: false, ...timeline });
     }
 
-    const ghtkOrder = await getOrderStatus(order);
-    if (ghtkOrder) {
-      await applyGhtkStatusUpdate({
-        label_id: ghtkOrder.label_id || order.shipment.labelId,
-        partner_id: ghtkOrder.partner_id || String(order._id),
-        status_id: Number(ghtkOrder.status),
-        fee: ghtkOrder.ship_money != null ? Number(ghtkOrder.ship_money) : undefined,
-        weight: ghtkOrder.weight != null ? Number(ghtkOrder.weight) / 1000 : undefined,
-        action_time: ghtkOrder.modified || new Date().toISOString(),
-        source: 'manual_refresh',
-      });
-    }
+    const detail = await syncGhnOrderFromApi(order);
 
     const fresh = await Order.findById(id).lean();
     const timeline = await buildOrderTimeline(fresh);
-    return res.json({ refreshed: Boolean(ghtkOrder), ...timeline });
+    return res.json({ refreshed: Boolean(detail), ...timeline });
   } catch (error) {
     return next(error);
   }

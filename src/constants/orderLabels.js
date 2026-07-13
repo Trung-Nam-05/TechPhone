@@ -86,6 +86,34 @@ export function getGhtkStatusLabel(statusId) {
   return GHTK_STATUS_LABELS[Number(statusId)] || `GHTK #${statusId}`;
 }
 
+export const GHN_STATUS_LABELS = {
+  ready_to_pick: 'Sẵn sàng lấy hàng',
+  picking: 'Đang lấy hàng',
+  picked: 'Đã lấy hàng',
+  storing: 'Đang nhập kho',
+  transporting: 'Đang vận chuyển',
+  delivering: 'Đang giao hàng',
+  delivered: 'Giao thành công',
+  delivery_fail: 'Giao thất bại',
+  waiting_to_return: 'Chờ hoàn hàng',
+  return: 'Đang hoàn hàng',
+  returned: 'Đã hoàn hàng',
+  cancel: 'Đã hủy',
+  cancelled: 'Đã hủy',
+};
+
+export function getGhnStatusLabel(status) {
+  const key = String(status || '').toLowerCase();
+  return GHN_STATUS_LABELS[key] || status || '';
+}
+
+export function getCarrierStatusLabel(shipment) {
+  if (!shipment) return '';
+  if (shipment.carrierStatus) return getGhnStatusLabel(shipment.carrierStatus);
+  if (shipment.ghtkStatusId != null) return getGhtkStatusLabel(shipment.ghtkStatusId);
+  return '';
+}
+
 export const PAYMENT_METHOD_LABELS = {
   cod: 'Thanh toán khi nhận hàng (COD)',
   vnpay: 'VNPAY',

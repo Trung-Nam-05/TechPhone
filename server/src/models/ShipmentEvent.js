@@ -3,8 +3,9 @@ import mongoose from 'mongoose';
 const shipmentEventSchema = new mongoose.Schema(
   {
     order: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', required: true, index: true },
-    provider: { type: String, default: 'ghtk', trim: true },
+    provider: { type: String, default: 'ghn', trim: true },
     ghtkStatusId: { type: Number, default: null, index: true },
+    carrierStatus: { type: String, default: '', trim: true },
     labelId: { type: String, default: '', trim: true },
     note: { type: String, default: '', trim: true },
     payload: { type: mongoose.Schema.Types.Mixed, default: null },

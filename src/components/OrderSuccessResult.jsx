@@ -51,7 +51,7 @@ export default function OrderSuccessResult({
           </p>
           {order.shipment?.labelId && (
             <p style={{ margin: '4px 0' }} className="text-muted">
-              Mã vận đơn GHTK: <strong>{order.shipment.labelId}</strong>
+              Mã vận đơn GHN: <strong>{order.shipment.labelId}</strong>
             </p>
           )}
         </div>
@@ -69,7 +69,7 @@ export default function OrderSuccessResult({
       {success && (
         <p style={{ textAlign: 'center', marginBottom: 24 }}>
           {subtitle ||
-            'Đơn hàng đã được xác nhận tự động. Vận đơn GHTK sẽ được tạo trong giây lát (nếu đã bật GHTK).'}
+            'Đơn hàng đã được xác nhận tự động. Vận đơn GHN (DEV) sẽ được tạo trong giây lát.'}
         </p>
       )}
       <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>

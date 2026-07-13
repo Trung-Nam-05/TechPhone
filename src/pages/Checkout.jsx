@@ -171,7 +171,7 @@ export default function Checkout() {
         order={createdOrder}
         loadError={orderLoadError}
         title="Đặt hàng thành công!"
-        subtitle="Đơn hàng COD đã được xác nhận tự động. Vận đơn GHTK sẽ được tạo trong giây lát (nếu đã bật GHTK)."
+        subtitle="Đơn hàng COD đã được xác nhận tự động. Vận đơn GHN sẽ được tạo trong giây lát (môi trường DEV)."
       />
     );
   }
@@ -251,14 +251,14 @@ export default function Checkout() {
                   name="province"
                   type="text"
                   className="input"
-                  placeholder="Tỉnh/Thành phố (vd: TP. Ho Chi Minh)"
+                  placeholder="Tỉnh/Thành phố (vd: Hồ Chí Minh)"
                 />
                 <input
                   required
                   name="district"
                   type="text"
                   className="input"
-                  placeholder="Quận/Huyện (vd: Quan 1)"
+                  placeholder="Quận/Huyện (vd: Quận 1)"
                 />
                 <input name="ward" type="text" className="input" placeholder="Phường/Xã (vd: Phuong Ben Nghe)" />
                 <input

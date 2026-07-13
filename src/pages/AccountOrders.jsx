@@ -92,7 +92,7 @@ export default function AccountOrders() {
               </p>
               {order.shipment?.labelId && (
                 <p className="text-sm text-muted" style={{ marginTop: 4 }}>
-                  Mã vận đơn GHTK: <strong>{order.shipment.labelId}</strong>
+                  Mã vận đơn GHN: <strong>{order.shipment.labelId}</strong>
                 </p>
               )}
               <p className="text-sm text-muted" style={{ marginTop: 6 }}>

@@ -80,9 +80,9 @@ export default function AdminOrders() {
     }
   };
 
-  const retryGhtk = async (orderId) => {
+  const retryGhn = async (orderId) => {
     try {
-      const payload = await authFetch(`/api/admin/orders/${orderId}/ghtk/retry`, { method: 'POST' });
+      const payload = await authFetch(`/api/admin/orders/${orderId}/ghn/retry`, { method: 'POST' });
       setItems((prev) => prev.map((item) => (item._id === orderId ? payload.order : item)));
       await loadEvents(orderId);
       await loadShipmentEvents(orderId);
@@ -91,10 +91,10 @@ export default function AdminOrders() {
     }
   };
 
-  const cancelGhtk = async (orderId) => {
-    if (!window.confirm('Hủy vận đơn GHTK cho đơn này?')) return;
+  const cancelGhn = async (orderId) => {
+    if (!window.confirm('Hủy vận đơn GHN cho đơn này?')) return;
     try {
-      const payload = await authFetch(`/api/admin/orders/${orderId}/ghtk/cancel`, { method: 'POST' });
+      const payload = await authFetch(`/api/admin/orders/${orderId}/ghn/cancel`, { method: 'POST' });
       setItems((prev) => prev.map((item) => (item._id === orderId ? payload.order : item)));
       await loadEvents(orderId);
       await loadShipmentEvents(orderId);
@@ -200,11 +200,11 @@ export default function AdminOrders() {
                   </p>
                   <p className="text-sm">Tổng: {(order.total || 0).toLocaleString('vi-VN')} đ</p>
                   {order.shipment?.labelId && (
-                    <p className="text-sm text-muted">Vận đơn GHTK: {order.shipment.labelId}</p>
+                    <p className="text-sm text-muted">Vận đơn GHN: {order.shipment.labelId}</p>
                   )}
                   {order.shipment?.submitError && (
                     <p className="text-sm" style={{ color: '#dc2626' }}>
-                      Lỗi GHTK: {order.shipment.submitError}
+                      Lỗi GHN: {order.shipment.submitError}
                     </p>
                   )}
                   {order.paymentMethod === 'installment' && (
@@ -253,13 +253,13 @@ export default function AdminOrders() {
                       Chi tiết
                     </button>
                     {(order.shipment?.submitError || order.status === 'confirmed') && (
-                      <button type="button" className="btn btn-outline" onClick={() => retryGhtk(order._id)}>
-                        Tạo lại GHTK
+                      <button type="button" className="btn btn-outline" onClick={() => retryGhn(order._id)}>
+                        Tạo lại GHN
                       </button>
                     )}
                     {order.shipment?.labelId && !['completed', 'cancelled', 'returned'].includes(order.status) && (
-                      <button type="button" className="btn btn-outline" onClick={() => cancelGhtk(order._id)}>
-                        Hủy GHTK
+                      <button type="button" className="btn btn-outline" onClick={() => cancelGhn(order._id)}>
+                        Hủy GHN
                       </button>
                     )}
                     <Link to={`/account/orders/${order._id}`} className="btn btn-outline" style={{ fontSize: 12 }}>
@@ -344,16 +344,16 @@ export default function AdminOrders() {
                 ))}
                 {events.length === 0 && <p className="text-muted">Chưa có sự kiện.</p>}
               </div>
-              <h3 style={{ fontSize: 16, marginBottom: 6 }}>Hành trình GHTK</h3>
+              <h3 style={{ fontSize: 16, marginBottom: 6 }}>Hành trình GHN</h3>
               <div style={{ display: 'grid', gap: 8 }}>
                 {shipmentEvents.map((item) => (
                   <div key={item._id} style={{ borderBottom: '1px solid #e5e7eb', paddingBottom: 8 }}>
-                    <strong>{item.note || `GHTK #${item.ghtkStatusId}`}</strong>
+                    <strong>{item.note || item.carrierStatus || 'GHN'}</strong>
                     <p className="text-sm text-muted">{new Date(item.createdAt).toLocaleString('vi-VN')}</p>
                     {item.labelId && <p className="text-sm text-muted">Mã: {item.labelId}</p>}
                   </div>
                 ))}
-                {shipmentEvents.length === 0 && <p className="text-muted">Chưa có cập nhật GHTK.</p>}
+                {shipmentEvents.length === 0 && <p className="text-muted">Chưa có cập nhật GHN.</p>}
               </div>
             </>
           )}

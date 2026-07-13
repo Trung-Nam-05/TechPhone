@@ -1,4 +1,5 @@
 import Order from '../models/Order.js';
+import { isGhtkMockEnabled, isGhtkStagingApi } from './ghtk.js';
 import { applyGhtkStatusUpdate } from './ghtkShipment.js';
 
 const DEMO_STAGES = [
@@ -28,11 +29,13 @@ function readMs(name, fallback) {
 }
 
 /**
- * Mô phỏng tiến trình GHTK khi không có lấy/giao hàng thật (môi trường demo/đồ án).
+ * Mô phỏng tiến trình vận chuyển (timeout từng bước) khi dùng STAGING hoặc MOCK.
  * await_pickup → picked → shipping → completed
  */
 export async function runGhtkDemoProgressTick() {
   if (process.env.GHTK_DEMO_PROGRESS_ENABLED !== 'true') return;
+  if (process.env.GHTK_ENABLED !== 'true') return;
+  if (!isGhtkMockEnabled() && !isGhtkStagingApi()) return;
 
   const now = Date.now();
 
@@ -70,10 +73,16 @@ export async function runGhtkDemoProgressTick() {
 
 export function startGhtkDemoProgressJob() {
   if (process.env.GHTK_DEMO_PROGRESS_ENABLED !== 'true') return;
+  if (process.env.GHTK_ENABLED !== 'true') return;
+  if (!isGhtkMockEnabled() && !isGhtkStagingApi()) {
+    console.log('[ghtk-demo] Disabled — chi chay tren STAGING hoac MOCK.');
+    return;
+  }
 
   const tickMs = readMs('GHTK_DEMO_PROGRESS_MS', 30000);
+  const mode = isGhtkMockEnabled() ? 'MOCK' : 'STAGING';
   console.log(
-    `[ghtk-demo] Progress simulation enabled (tick=${tickMs}ms, stages=${DEMO_STAGES.length})`,
+    `[ghtk-demo] Tracking simulation (${mode}, tick=${tickMs}ms, stages=${DEMO_STAGES.length})`,
   );
 
   runGhtkDemoProgressTick().catch((err) => console.error('[ghtk-demo] Initial tick failed:', err));

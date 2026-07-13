@@ -2,7 +2,7 @@ import express from 'express';
 import Order from '../models/Order.js';
 import OrderEvent from '../models/OrderEvent.js';
 import { verifyVnpayCallback, isVnpayConfigured } from '../services/vnpay.js';
-import { ensureGhtkShipmentForOrder } from '../services/ghtkShipment.js';
+import { ensureGhnShipmentForOrder } from '../services/ghnShipment.js';
 
 const router = express.Router();
 
@@ -58,8 +58,8 @@ async function processVnpayQuery(query) {
     }
 
     if (order.status === 'confirmed') {
-      await ensureGhtkShipmentForOrder(String(order._id)).catch((err) => {
-        console.error(`[vnpay] GHTK create failed for ${order._id}:`, err.message);
+      await ensureGhnShipmentForOrder(String(order._id)).catch((err) => {
+        console.error(`[vnpay] GHN create failed for ${order._id}:`, err.message);
       });
     }
 

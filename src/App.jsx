@@ -26,6 +26,7 @@ import AccountProfile from './pages/AccountProfile';
 import AccountOrders from './pages/AccountOrders';
 import OrderDetail from './pages/OrderDetail';
 import AdminUsers from './pages/AdminUsers';
+import AdminSupport from './pages/AdminSupport';
 import VnpayResult from './pages/VnpayResult';
 
 function App() {
@@ -43,6 +44,7 @@ function App() {
         <Route path="products" element={<AdminProducts />} />
         <Route path="analytics" element={<AdminAnalytics />} />
         <Route path="orders" element={<AdminOrders />} />
+        <Route path="support" element={<AdminSupport />} />
         <Route path="inventory" element={<AdminInventory />} />
         <Route path="flash-sales" element={<AdminFlashSales />} />
         <Route path="program" element={<AdminProgram />} />

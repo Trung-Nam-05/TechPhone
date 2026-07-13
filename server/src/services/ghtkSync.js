@@ -1,5 +1,5 @@
 import Order from '../models/Order.js';
-import { isGhtkConfigured, getOrderStatus } from './ghtk.js';
+import { isGhtkConfigured, isGhtkMockEnabled, getOrderStatus } from './ghtk.js';
 import { applyGhtkStatusUpdate } from './ghtkShipment.js';
 
 const SYNC_STATUSES = ['await_pickup', 'picked', 'shipping'];
@@ -39,6 +39,10 @@ export async function runGhtkSyncTick() {
 
 export function startGhtkSyncJob() {
   if (process.env.GHTK_ENABLED !== 'true') return;
+  if (isGhtkMockEnabled()) {
+    console.log('[ghtk-sync] Skipped in MOCK mode (use GHTK_DEMO_PROGRESS instead).');
+    return;
+  }
   if (process.env.GHTK_POLL_ENABLED !== 'true') {
     console.log('[ghtk-sync] Poll disabled (set GHTK_POLL_ENABLED=true to enable).');
     return;

@@ -8,7 +8,7 @@ import {
   ACTIVE_SHIPMENT_STATUSES,
   canCustomerCancelImmediate,
   canRequestCancel,
-  getGhtkStatusLabel,
+  getCarrierStatusLabel,
   getOrderStatusLabel,
   getPaymentMethodLabel,
 } from '../constants/orderLabels';
@@ -196,23 +196,22 @@ export default function OrderDetail() {
             order.shipment?.submitError ||
             (order.paymentMethod !== 'installment' && ['confirmed', 'await_pickup', 'picked', 'shipping'].includes(order.status))) && (
             <section className="card" style={{ padding: 16, marginBottom: 16 }}>
-              <h2 style={{ fontSize: 18, marginBottom: 12 }}>Vận chuyển GHTK</h2>
+              <h2 style={{ fontSize: 18, marginBottom: 12 }}>Vận chuyển GHN</h2>
               <div style={{ display: 'grid', gap: 8 }}>
                 {order.shipment?.labelId ? (
                   <p>
-                    Mã vận đơn:{' '}
+                    Mã vận đơn GHN:{' '}
                     <strong>{order.shipment.labelId}</strong>{' '}
                     <button type="button" className="btn btn-outline" style={{ marginLeft: 8 }} onClick={() => copyLabelId(order.shipment.labelId)}>
                       {copied ? 'Đã sao chép' : 'Sao chép'}
                     </button>
                   </p>
                 ) : (
-                  <p className="text-sm text-muted">Đang tạo vận đơn GHTK, vui lòng đợi vài giây...</p>
+                  <p className="text-sm text-muted">Đang tạo vận đơn GHN, vui lòng đợi vài giây...</p>
                 )}
-                {order.shipment.ghtkStatusId != null && (
+                {order.shipment?.carrierStatus && (
                   <p className="text-sm">
-                    Trạng thái GHTK: <strong>{getGhtkStatusLabel(order.shipment.ghtkStatusId)}</strong>
-                    <span className="text-muted"> (#{order.shipment.ghtkStatusId})</span>
+                    Trạng thái GHN: <strong>{getCarrierStatusLabel(order.shipment)}</strong>
                   </p>
                 )}
                 {order.shipment.submitError && (
@@ -222,11 +221,11 @@ export default function OrderDetail() {
                     <span className="text-muted">Hệ thống sẽ thử lại tự động...</span>
                   </p>
                 )}
-                <a href="https://i.ghtk.vn" target="_blank" rel="noopener noreferrer" className="btn btn-outline" style={{ width: 'fit-content' }}>
-                  Tra cứu trên GHTK
+                <a href="https://5sao.ghn.dev" target="_blank" rel="noopener noreferrer" className="btn btn-outline" style={{ width: 'fit-content' }}>
+                  Tra cứu trên GHN (DEV)
                 </a>
                 <p className="text-sm text-muted" style={{ marginTop: 4 }}>
-                  Chi tiết hành trình đầy đủ xem trên i.ghtk.vn bằng mã vận đơn ở trên.
+                  Đăng nhập 5sao.ghn.dev → Quản lý đơn hàng → tìm mã vận đơn ở trên.
                 </p>
               </div>
             </section>
@@ -291,7 +290,7 @@ export default function OrderDetail() {
                 </label>
                 {(order.status === 'picked' || order.status === 'shipping') && (
                   <p className="text-sm" style={{ color: '#ca8a04' }}>
-                    Lưu ý: Đơn có thể đã được lấy hàng. Shop sẽ xem xét và liên hệ GHTK nếu cần.
+                    Lưu ý: Đơn có thể đã được lấy hàng. Shop sẽ xem xét và liên hệ GHN nếu cần.
                   </p>
                 )}
                 <button type="submit" className="btn btn-outline" disabled={actionLoading}>
