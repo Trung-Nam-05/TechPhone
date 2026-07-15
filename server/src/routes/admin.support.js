@@ -3,14 +3,17 @@ import mongoose from 'mongoose';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import {
   listAdminConversations,
+  listAdminSupportCustomers,
   listMessages,
+  listMessagesByCustomer,
+  markAllCustomerConversationsRead,
   assignConversation,
   closeConversation,
   markConversationRead,
   getAdminUnreadTotal,
   assertConversationAccess,
 } from '../services/supportChat.js';
-import { emitConversationUpdated } from '../socket.js';
+import { emitConversationUpdated, emitConversationRead } from '../socket.js';
 
 const router = express.Router();
 
@@ -23,6 +26,49 @@ router.get('/conversations', async (req, res, next) => {
     const unreadTotal = await getAdminUnreadTotal();
     return res.json({ items, unreadTotal });
   } catch (error) {
+    return next(error);
+  }
+});
+
+router.get('/customers', async (req, res, next) => {
+  try {
+    const items = await listAdminSupportCustomers({ limit: req.query.limit });
+    const unreadTotal = await getAdminUnreadTotal();
+    return res.json({ items, unreadTotal });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.get('/customers/:customerId/messages', async (req, res, next) => {
+  try {
+    const { customerId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(customerId)) {
+      return res.status(400).json({ message: 'Invalid customer id.' });
+    }
+    const items = await listMessagesByCustomer(customerId, { limit: req.query.limit });
+    return res.json({ items });
+  } catch (error) {
+    if (error.message === 'INVALID_ID') return res.status(400).json({ message: 'Invalid customer id.' });
+    return next(error);
+  }
+});
+
+router.post('/customers/:customerId/read', async (req, res, next) => {
+  try {
+    const { customerId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(customerId)) {
+      return res.status(400).json({ message: 'Invalid customer id.' });
+    }
+    const conversationIds = await markAllCustomerConversationsRead(customerId, { role: 'admin' });
+    for (const convId of conversationIds) {
+      if (convId) emitConversationRead(String(convId), 'admin');
+    }
+    const unreadTotal = await getAdminUnreadTotal();
+    return res.json({ unreadTotal });
+  } catch (error) {
+    if (error.message === 'INVALID_ID') return res.status(400).json({ message: 'Invalid customer id.' });
+    if (error.message === 'FORBIDDEN') return res.status(403).json({ message: 'Forbidden.' });
     return next(error);
   }
 });
@@ -89,6 +135,7 @@ router.post('/conversations/:id/read', async (req, res, next) => {
       role: 'admin',
     });
     emitConversationUpdated(conversation);
+    emitConversationRead(id, 'admin');
     return res.json({ conversation });
   } catch (error) {
     if (error.message === 'NOT_FOUND') return res.status(404).json({ message: 'Conversation not found.' });

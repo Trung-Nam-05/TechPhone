@@ -3,6 +3,10 @@ import mongoose from 'mongoose';
 import Product from '../models/Product.js';
 import Review from '../models/Review.js';
 import { enrichProductsWithFlashSale } from '../services/flashSale.js';
+import {
+  buildProductSearchFilter,
+  sortProductsByRelevance,
+} from '../services/productSearch.js';
 import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -26,6 +30,29 @@ const SORT_MAP = {
   priceDesc: { price: -1 },
 };
 
+router.get('/suggest', async (req, res, next) => {
+  try {
+    const q = String(req.query.q || '').trim();
+    const limit = Math.min(Math.max(Number(req.query.limit) || 8, 1), 12);
+    if (!q) return res.json({ items: [] });
+
+    const query = { isActive: true, deletedAt: null };
+    const searchFilter = buildProductSearchFilter(q);
+    if (searchFilter) Object.assign(query, searchFilter);
+
+    const raw = await Product.find(query)
+      .select('name slug brand price oldPrice image category stock legacyId')
+      .limit(40)
+      .lean();
+
+    const ranked = sortProductsByRelevance(raw, q).slice(0, limit);
+    const items = await enrichProductsWithFlashSale(ranked);
+    return res.json({ items });
+  } catch (error) {
+    return next(error);
+  }
+});
+
 router.get('/', async (req, res, next) => {
   try {
     const {
@@ -38,14 +65,14 @@ router.get('/', async (req, res, next) => {
 
     const page = Math.max(Number(pageRaw) || 1, 1);
     const limit = Math.min(Math.max(Number(limitRaw) || 12, 1), 48);
+    const searchText = String(search || '').trim();
 
     const query = { isActive: true, deletedAt: null };
     if (category && category !== 'all') {
       query['category.key'] = category;
     }
-    if (search.trim()) {
-      query.$text = { $search: search.trim() };
-    }
+    const searchFilter = buildProductSearchFilter(searchText);
+    if (searchFilter) Object.assign(query, searchFilter);
     if (req.query.brand) {
       query.brand = String(req.query.brand).trim().toLowerCase();
     }
@@ -56,15 +83,23 @@ router.get('/', async (req, res, next) => {
     }
 
     const sortQuery = SORT_MAP[sort] || SORT_MAP.newest;
+    const fetchLimit = searchText ? Math.min(limit * 4, 120) : limit;
     const [rawItems, total] = await Promise.all([
       Product.find(query)
         .sort(sortQuery)
-        .skip((page - 1) * limit)
-        .limit(limit)
+        .skip(searchText ? 0 : (page - 1) * limit)
+        .limit(searchText ? fetchLimit : limit)
         .lean(),
       Product.countDocuments(query),
     ]);
-    const items = await enrichProductsWithFlashSale(rawItems);
+
+    let rankedItems = rawItems;
+    if (searchText) {
+      rankedItems = sortProductsByRelevance(rawItems, searchText);
+      rankedItems = rankedItems.slice((page - 1) * limit, (page - 1) * limit + limit);
+    }
+
+    const items = await enrichProductsWithFlashSale(rankedItems);
 
     res.json({
       items,

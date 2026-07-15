@@ -39,13 +39,13 @@ export default function AdminUsers() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 30, marginBottom: 12 }}>Khach hang</h1>
+      <h1 style={{ fontSize: 30, marginBottom: 12 }}>Khách hàng</h1>
       <p className="text-muted" style={{ marginBottom: 14 }}>
-        Kich hoat / vo hieu hoa tai khoan. Tai khoan bi vo hieu khong the dang nhap.
+        Kích hoạt / vô hiệu hóa tài khoản. Tài khoản bị vô hiệu không thể đăng nhập.
       </p>
       {error && <p style={{ color: '#dc2626', marginBottom: 12 }}>{error}</p>}
       {loading ? (
-        <p className="text-muted">Dang tai...</p>
+        <p className="text-muted">Đang tải...</p>
       ) : (
         <div className="card" style={{ padding: 12 }}>
           <div style={{ display: 'grid', gap: 10 }}>
@@ -72,12 +72,12 @@ export default function AdminUsers() {
                     className="btn btn-outline"
                     onClick={() => toggleActive(id, !active)}
                   >
-                    {active ? 'Vo hieu hoa' : 'Kich hoat'}
+                    {active ? 'Vô hiệu hóa' : 'Kích hoạt'}
                   </button>
                 </div>
               );
             })}
-            {items.length === 0 && <p className="text-muted">Chua co khach hang.</p>}
+            {items.length === 0 && <p className="text-muted">Chưa có khách hàng.</p>}
           </div>
         </div>
       )}

@@ -14,12 +14,18 @@
 .admin-support-header h1 {
   margin: 0;
   font-size: 22px;
+  font-weight: 600;
 }
 
 .admin-support-header p {
   margin: 4px 0 0;
   color: #6b7280;
   font-size: 13px;
+}
+
+.admin-support-sub {
+  font-size: 12px !important;
+  color: #9ca3af !important;
 }
 
 .admin-support-layout {
@@ -175,6 +181,23 @@
   opacity: 0.75;
 }
 
+.admin-support-bubble-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 10px;
+  opacity: 0.75;
+}
+
+.admin-support-typing {
+  font-size: 13px;
+  color: #6b7280;
+  font-style: italic;
+  padding: 4px 8px;
+}
+
 .admin-support-form {
   display: flex;
   gap: 8px;
@@ -193,6 +216,11 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+
+.admin-support-closed-tag {
+  color: #b45309 !important;
+  font-size: 12px !important;
 }
 
 .admin-support-placeholder,

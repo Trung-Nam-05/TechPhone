@@ -91,6 +91,11 @@
   background: rgba(255, 255, 255, 0.2);
 }
 
+.tp-search-bar-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
 .tp-search-bar {
   position: relative;
 }

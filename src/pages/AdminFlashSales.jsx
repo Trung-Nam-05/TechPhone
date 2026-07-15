@@ -258,7 +258,7 @@ export default function AdminFlashSales() {
 
         <div className="card" style={{ padding: 12 }}>
           {loading ? (
-            <p className="text-muted">Dang tai Flash Sale...</p>
+            <p className="text-muted">Đang tải Flash Sale...</p>
           ) : (
             <div style={{ display: 'grid', gap: 8 }}>
               {items.map((item) => (
@@ -288,7 +288,7 @@ export default function AdminFlashSales() {
                   </div>
                 </article>
               ))}
-              {items.length === 0 && <p className="text-muted">Chua co campaign flash sale.</p>}
+              {items.length === 0 && <p className="text-muted">Chưa có chiến dịch flash sale.</p>}
             </div>
           )}
         </div>

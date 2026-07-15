@@ -26,8 +26,8 @@ async function transitionOrder(order, nextStatus, note) {
 
 export async function runFulfillmentDemoTick() {
   const now = Date.now();
-  const confirmToShippingMs = readMs('FULFILLMENT_CONFIRM_TO_SHIPPING_MS', 60 * 60 * 1000);
-  const shippingToCompleteMs = readMs('FULFILLMENT_SHIPPING_TO_COMPLETE_MS', 24 * 60 * 60 * 1000);
+  const confirmToShippingMs = readMs('FULFILLMENT_CONFIRM_TO_SHIPPING_MS', 30 * 1000);
+  const shippingToCompleteMs = readMs('FULFILLMENT_SHIPPING_TO_COMPLETE_MS', 30 * 1000);
 
   const confirmedOrders = await Order.find({
     status: 'confirmed',

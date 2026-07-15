@@ -86,7 +86,10 @@ export async function sendMessage({ conversationId, senderId, senderRole, body }
     userId: senderId,
     role: senderRole,
   });
-  if (conversation.status === 'closed') throw new Error('CONVERSATION_CLOSED');
+  if (conversation.status === 'closed') {
+    if (senderRole !== 'admin') throw new Error('CONVERSATION_CLOSED');
+    conversation.status = 'open';
+  }
 
   const message = await Message.create({
     conversation: conversation._id,
@@ -106,17 +109,30 @@ export async function sendMessage({ conversationId, senderId, senderRole, body }
   await conversation.save();
 
   const populated = await Message.findById(message._id).populate('sender', 'name email role').lean();
-  return { message: populated, conversation: conversation.toObject() };
+  const populatedConversation = await Conversation.findById(conversation._id)
+    .populate('customer', 'name email')
+    .populate('assignedAdmin', 'name email')
+    .lean();
+  return { message: populated, conversation: populatedConversation };
 }
 
 export async function markConversationRead(conversationId, { userId, role }) {
   const conversation = await assertConversationAccess(conversationId, { userId, role });
+  const readAt = new Date();
+  const otherRole = role === 'admin' ? 'customer' : 'admin';
+
   if (role === 'admin') {
     conversation.unreadByAdmin = 0;
   } else {
     conversation.unreadByCustomer = 0;
   }
   await conversation.save();
+
+  await Message.updateMany(
+    { conversation: conversation._id, senderRole: otherRole, readAt: null },
+    { $set: { readAt } },
+  );
+
   return Conversation.findById(conversationId)
     .populate('customer', 'name email')
     .populate('assignedAdmin', 'name email')
@@ -154,6 +170,113 @@ export async function listAdminConversations({ status = 'open', limit = 50 } = {
     .populate('customer', 'name email')
     .populate('assignedAdmin', 'name email')
     .lean();
+}
+
+export async function listAdminSupportCustomers({ limit = 100 } = {}) {
+  const cap = Math.min(Math.max(Number(limit) || 100, 1), 200);
+
+  const rows = await Conversation.aggregate([
+    {
+      $lookup: {
+        from: 'messages',
+        localField: '_id',
+        foreignField: 'conversation',
+        as: 'messageDocs',
+      },
+    },
+    { $match: { 'messageDocs.0': { $exists: true } } },
+    { $sort: { lastMessageAt: -1 } },
+    {
+      $group: {
+        _id: '$customer',
+        lastMessageAt: { $first: '$lastMessageAt' },
+        lastMessagePreview: { $first: '$lastMessagePreview' },
+        unreadByAdmin: { $sum: '$unreadByAdmin' },
+        latestConversationId: { $first: '$_id' },
+        conversations: {
+          $push: {
+            _id: '$_id',
+            status: '$status',
+            lastMessageAt: '$lastMessageAt',
+            assignedAdmin: '$assignedAdmin',
+          },
+        },
+      },
+    },
+    { $sort: { lastMessageAt: -1 } },
+    { $limit: cap },
+    {
+      $lookup: {
+        from: 'users',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'customerDoc',
+      },
+    },
+    { $unwind: { path: '$customerDoc', preserveNullAndEmptyArrays: true } },
+  ]);
+
+  return rows.map((row) => {
+    const openConv = row.conversations.find((item) => item.status === 'open');
+    const activeConversationId = openConv?._id || row.latestConversationId;
+    const activeStatus = openConv ? 'open' : 'closed';
+    const activeAssignedAdmin = openConv?.assignedAdmin || null;
+
+    return {
+      customerId: row._id,
+      customer: {
+        _id: row.customerDoc?._id,
+        name: row.customerDoc?.name || 'Khách hàng',
+        email: row.customerDoc?.email || '',
+      },
+      lastMessageAt: row.lastMessageAt,
+      lastMessagePreview: row.lastMessagePreview || '',
+      unreadByAdmin: row.unreadByAdmin || 0,
+      activeConversationId,
+      activeStatus,
+      assignedAdmin: activeAssignedAdmin,
+      conversationCount: row.conversations.length,
+    };
+  });
+}
+
+export async function listMessagesByCustomer(customerId, { limit = 200 } = {}) {
+  if (!mongoose.Types.ObjectId.isValid(customerId)) throw new Error('INVALID_ID');
+
+  const customerOid = new mongoose.Types.ObjectId(customerId);
+  const conversations = await Conversation.find({ customer: customerOid }).select('_id').lean();
+  if (!conversations.length) return [];
+
+  const convIds = conversations.map((item) => item._id);
+  const cap = Math.min(Math.max(Number(limit) || 200, 1), 500);
+
+  const items = await Message.find({ conversation: { $in: convIds } })
+    .sort({ createdAt: 1 })
+    .limit(cap)
+    .populate('sender', 'name email role')
+    .lean();
+
+  return items;
+}
+
+export async function markAllCustomerConversationsRead(customerId, { role } = {}) {
+  if (role !== 'admin') throw new Error('FORBIDDEN');
+  if (!mongoose.Types.ObjectId.isValid(customerId)) throw new Error('INVALID_ID');
+
+  const customerOid = new mongoose.Types.ObjectId(customerId);
+  const readAt = new Date();
+  const conversations = await Conversation.find({ customer: customerOid }).select('_id').lean();
+  const convIds = conversations.map((item) => item._id);
+
+  if (!convIds.length) return [];
+
+  await Conversation.updateMany({ customer: customerOid }, { $set: { unreadByAdmin: 0 } });
+  await Message.updateMany(
+    { conversation: { $in: convIds }, senderRole: 'customer', readAt: null },
+    { $set: { readAt } },
+  );
+
+  return convIds;
 }
 
 export async function getCustomerConversation(customerId) {

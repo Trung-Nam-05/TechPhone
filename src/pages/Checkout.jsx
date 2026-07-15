@@ -29,7 +29,7 @@ const INSTALLMENT_METHODS = [
 export default function Checkout() {
   const navigate = useNavigate();
   const { authFetch, isAuthenticated } = useAuth();
-  const { cartItems, cartCount, cartTotal, clearCart } = useCart();
+  const { cartItems, cartCount, cartTotal, clearCart, syncCartNow } = useCart();
   const { track } = useAnalytics();
   const [isSuccess, setIsSuccess] = useState(false);
   const [createdOrder, setCreatedOrder] = useState(null);
@@ -89,6 +89,8 @@ export default function Checkout() {
     };
 
     try {
+      await syncCartNow();
+
       await track('begin_checkout', {
         metadata: {
           cartCount,

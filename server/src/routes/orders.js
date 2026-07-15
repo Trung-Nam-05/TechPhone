@@ -20,6 +20,7 @@ import {
   validateCustomerRequestCancel,
   canCustomerCancelImmediate,
 } from '../services/orderStateMachine.js';
+import { MAX_LINE_QUANTITY } from '../constants/cartLimits.js';
 
 const router = express.Router();
 
@@ -115,6 +116,9 @@ router.post('/', async (req, res, next) => {
         const product = item.product;
         if (!product || !product.isActive) {
           throw new Error('PRODUCT_UNAVAILABLE');
+        }
+        if (item.quantity > MAX_LINE_QUANTITY) {
+          throw new Error(`LINE_QTY_LIMIT:${product._id}:${MAX_LINE_QUANTITY}`);
         }
 
         // Atomic stock decrement to reduce oversell risk on concurrent checkouts.
@@ -347,6 +351,12 @@ router.post('/', async (req, res, next) => {
       const [, productId, limit] = error.message.split(':');
       return res.status(400).json({
         message: `Vuot gioi han mua flash sale cho san pham ${productId}. Toi da moi don: ${limit}.`,
+      });
+    }
+    if (error.message.startsWith('LINE_QTY_LIMIT:')) {
+      const limit = error.message.split(':')[2] || MAX_LINE_QUANTITY;
+      return res.status(400).json({
+        message: `Mỗi sản phẩm tối đa ${limit} sản phẩm/đơn.`,
       });
     }
     return next(error);

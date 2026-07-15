@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { Send, UserCheck, XCircle } from 'lucide-react';
+import { Send } from 'lucide-react';
 import { useSupportChat } from '../context/SupportChatContext';
+import { getOwnMessageStatus } from '../utils/supportMessageStatus';
 import './AdminSupport.css';
 
 function formatTime(value) {
@@ -13,85 +14,99 @@ function formatTime(value) {
   });
 }
 
-function getId(item) {
-  return item?._id || item?.id;
+function getCustomerId(item) {
+  return String(item?.customerId || item?.customer?._id || '');
 }
+
+const TYPING_IDLE_MS = 60_000;
 
 export default function AdminSupport() {
   const {
-    conversations,
-    selectedConversationId,
-    selectConversation,
+    supportCustomers,
+    selectedCustomerId,
+    selectCustomer,
     messages,
     loading,
     error,
     sendMessage,
-    closeConversation,
-    assignToMe,
-    loadAdminConversations,
+    emitTyping,
+    loadAdminSupportCustomers,
     socketConnected,
-    markRead,
     activeConversationId,
+    selectedCustomer,
+    peerTyping,
   } = useSupportChat();
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const listRef = useRef(null);
-
-  const selected = conversations.find((item) => getId(item) === selectedConversationId);
+  const typingTimerRef = useRef(null);
 
   useEffect(() => {
-    loadAdminConversations().catch(() => {});
-  }, [loadAdminConversations]);
+    loadAdminSupportCustomers().catch(() => {});
+  }, [loadAdminSupportCustomers]);
 
   useEffect(() => {
     if (listRef.current) {
       listRef.current.scrollTop = listRef.current.scrollHeight;
     }
-  }, [messages, selectedConversationId]);
+  }, [messages, selectedCustomerId, peerTyping]);
 
-  useEffect(() => {
-    if (activeConversationId) {
-      markRead(activeConversationId);
-    }
-  }, [activeConversationId, messages.length, markRead]);
+  useEffect(() => () => {
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    emitTyping(false);
+  }, [emitTyping]);
+
+  const handleDraftChange = (value) => {
+    setDraft(value);
+    if (!activeConversationId) return;
+    emitTyping(true);
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    typingTimerRef.current = setTimeout(() => emitTyping(false), TYPING_IDLE_MS);
+  };
 
   const handleSend = async (event) => {
     event.preventDefault();
     const text = draft.trim();
-    if (!text || sending || !activeConversationId) return;
+    if (!text || sending || !selectedCustomer) return;
+    setDraft('');
+    emitTyping(false);
     setSending(true);
     try {
       await sendMessage(text);
-      setDraft('');
     } finally {
       setSending(false);
     }
   };
+
+  const canReply = Boolean(selectedCustomer);
 
   return (
     <div className="admin-support-page">
       <div className="admin-support-header">
         <div>
           <h1>Hỗ trợ khách hàng</h1>
-          <p>{socketConnected ? 'Realtime đang bật' : 'Đang đồng bộ qua polling'}</p>
+          <p>Hội thoại từ tab Nhân viên — không bao gồm chat AI</p>
+          <p className="admin-support-sub">{socketConnected ? 'Realtime đang bật' : 'Đang đồng bộ qua polling'}</p>
         </div>
-        <button type="button" className="btn btn-outline" onClick={() => loadAdminConversations()}>
+        <button type="button" className="btn btn-outline" onClick={() => loadAdminSupportCustomers()}>
           Làm mới
         </button>
       </div>
 
       <div className="admin-support-layout">
         <aside className="admin-support-list">
-          {conversations.length === 0 && <p className="admin-support-empty">Chưa có hội thoại mở.</p>}
-          {conversations.map((item) => {
-            const id = getId(item);
-            const isActive = id === selectedConversationId;
+          {supportCustomers.length === 0 && (
+            <p className="admin-support-empty">Chưa có khách hàng đã chat.</p>
+          )}
+          {supportCustomers.map((item) => {
+            const id = getCustomerId(item);
+            const isActive = id === String(selectedCustomerId || '');
             return (
               <button
                 key={id}
                 type="button"
                 className={`admin-support-item ${isActive ? 'active' : ''}`}
-                onClick={() => selectConversation(id)}
+                onClick={() => selectCustomer(id)}
               >
                 <div className="admin-support-item-top">
                   <strong>{item.customer?.name || 'Khách hàng'}</strong>
@@ -108,57 +123,50 @@ export default function AdminSupport() {
         </aside>
 
         <section className="admin-support-chat">
-          {!selected ? (
-            <div className="admin-support-placeholder">Chọn một hội thoại để bắt đầu trả lời.</div>
+          {!selectedCustomer ? (
+            <div className="admin-support-placeholder">Chọn khách hàng để xem lịch sử chat.</div>
           ) : (
             <>
               <header className="admin-support-chat-header">
                 <div>
-                  <strong>{selected.customer?.name}</strong>
-                  <p>{selected.customer?.email}</p>
-                  {selected.assignedAdmin?.name && (
-                    <p className="admin-support-assigned">Phụ trách: {selected.assignedAdmin.name}</p>
-                  )}
-                </div>
-                <div className="admin-support-actions">
-                  <button type="button" className="btn btn-outline" onClick={assignToMe}>
-                    <UserCheck size={16} />
-                    Gán cho tôi
-                  </button>
-                  {selected.status === 'open' && (
-                    <button type="button" className="btn btn-outline" onClick={closeConversation}>
-                      <XCircle size={16} />
-                      Đóng hội thoại
-                    </button>
-                  )}
+                  <strong>{selectedCustomer.customer?.name}</strong>
+                  <p>{selectedCustomer.customer?.email}</p>
                 </div>
               </header>
 
               <div className="admin-support-messages" ref={listRef}>
                 {loading && <p className="admin-support-empty">Đang tải tin nhắn...</p>}
+                {!loading && messages.length === 0 && (
+                  <p className="admin-support-empty">Chưa có tin nhắn trong lịch sử.</p>
+                )}
                 {!loading && messages.map((msg) => {
                   const isMine = msg.senderRole === 'admin';
+                  const statusLabel = getOwnMessageStatus(msg, messages, 'admin');
                   return (
                     <div key={msg._id} className={`admin-support-bubble-row ${isMine ? 'mine' : 'theirs'}`}>
                       <div className="admin-support-bubble">
                         <p>{msg.body}</p>
-                        <span>{formatTime(msg.createdAt)}</span>
+                        <div className="admin-support-bubble-meta">
+                          {!msg.pending && <span>{formatTime(msg.createdAt)}</span>}
+                          {statusLabel && <span className="chat-message-status">{statusLabel}</span>}
+                        </div>
                       </div>
                     </div>
                   );
                 })}
+                {peerTyping && (
+                  <p className="admin-support-typing">Khách hàng đang nhập tin nhắn...</p>
+                )}
               </div>
 
               {error && <p className="admin-support-error">{error}</p>}
 
-              {selected.status === 'closed' ? (
-                <p className="admin-support-empty">Hội thoại đã đóng.</p>
-              ) : (
+              {canReply ? (
                 <form className="admin-support-form" onSubmit={handleSend}>
                   <input
                     type="text"
                     value={draft}
-                    onChange={(e) => setDraft(e.target.value)}
+                    onChange={(e) => handleDraftChange(e.target.value)}
                     placeholder="Nhập phản hồi..."
                     maxLength={2000}
                   />
@@ -167,7 +175,7 @@ export default function AdminSupport() {
                     Gửi
                   </button>
                 </form>
-              )}
+              ) : null}
             </>
           )}
         </section>

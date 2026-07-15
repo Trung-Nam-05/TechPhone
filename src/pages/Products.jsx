@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, ChevronDown, Search } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ChevronDown } from 'lucide-react';
+import ProductSearchInput from '../components/ProductSearchInput';
 import ProductCard from '../components/ProductCard';
 import { useCart } from '../context/CartContext';
 import { PRODUCT_CATEGORIES, PRODUCTS, getCategoryLabel } from '../data/products';
@@ -642,9 +643,8 @@ export default function Products() {
     [filter, searchTerm, remoteProducts, hasRemoteLoaded],
   );
 
-  const handleSearchSubmit = (event) => {
-    event.preventDefault();
-    const normalized = queryInput.trim();
+  const handleSearchSubmit = (query) => {
+    const normalized = (query !== undefined ? query : queryInput).trim();
     const nextParams = {};
     if (filter !== 'all') nextParams.category = filter;
     if (normalized) nextParams.search = normalized;
@@ -747,8 +747,10 @@ export default function Products() {
                       return 'Trả góp 0%';
                     })()}
                   </span>
-                  <p className="tp-price">{product.price.toLocaleString('vi-VN')} đ</p>
-                  <p className="tp-old-price">{product.oldPrice.toLocaleString('vi-VN')} đ</p>
+                  <p className="tp-price">{Number(product.price || 0).toLocaleString('vi-VN')} đ</p>
+                  <p className="tp-old-price">
+                    {product.oldPrice != null ? `${Number(product.oldPrice).toLocaleString('vi-VN')} đ` : ''}
+                  </p>
                   <h4>{product.name}</h4>
                   {product.flashSale && (
                     <p className="text-sm text-muted">Con lai: {product.flashSale.remainingQuantity || 0} suat</p>
@@ -883,7 +885,7 @@ export default function Products() {
                         return 'Trả góp 0%';
                       })()}
                     </span>
-                    <p className="tp-price">{product.price.toLocaleString('vi-VN')} đ</p>
+                    <p className="tp-price">{Number(product.price || 0).toLocaleString('vi-VN')} đ</p>
                     {product.oldPrice && <p className="tp-old-price">{product.oldPrice.toLocaleString('vi-VN')} đ</p>}
                     <Link to={`/product/${product.id || product.legacyId || product._id}`}>
                       <h4>{product.name}</h4>
@@ -929,17 +931,14 @@ export default function Products() {
                 </button>
               ))}
             </div>
-            <form className="tp-products-search" onSubmit={handleSearchSubmit}>
-              <input
-                type="text"
-                value={queryInput}
-                onChange={(event) => setQueryInput(event.target.value)}
-                placeholder="Tìm theo tên sản phẩm..."
-              />
-              <button type="submit" aria-label="Tìm kiếm sản phẩm">
-                <Search size={16} />
-              </button>
-            </form>
+            <ProductSearchInput
+              value={queryInput}
+              onChange={setQueryInput}
+              onSubmit={handleSearchSubmit}
+              placeholder="Tìm theo tên sản phẩm..."
+              className="tp-products-search-wrap"
+              inputClassName="tp-products-search"
+            />
           </div>
           <div className="tp-products-header">
             <h1>{filter === 'all' ? 'Tất cả sản phẩm' : getCategoryLabel(filter)}</h1>

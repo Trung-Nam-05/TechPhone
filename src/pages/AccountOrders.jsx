@@ -55,13 +55,9 @@ export default function AccountOrders() {
   }
 
   return (
-    <div className="container" style={{ maxWidth: 900, padding: '24px 16px' }}>
-      <p style={{ marginBottom: 16 }}>
-        <Link to="/account/profile">{t('account.profileNav')}</Link>
-        {' · '}
-        <Link to="/">{t('account.homeLink')}</Link>
-      </p>
-      <h1 style={{ fontSize: 28, marginBottom: 16 }}>{t('account.ordersTitle')}</h1>
+    <div>
+      <h1 className="account-page-title">{t('account.ordersTitle')}</h1>
+      <p className="account-page-sub">Theo dõi trạng thái và chi tiết các đơn hàng của bạn.</p>
       {error && <p style={{ color: '#dc2626', marginBottom: 12 }}>{error}</p>}
       {loading ? (
         <p className="text-muted">{t('account.loadingOrders')}</p>

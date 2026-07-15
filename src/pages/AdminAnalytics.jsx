@@ -60,7 +60,7 @@ export default function AdminAnalytics() {
   };
 
   if (loading) {
-    return <p className="text-muted">Dang tai dashboard funnel...</p>;
+    return <p className="text-muted">Đang tải dashboard funnel...</p>;
   }
 
   if (error) {
@@ -69,9 +69,9 @@ export default function AdminAnalytics() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 30, marginBottom: 12 }}>Funnel dashboard (weekly review)</h1>
+      <h1 style={{ fontSize: 30, marginBottom: 12 }}>Dashboard funnel (đánh giá hàng tuần)</h1>
       <p className="text-muted" style={{ marginBottom: 16 }}>
-        Theo doi 4 buoc chinh: view product - add to cart - begin checkout - purchase.
+        Theo dõi 4 bước chính: xem sản phẩm — thêm giỏ — bắt đầu thanh toán — mua hàng.
       </p>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4" style={{ marginBottom: 14 }}>
         <article className="card" style={{ padding: 12 }}>
@@ -92,29 +92,29 @@ export default function AdminAnalytics() {
         </article>
       </div>
       <div className="card" style={{ padding: 14 }}>
-        <h2 style={{ fontSize: 20, marginBottom: 8 }}>Conversion rates</h2>
-        <p style={{ marginBottom: 4 }}>View to Cart: {funnel?.conversionRates?.viewToCart || 0}%</p>
-        <p style={{ marginBottom: 4 }}>Cart to Checkout: {funnel?.conversionRates?.cartToCheckout || 0}%</p>
-        <p>Checkout to Purchase: {funnel?.conversionRates?.checkoutToPurchase || 0}%</p>
+        <h2 style={{ fontSize: 20, marginBottom: 8 }}>Tỷ lệ chuyển đổi</h2>
+        <p style={{ marginBottom: 4 }}>Xem → Giỏ: {funnel?.conversionRates?.viewToCart || 0}%</p>
+        <p style={{ marginBottom: 4 }}>Giỏ → Thanh toán: {funnel?.conversionRates?.cartToCheckout || 0}%</p>
+        <p>Thanh toán → Mua: {funnel?.conversionRates?.checkoutToPurchase || 0}%</p>
       </div>
 
       <div className="card" style={{ padding: 14, marginTop: 14 }}>
-        <h2 style={{ fontSize: 20, marginBottom: 8 }}>Doanh thu (tong tien don)</h2>
+        <h2 style={{ fontSize: 20, marginBottom: 8 }}>Doanh thu (tổng tiền đơn)</h2>
         <p style={{ marginBottom: 4 }}>
-          Don hoan thanh (status=completed):{' '}
+          Đơn hoàn thành (status=completed):{' '}
           <strong>{(revenue?.completedOrders?.totalRevenue || 0).toLocaleString('vi-VN')} đ</strong> —{' '}
-          {revenue?.completedOrders?.orderCount || 0} don
+          {revenue?.completedOrders?.orderCount || 0} đơn
         </p>
         <p style={{ marginBottom: 12 }}>
-          Tat ca don (moi trang thai):{' '}
+          Tất cả đơn (mọi trạng thái):{' '}
           <strong>{(revenue?.allOrders?.sumTotal || 0).toLocaleString('vi-VN')} đ</strong> — {revenue?.allOrders?.orderCount || 0}{' '}
-          don
+          đơn
         </p>
         <button type="button" className="btn btn-outline" onClick={() => exportOrdersCsv().catch((e) => setError(e.message))}>
-          Xuat CSV don hang
+          Xuất CSV đơn hàng
         </button>
         <p className="text-sm text-muted" style={{ marginTop: 8 }}>
-          File CSV co the mo bang Excel. Bao gom ma don, trang thai, tong tien, email, yeu cau huy.
+          File CSV có thể mở bằng Excel. Bao gồm mã đơn, trạng thái, tổng tiền, email, yêu cầu hủy.
         </p>
       </div>
     </div>

@@ -105,13 +105,26 @@ router.patch('/me', requireAuth, async (req, res, next) => {
     if (!user || user.isActive === false) {
       return res.status(403).json({ message: 'Account is disabled.' });
     }
-    const { name, currentPassword, newPassword } = req.body || {};
+    const { name, phone, avatar, currentPassword, newPassword } = req.body || {};
     if (name !== undefined) {
       const nextName = String(name || '').trim();
       if (!nextName) {
         return res.status(400).json({ message: 'name cannot be empty.' });
       }
       user.name = nextName;
+    }
+    if (phone !== undefined) {
+      user.phone = String(phone || '').trim();
+    }
+    if (avatar !== undefined) {
+      const nextAvatar = String(avatar || '').trim();
+      if (nextAvatar && !nextAvatar.startsWith('data:image/')) {
+        return res.status(400).json({ message: 'Avatar must be an image data URL.' });
+      }
+      if (nextAvatar.length > 220_000) {
+        return res.status(400).json({ message: 'Avatar file is too large (max ~150KB).' });
+      }
+      user.avatar = nextAvatar;
     }
     if (newPassword !== undefined && String(newPassword).trim()) {
       const pwd = String(newPassword);
@@ -124,7 +137,7 @@ router.patch('/me', requireAuth, async (req, res, next) => {
       user.passwordHash = hashPassword(pwd);
     }
     await user.save();
-    const fresh = await User.findById(user._id).select('_id name email role isActive createdAt updatedAt');
+    const fresh = await User.findById(user._id).select('_id name email phone avatar role isActive createdAt updatedAt');
     return res.json({ user: toSafeUser(fresh) });
   } catch (error) {
     return next(error);

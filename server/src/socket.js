@@ -8,6 +8,8 @@ import {
 
 let io = null;
 
+const ADMIN_SUPPORT_ROOM = 'admin:support';
+
 function conversationRoom(conversationId) {
   return `conversation:${conversationId}`;
 }
@@ -18,8 +20,28 @@ export function getIo() {
 
 export function emitConversationUpdated(conversation) {
   if (!io || !conversation?._id) return;
-  const room = conversationRoom(conversation._id);
-  io.to(room).emit('conversation:updated', { conversation });
+  const payload = { conversation };
+  io.to(conversationRoom(conversation._id)).emit('conversation:updated', payload);
+  io.to(ADMIN_SUPPORT_ROOM).emit('conversation:updated', payload);
+}
+
+export function emitConversationRead(conversationId, readerRole) {
+  if (!io || !conversationId) return;
+  const payload = { conversationId: String(conversationId), readerRole };
+  io.to(conversationRoom(conversationId)).emit('conversation:read', payload);
+  io.to(ADMIN_SUPPORT_ROOM).emit('conversation:read', payload);
+}
+
+export function emitTypingUpdate(conversationId, role, typing) {
+  if (!io || !conversationId) return;
+  const payload = { conversationId: String(conversationId), role, typing: Boolean(typing) };
+  io.to(conversationRoom(conversationId)).emit('typing:update', payload);
+  io.to(ADMIN_SUPPORT_ROOM).emit('typing:update', payload);
+}
+
+export function emitAdminSupportMessage(message) {
+  if (!io || !message) return;
+  io.to(ADMIN_SUPPORT_ROOM).emit('message:new', { message });
 }
 
 export function initSocket(httpServer) {
@@ -55,6 +77,10 @@ export function initSocket(httpServer) {
   });
 
   io.on('connection', (socket) => {
+    if (socket.data.role === 'admin') {
+      socket.join(ADMIN_SUPPORT_ROOM);
+    }
+
     socket.on('conversation:join', async ({ conversationId } = {}) => {
       try {
         if (!conversationId) throw new Error('Missing conversationId');
@@ -79,8 +105,10 @@ export function initSocket(httpServer) {
         });
         const room = conversationRoom(conversationId);
         io.to(room).emit('message:new', { message: result.message });
-        io.to(room).emit('conversation:updated', { conversation: result.conversation });
+        emitAdminSupportMessage(result.message);
+        emitConversationUpdated(result.conversation);
         socket.emit('message:ack', { message: result.message });
+        emitTypingUpdate(conversationId, socket.data.role, false);
       } catch (error) {
         const code = error.message;
         let message = 'Failed to send message.';
@@ -98,11 +126,28 @@ export function initSocket(httpServer) {
           userId: socket.data.userId,
           role: socket.data.role,
         });
-        const room = conversationRoom(conversationId);
-        io.to(room).emit('conversation:updated', { conversation });
+        emitConversationUpdated(conversation);
+        emitConversationRead(conversationId, socket.data.role);
       } catch (error) {
         socket.emit('error', { message: error.message || 'Cannot mark as read.' });
       }
+    });
+
+    socket.on('typing:start', ({ conversationId } = {}) => {
+      if (!conversationId) return;
+      emitTypingUpdate(conversationId, socket.data.role, true);
+    });
+
+    socket.on('typing:stop', ({ conversationId } = {}) => {
+      if (!conversationId) return;
+      emitTypingUpdate(conversationId, socket.data.role, false);
+    });
+
+    socket.on('message:delivered', ({ conversationId, messageId } = {}) => {
+      if (!conversationId || !messageId) return;
+      const payload = { conversationId: String(conversationId), messageId: String(messageId) };
+      io.to(conversationRoom(conversationId)).emit('message:delivered', payload);
+      io.to(ADMIN_SUPPORT_ROOM).emit('message:delivered', payload);
     });
   });
 

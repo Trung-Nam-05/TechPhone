@@ -22,8 +22,11 @@ import AdminProgram from './pages/AdminProgram';
 import AdminFlashSales from './pages/AdminFlashSales';
 import Installment from './pages/Installment';
 import Coupon from './pages/Coupon';
+import AccountLayout from './layouts/AccountLayout';
+import AccountDashboard from './pages/AccountDashboard';
 import AccountProfile from './pages/AccountProfile';
 import AccountOrders from './pages/AccountOrders';
+import AccountSecurity from './pages/AccountSecurity';
 import OrderDetail from './pages/OrderDetail';
 import AdminUsers from './pages/AdminUsers';
 import AdminSupport from './pages/AdminSupport';
@@ -59,10 +62,13 @@ function App() {
           </ProtectedRoute>
         )}
       >
-        <Route index element={<Navigate to="profile" replace />} />
-        <Route path="profile" element={<AccountProfile />} />
-        <Route path="orders" element={<AccountOrders />} />
-        <Route path="orders/:orderId" element={<OrderDetail />} />
+        <Route element={<AccountLayout />}>
+          <Route index element={<AccountDashboard />} />
+          <Route path="profile" element={<AccountProfile />} />
+          <Route path="orders" element={<AccountOrders />} />
+          <Route path="orders/:orderId" element={<OrderDetail />} />
+          <Route path="security" element={<AccountSecurity />} />
+        </Route>
       </Route>
 
       <Route path="/" element={<StoreLayout />}>

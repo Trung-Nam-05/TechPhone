@@ -4,7 +4,6 @@ import {
   CircleHelp,
   CreditCard,
   Menu,
-  Search,
   ShoppingCart,
   Smartphone,
   User,
@@ -15,6 +14,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/I18nContext';
+import ProductSearchInput from './ProductSearchInput';
 import './Header.css';
 
 const QUICK_LINK_KEYS = [
@@ -277,9 +277,8 @@ export default function Header() {
     [t],
   );
 
-  const handleSearchSubmit = (event) => {
-    event.preventDefault();
-    const trimmedQuery = searchQuery.trim();
+  const handleSearchSubmit = (query) => {
+    const trimmedQuery = String(query || searchQuery).trim();
     if (!trimmedQuery) return;
     navigate(`/products?search=${encodeURIComponent(trimmedQuery)}`);
     setIsMenuOpen(false);
@@ -336,23 +335,19 @@ export default function Header() {
             <span>{t('header.menuCategory')}</span>
           </button>
 
-          <form className="tp-search-bar" onSubmit={handleSearchSubmit}>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder={t('header.searchPlaceholder')}
-              data-testid="header-search"
-            />
-            <button type="submit" aria-label={t('header.searchAria')} data-testid="header-search-submit">
-              <Search size={18} />
-            </button>
-          </form>
+          <ProductSearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            onSubmit={handleSearchSubmit}
+            placeholder={t('header.searchPlaceholder')}
+            className="tp-search-bar-wrap"
+            inputClassName="tp-search-bar"
+          />
 
           {isAuthenticated ? (
             <>
               <Link
-                to="/account/profile"
+                to="/account"
                 className="tp-round-action"
                 aria-label={t('header.account')}
                 title={user?.name || t('header.account')}
@@ -398,18 +393,14 @@ export default function Header() {
         </div>
 
         <div className="container tp-mobile-search-row">
-          <form className="tp-search-bar" onSubmit={handleSearchSubmit}>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder={t('header.searchPlaceholder')}
-              data-testid="header-search"
-            />
-            <button type="submit" aria-label={t('header.searchAria')} data-testid="header-search-submit">
-              <Search size={18} />
-            </button>
-          </form>
+          <ProductSearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            onSubmit={handleSearchSubmit}
+            placeholder={t('header.searchPlaceholder')}
+            className="tp-search-bar-wrap"
+            inputClassName="tp-search-bar"
+          />
         </div>
       </div>
 

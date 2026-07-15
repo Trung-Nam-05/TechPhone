@@ -1,6 +1,7 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
 import { apiFetch } from '../config/api';
 import { useAnalytics } from './AnalyticsContext';
+import { MAX_LINE_QUANTITY, MAX_LINE_QUANTITY_MESSAGE } from '../constants/cartLimits';
 
 const CartContext = createContext();
 
@@ -109,14 +110,30 @@ export function CartProvider({ children }) {
     };
   }, []);
 
+  const showToast = (message) => {
+    setToastMessage(message);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  const syncCartNow = useCallback(async (items) => {
+    const source = items ?? cartItems;
+    return syncCartToServer(source);
+  }, [cartItems]);
+
   const addToCart = (product) => {
+    const incomingId = product.id || product.legacyId || product._id;
+    const existingItem = cartItems.find((item) => item.id === incomingId);
+    if (existingItem && existingItem.quantity >= MAX_LINE_QUANTITY) {
+      showToast(MAX_LINE_QUANTITY_MESSAGE);
+      return;
+    }
+
     setCartItems((prev) => {
-      const incomingId = product.id || product.legacyId || product._id;
-      const existingItem = prev.find((item) => item.id === incomingId);
+      const existing = prev.find((item) => item.id === incomingId);
       let nextItems;
-      if (existingItem) {
+      if (existing) {
         nextItems = prev.map((item) =>
-          item.id === incomingId ? { ...item, quantity: item.quantity + 1 } : item,
+          item.id === incomingId ? { ...item, quantity: Math.min(item.quantity + 1, MAX_LINE_QUANTITY) } : item,
         );
       } else {
         nextItems = [
@@ -137,7 +154,7 @@ export function CartProvider({ children }) {
       return nextItems;
     });
 
-    setToastMessage(`Thêm "${product.name}" vào giỏ thành công!`);
+    showToast(`Thêm "${product.name}" vào giỏ thành công!`);
     track('add_to_cart', {
       productId: product._id || null,
       metadata: {
@@ -145,9 +162,6 @@ export function CartProvider({ children }) {
         price: product.price,
       },
     });
-    setTimeout(() => {
-      setToastMessage(null);
-    }, 3000);
   };
 
   const removeFromCart = (productId) => {
@@ -162,6 +176,10 @@ export function CartProvider({ children }) {
     if (quantity <= 0) {
       removeFromCart(productId);
       return;
+    }
+    if (quantity > MAX_LINE_QUANTITY) {
+      showToast(MAX_LINE_QUANTITY_MESSAGE);
+      quantity = MAX_LINE_QUANTITY;
     }
 
     setCartItems((prev) => {
@@ -200,6 +218,7 @@ export function CartProvider({ children }) {
         removeFromCart,
         updateQuantity,
         clearCart,
+        syncCartNow,
         toastMessage,
         isSyncing,
         syncError,

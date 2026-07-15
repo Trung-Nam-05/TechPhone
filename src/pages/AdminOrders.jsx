@@ -9,6 +9,12 @@ import {
 import { OrderStatusBadge, PaymentStatusBadge } from '../components/OrderStatusBadge';
 
 const SUPPORT_STATUS_OPTIONS = ['none', 'customer_contacted', 'awaiting_response', 'resolved'];
+const SUPPORT_STATUS_LABELS = {
+  none: 'Chưa xử lý hỗ trợ',
+  customer_contacted: 'Đã liên hệ khách',
+  awaiting_response: 'Chờ khách phản hồi',
+  resolved: 'Đã xử lý xong',
+};
 const INSTALLMENT_STATUS_OPTIONS = ['draft', 'pending_review', 'approved', 'rejected', 'completed', 'cancelled'];
 
 export default function AdminOrders() {
@@ -146,6 +152,9 @@ export default function AdminOrders() {
   return (
     <div>
       <h1 style={{ fontSize: 30, marginBottom: 12 }}>Quản lý đơn hàng</h1>
+      <p className="text-muted" style={{ marginBottom: 12 }}>
+        Trạng thái theo dõi hỗ trợ đơn hàng (nội bộ admin): dùng dropdown trên từng đơn để ghi nhận tiến độ xử lý khiếu nại, giao trễ hoặc liên hệ khách.
+      </p>
       <div style={{ display: 'flex', gap: 16, marginBottom: 12, flexWrap: 'wrap' }}>
         <label>
           Lọc trạng thái:
@@ -234,10 +243,11 @@ export default function AdminOrders() {
                       className="input"
                       value={order.supportStatus || 'none'}
                       onChange={(event) => updateOrder(order._id, { supportStatus: event.target.value })}
+                      title="Trạng thái theo dõi hỗ trợ đơn hàng"
                     >
                       {SUPPORT_STATUS_OPTIONS.map((status) => (
                         <option key={status} value={status}>
-                          {status}
+                          {SUPPORT_STATUS_LABELS[status] || status}
                         </option>
                       ))}
                     </select>

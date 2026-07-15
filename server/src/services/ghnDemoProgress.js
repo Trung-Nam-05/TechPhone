@@ -7,19 +7,19 @@ const DEMO_STAGES = [
     orderStatus: 'await_pickup',
     carrierStatus: 'picked',
     envMs: 'GHN_DEMO_AWAIT_TO_PICKED_MS',
-    defaultMs: 60000,
+    defaultMs: 30000,
   },
   {
     orderStatus: 'picked',
     carrierStatus: 'delivering',
     envMs: 'GHN_DEMO_PICKED_TO_SHIPPING_MS',
-    defaultMs: 60000,
+    defaultMs: 30000,
   },
   {
     orderStatus: 'shipping',
     carrierStatus: 'delivered',
     envMs: 'GHN_DEMO_SHIPPING_TO_COMPLETE_MS',
-    defaultMs: 90000,
+    defaultMs: 30000,
   },
 ];
 
@@ -78,7 +78,7 @@ export function startGhnDemoProgressJob() {
     return;
   }
 
-  const tickMs = readMs('GHN_DEMO_PROGRESS_MS', 15000);
+  const tickMs = readMs('GHN_DEMO_PROGRESS_MS', 5000);
   console.log(
     `[ghn-demo] Tracking simulation (chi tren TechPhone, tick=${tickMs}ms, stages=${DEMO_STAGES.length})`,
   );

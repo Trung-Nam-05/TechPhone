@@ -1,8 +1,18 @@
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap');
+
 .admin-shell {
   min-height: 100vh;
   display: grid;
   grid-template-columns: 240px 1fr;
   background: #f8fafc;
+  font-family: 'Be Vietnam Pro', 'Segoe UI', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.admin-shell h1,
+.admin-shell h2,
+.admin-shell h3 {
+  font-weight: 600;
 }
 
 .admin-sidebar {

@@ -4,6 +4,7 @@ import Cart from '../models/Cart.js';
 import Product from '../models/Product.js';
 import { getOwnershipFilter, getOwnershipForWrite } from '../utils/ownership.js';
 import { calculatePricing, PricingError } from '../services/pricing.js';
+import { MAX_LINE_QUANTITY } from '../constants/cartLimits.js';
 
 const router = express.Router();
 
@@ -97,6 +98,11 @@ router.put('/', async (req, res, next) => {
     for (const item of incomingItems) {
       const quantity = Number(item?.quantity || 0);
       if (quantity <= 0) continue;
+      if (quantity > MAX_LINE_QUANTITY) {
+        return res.status(400).json({
+          message: `Mỗi sản phẩm tối đa ${MAX_LINE_QUANTITY} sản phẩm/đơn.`,
+        });
+      }
 
       const productId = item?.productId;
       const isObjectId = mongoose.Types.ObjectId.isValid(productId);

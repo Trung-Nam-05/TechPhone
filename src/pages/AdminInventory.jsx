@@ -112,7 +112,7 @@ export default function AdminInventory() {
                 <p className="text-sm text-muted">{new Date(item.createdAt).toLocaleString('vi-VN')}</p>
               </div>
             ))}
-            {movements.length === 0 && <p className="text-muted">Chua co movement.</p>}
+            {movements.length === 0 && <p className="text-muted">Chưa có lịch sử tồn kho.</p>}
           </div>
         </div>
       </div>

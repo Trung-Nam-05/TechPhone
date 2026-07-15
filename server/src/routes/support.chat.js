@@ -10,7 +10,7 @@ import {
   sendMessage,
   assertConversationAccess,
 } from '../services/supportChat.js';
-import { emitConversationUpdated, getIo } from '../socket.js';
+import { emitConversationUpdated, emitAdminSupportMessage, emitConversationRead, getIo } from '../socket.js';
 
 const router = express.Router();
 
@@ -73,6 +73,7 @@ router.post('/conversations/:id/messages', async (req, res, next) => {
       body: req.body?.body,
     });
     emitConversationUpdated(result.conversation);
+    emitAdminSupportMessage(result.message);
     const io = getIo();
     if (io) {
       io.to(`conversation:${id}`).emit('message:new', { message: result.message });
@@ -105,6 +106,7 @@ router.post('/conversations/:id/read', async (req, res, next) => {
       role: req.auth.role,
     });
     emitConversationUpdated(conversation);
+    emitConversationRead(id, req.auth.role);
     return res.json({ conversation });
   } catch (error) {
     if (error.message === 'NOT_FOUND') return res.status(404).json({ message: 'Conversation not found.' });

@@ -20,6 +20,7 @@ import vnpayPaymentRoutes from './routes/payments.vnpay.js';
 import ghnShippingRoutes from './routes/shipping.ghn.js';
 import supportChatRoutes from './routes/support.chat.js';
 import adminSupportRoutes from './routes/admin.support.js';
+import aiChatRoutes from './routes/ai.chat.js';
 import { initSocket } from './socket.js';
 import { startFulfillmentDemoJob } from './services/orderFulfillment.js';
 import { startGhnSyncJob } from './services/ghnSync.js';
@@ -46,7 +47,7 @@ app.use(
     credentials: false,
   }),
 );
-app.use(express.json());
+app.use(express.json({ limit: '512kb' }));
 
 app.get('/api/health', (_req, res) => {
   res.json({
@@ -73,6 +74,7 @@ app.use('/api/payments/vnpay', vnpayPaymentRoutes);
 app.use('/api/shipping/ghn', ghnShippingRoutes);
 app.use('/api/support', supportChatRoutes);
 app.use('/api/admin/support', adminSupportRoutes);
+app.use('/api/ai-chat', aiChatRoutes);
 
 app.use((err, _req, res, _next) => {
   console.error(err);
