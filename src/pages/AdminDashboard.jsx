@@ -1,5 +1,5 @@
 import { Navigate } from 'react-router-dom';
 
 export default function AdminDashboard() {
-  return <Navigate to="/admin/orders" replace />;
+  return <Navigate to="/admin/analytics" replace />;
 }

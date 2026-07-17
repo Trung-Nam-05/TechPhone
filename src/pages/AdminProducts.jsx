@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import AdminPageHeader from '../components/admin/AdminPageHeader';
 
 const DEFAULT_FORM = {
   name: '',
@@ -128,26 +129,20 @@ export default function AdminProducts() {
   };
 
   return (
-    <div>
-      <h1 style={{ fontSize: 30, marginBottom: 12 }}>Quản lý sản phẩm</h1>
-      <p className="text-muted" style={{ marginBottom: 16 }}>
-        CRUD sản phẩm cho admin. Tổng hiện tại: {items.length}
-      </p>
+    <div className="admin-page">
+      <AdminPageHeader
+        title="Quản lý sản phẩm"
+        subtitle={`CRUD sản phẩm cho admin. Tổng hiện tại: ${items.length}`}
+      />
 
-      {error && (
-        <div className="card" style={{ padding: 12, marginBottom: 14, borderColor: '#fca5a5' }}>
-          <p style={{ color: '#dc2626' }}>{error}</p>
-        </div>
-      )}
+      {error && <div className="admin-alert admin-alert-error">{error}</div>}
 
-      <div className="grid" style={{ gridTemplateColumns: '380px 1fr', gap: 16 }}>
-        <div className="card" style={{ padding: 14, height: 'fit-content' }}>
-          <h2 style={{ fontSize: 20, marginBottom: 10 }}>
-            {isEditing ? 'Cập nhật sản phẩm' : 'Tạo sản phẩm mới'}
-          </h2>
+      <div className="admin-split-layout">
+        <div className="admin-panel" style={{ height: 'fit-content' }}>
+          <h2 className="admin-panel-title">{isEditing ? 'Cập nhật sản phẩm' : 'Tạo sản phẩm mới'}</h2>
           <form onSubmit={handleSubmit}>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-1">Tên sản phẩm</label>
+            <div className="admin-form-group">
+              <label>Tên sản phẩm</label>
               <input
                 className="input"
                 value={form.name}
@@ -263,45 +258,34 @@ export default function AdminProducts() {
           </form>
         </div>
 
-        <div className="card" style={{ padding: 12 }}>
+        <div className="admin-panel">
           {loading ? (
-            <p className="text-muted">Đang tải dữ liệu...</p>
+            <p className="admin-empty">Đang tải dữ liệu...</p>
           ) : (
-            <div style={{ display: 'grid', gap: 8 }}>
+            <div>
               {items.map((item) => (
-                <div
-                  key={item._id}
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '52px 1fr auto',
-                    gap: 10,
-                    alignItems: 'center',
-                    borderBottom: '1px solid #e5e7eb',
-                    paddingBottom: 8,
-                  }}
-                >
+                <div key={item._id} className="admin-product-row">
                   <img
                     src={item.image || 'https://via.placeholder.com/52x52.png?text=P'}
                     alt={item.name}
-                    style={{ width: 52, height: 52, borderRadius: 8, objectFit: 'cover' }}
                   />
-                  <div>
-                    <strong style={{ fontSize: 14 }}>{item.name}</strong>
-                    <p className="text-muted text-sm">
-                      {item.category?.label} - {item.price?.toLocaleString('vi-VN')} đ - Tồn: {item.stock}
+                  <div className="admin-list-row-meta">
+                    <strong>{item.name}</strong>
+                    <p>
+                      {item.category?.label} · {item.price?.toLocaleString('vi-VN')} đ · Tồn: {item.stock}
                     </p>
                   </div>
-                  <div className="flex gap-2">
-                    <button className="btn btn-outline" onClick={() => handleEdit(item)}>
+                  <div className="admin-list-row-actions">
+                    <button type="button" className="btn btn-outline" onClick={() => handleEdit(item)}>
                       Sửa
                     </button>
-                    <button className="btn btn-outline" onClick={() => handleDelete(item._id)}>
+                    <button type="button" className="btn btn-outline" onClick={() => handleDelete(item._id)}>
                       Xoá
                     </button>
                   </div>
                 </div>
               ))}
-              {items.length === 0 && <p className="text-muted">Chưa có sản phẩm.</p>}
+              {items.length === 0 && <p className="admin-empty">Chưa có sản phẩm.</p>}
             </div>
           )}
         </div>

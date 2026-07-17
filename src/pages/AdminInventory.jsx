@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import AdminPageHeader from '../components/admin/AdminPageHeader';
 
 export default function AdminInventory() {
   const { authFetch } = useAuth();
@@ -54,15 +55,20 @@ export default function AdminInventory() {
   };
 
   return (
-    <div>
-      <h1 style={{ fontSize: 30, marginBottom: 12 }}>Quan ly ton kho</h1>
-      {error && <p style={{ color: '#dc2626', marginBottom: 10 }}>{error}</p>}
-      <div className="grid" style={{ gridTemplateColumns: '360px 1fr', gap: 14 }}>
-        <div className="card" style={{ padding: 12 }}>
-          <h2 style={{ fontSize: 20, marginBottom: 8 }}>Dieu chinh ton kho</h2>
+    <div className="admin-page">
+      <AdminPageHeader
+        title="Quản lý tồn kho"
+        subtitle="Điều chỉnh số lượng tồn và theo dõi lịch sử biến động kho."
+      />
+
+      {error && <div className="admin-alert admin-alert-error">{error}</div>}
+
+      <div className="admin-split-layout">
+        <div className="admin-panel">
+          <h2 className="admin-panel-title">Điều chỉnh tồn kho</h2>
           <form onSubmit={handleAdjust}>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-1">San pham</label>
+            <div className="admin-form-group">
+              <label>Sản phẩm</label>
               <select
                 className="input"
                 value={form.productId}
@@ -70,13 +76,13 @@ export default function AdminInventory() {
               >
                 {products.map((product) => (
                   <option key={product._id} value={product._id}>
-                    {product.name} (ton: {product.stock})
+                    {product.name} (tồn: {product.stock})
                   </option>
                 ))}
               </select>
             </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-1">So luong dieu chinh (+/-)</label>
+            <div className="admin-form-group">
+              <label>Số lượng điều chỉnh (+/-)</label>
               <input
                 type="number"
                 className="input"
@@ -85,8 +91,8 @@ export default function AdminInventory() {
                 required
               />
             </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-1">Ghi chu</label>
+            <div className="admin-form-group">
+              <label>Ghi chú</label>
               <textarea
                 className="input"
                 rows={3}
@@ -95,24 +101,27 @@ export default function AdminInventory() {
               />
             </div>
             <button type="submit" className="btn btn-primary">
-              Cap nhat ton kho
+              Cập nhật tồn kho
             </button>
           </form>
         </div>
-        <div className="card" style={{ padding: 12 }}>
-          <h2 style={{ fontSize: 20, marginBottom: 8 }}>Inventory movements</h2>
-          <div style={{ display: 'grid', gap: 8 }}>
+
+        <div className="admin-panel">
+          <h2 className="admin-panel-title">Lịch sử biến động</h2>
+          <div className="admin-list">
             {movements.map((item) => (
-              <div key={item._id} style={{ borderBottom: '1px solid #e5e7eb', paddingBottom: 8 }}>
-                <strong>{item.product?.name || item.product}</strong>
-                <p className="text-sm text-muted">
-                  {item.type} | {item.quantity > 0 ? '+' : ''}
-                  {item.quantity} | {item.previousStock}{' -> '}{item.nextStock}
-                </p>
-                <p className="text-sm text-muted">{new Date(item.createdAt).toLocaleString('vi-VN')}</p>
+              <div key={item._id} className="admin-list-row" style={{ alignItems: 'flex-start' }}>
+                <div className="admin-list-row-meta">
+                  <strong>{item.product?.name || item.product}</strong>
+                  <p>
+                    {item.type} · {item.quantity > 0 ? '+' : ''}
+                    {item.quantity} · {item.previousStock} → {item.nextStock}
+                  </p>
+                  <p>{new Date(item.createdAt).toLocaleString('vi-VN')}</p>
+                </div>
               </div>
             ))}
-            {movements.length === 0 && <p className="text-muted">Chưa có lịch sử tồn kho.</p>}
+            {movements.length === 0 && <p className="admin-empty">Chưa có lịch sử tồn kho.</p>}
           </div>
         </div>
       </div>

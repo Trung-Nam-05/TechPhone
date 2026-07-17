@@ -1,60 +1,63 @@
 import { Link } from 'react-router-dom';
+import AdminPageHeader from '../components/admin/AdminPageHeader';
 
 const WEEKLY_LOOP = [
-  'Thu thap funnel KPI tu admin analytics.',
-  'Review van de conversion va quality (that bai don, oversell, support SLA).',
-  'Chon 1-2 experiment co tac dong cao nhat cho sprint tiep theo.',
-  'Phan cong owner, ETA, metric ky vong.',
-  'Tong ket ket qua vao cuoi tuan va cap nhat quyet dinh iterate.',
+  'Thu thập funnel KPI từ admin analytics.',
+  'Review vấn đề conversion và quality (thất bại đơn, oversell, support SLA).',
+  'Chọn 1-2 experiment có tác động cao nhất cho sprint tiếp theo.',
+  'Phân công owner, ETA, metric kỳ vọng.',
+  'Tổng kết kết quả vào cuối tuần và cập nhật quyết định iterate.',
 ];
 
 const KPI_CHECKPOINTS = [
-  { metric: 'Add-to-cart rate', target: '+10% vs baseline 4 tuan' },
-  { metric: 'Checkout completion rate', target: '+8% vs baseline 4 tuan' },
+  { metric: 'Add-to-cart rate', target: '+10% vs baseline 4 tuần' },
+  { metric: 'Checkout completion rate', target: '+8% vs baseline 4 tuần' },
   { metric: 'Order failure rate', target: '< 1%' },
-  { metric: 'Oversell incident', target: '0 / tuan' },
-  { metric: 'Support resolution time', target: '< 4h trung binh' },
+  { metric: 'Oversell incident', target: '0 / tuần' },
+  { metric: 'Support resolution time', target: '< 4h trung bình' },
 ];
 
 export default function AdminProgram() {
   return (
-    <div>
-      <h1 style={{ fontSize: 30, marginBottom: 10 }}>30/60/90 execution program</h1>
-      <p className="text-muted" style={{ marginBottom: 14 }}>
-        Khung van hanh de ra quyet dinh hang tuan theo KPI thay vi ra feature theo cam tinh.
-      </p>
+    <div className="admin-page">
+      <AdminPageHeader
+        title="Chương trình 30/60/90"
+        subtitle="Khung vận hành để ra quyết định hàng tuần theo KPI thay vì ra feature theo cảm tính."
+      />
 
-      <div className="card" style={{ padding: 14, marginBottom: 12 }}>
-        <h2 style={{ fontSize: 20, marginBottom: 8 }}>Weekly operating loop</h2>
-        <ul style={{ listStyle: 'disc', paddingLeft: 18, display: 'grid', gap: 6 }}>
-          {WEEKLY_LOOP.map((item) => (
-            <li key={item}>{item}</li>
-          ))}
-        </ul>
-      </div>
+      <div className="admin-card-grid">
+        <section className="admin-stat-card">
+          <h2>Weekly operating loop</h2>
+          <ul style={{ listStyle: 'disc', paddingLeft: 18, display: 'grid', gap: 8, margin: 0 }}>
+            {WEEKLY_LOOP.map((item) => (
+              <li key={item} style={{ fontSize: 14, color: 'var(--admin-text-secondary)' }}>{item}</li>
+            ))}
+          </ul>
+        </section>
 
-      <div className="card" style={{ padding: 14, marginBottom: 12 }}>
-        <h2 style={{ fontSize: 20, marginBottom: 8 }}>KPI checkpoints</h2>
-        <div style={{ display: 'grid', gap: 6 }}>
-          {KPI_CHECKPOINTS.map((item) => (
-            <div key={item.metric} style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-              <strong>{item.metric}</strong>
-              <span className="text-muted">{item.target}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+        <section className="admin-stat-card">
+          <h2>KPI checkpoints</h2>
+          <div className="admin-list">
+            {KPI_CHECKPOINTS.map((item) => (
+              <div key={item.metric} className="admin-list-row">
+                <strong style={{ fontSize: 14 }}>{item.metric}</strong>
+                <span className="text-muted">{item.target}</span>
+              </div>
+            ))}
+          </div>
+        </section>
 
-      <div className="card" style={{ padding: 14 }}>
-        <h2 style={{ fontSize: 20, marginBottom: 8 }}>Lien ket thuc thi</h2>
-        <div className="flex gap-2">
-          <Link to="/admin/analytics" className="btn btn-primary">
-            Mo funnel dashboard
-          </Link>
-          <Link to="/program" className="btn btn-outline">
-            Xem roadmap 30/60/90
-          </Link>
-        </div>
+        <section className="admin-stat-card">
+          <h2>Liên kết thực thi</h2>
+          <div className="flex gap-2">
+            <Link to="/admin/analytics" className="btn btn-primary">
+              Mở funnel dashboard
+            </Link>
+            <Link to="/program" className="btn btn-outline">
+              Xem roadmap 30/60/90
+            </Link>
+          </div>
+        </section>
       </div>
     </div>
   );

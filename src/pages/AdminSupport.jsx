@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Send } from 'lucide-react';
 import { useSupportChat } from '../context/SupportChatContext';
 import { getOwnMessageStatus } from '../utils/supportMessageStatus';
+import AdminPageHeader from '../components/admin/AdminPageHeader';
 import './AdminSupport.css';
 
 function formatTime(value) {
@@ -81,17 +82,16 @@ export default function AdminSupport() {
   const canReply = Boolean(selectedCustomer);
 
   return (
-    <div className="admin-support-page">
-      <div className="admin-support-header">
-        <div>
-          <h1>Hỗ trợ khách hàng</h1>
-          <p>Hội thoại từ tab Nhân viên — không bao gồm chat AI</p>
-          <p className="admin-support-sub">{socketConnected ? 'Realtime đang bật' : 'Đang đồng bộ qua polling'}</p>
-        </div>
-        <button type="button" className="btn btn-outline" onClick={() => loadAdminSupportCustomers()}>
-          Làm mới
-        </button>
-      </div>
+    <div className="admin-page admin-support-page">
+      <AdminPageHeader
+        title="Hỗ trợ khách hàng"
+        subtitle={`Hội thoại từ tab Nhân viên — ${socketConnected ? 'Realtime đang bật' : 'Đang đồng bộ qua polling'}`}
+        actions={
+          <button type="button" className="btn btn-outline" onClick={() => loadAdminSupportCustomers()}>
+            Làm mới
+          </button>
+        }
+      />
 
       <div className="admin-support-layout">
         <aside className="admin-support-list">
@@ -129,7 +129,7 @@ export default function AdminSupport() {
             <>
               <header className="admin-support-chat-header">
                 <div>
-                  <strong>{selectedCustomer.customer?.name}</strong>
+                  <h2>{selectedCustomer.customer?.name}</h2>
                   <p>{selectedCustomer.customer?.email}</p>
                 </div>
               </header>

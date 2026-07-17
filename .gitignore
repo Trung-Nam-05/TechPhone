@@ -30,13 +30,4 @@ temp-dev-out.txt
 *.ntvs*
 *.njsproj
 *.sln
-!TechPhoneE2E/TechPhoneE2E.sln
 *.sw?
-
-# C# E2E (NUnit + Selenium)
-TechPhoneE2E/**/bin/
-TechPhoneE2E/**/obj/
-TH_CK_Test/**/bin/
-TH_CK_Test/**/obj/
-TH_CK_Test/.vs/
-test/e2e-screenshots/

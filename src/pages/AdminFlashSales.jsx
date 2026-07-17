@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import AdminPageHeader from '../components/admin/AdminPageHeader';
 
 const DEFAULT_FORM = {
   name: '',
@@ -132,26 +133,20 @@ export default function AdminFlashSales() {
   };
 
   return (
-    <div>
-      <h1 style={{ fontSize: 30, marginBottom: 12 }}>Quan ly Flash Sale</h1>
-      <p className="text-muted" style={{ marginBottom: 14 }}>
-        Tao campaign giam gia theo khung gio va quota, he thong se check theo server time.
-      </p>
+    <div className="admin-page">
+      <AdminPageHeader
+        title="Quản lý Flash Sale"
+        subtitle="Tạo campaign giảm giá theo khung giờ và quota, hệ thống sẽ check theo server time."
+      />
 
-      {error && (
-        <div className="card" style={{ padding: 12, marginBottom: 14, borderColor: '#fca5a5' }}>
-          <p style={{ color: '#dc2626' }}>{error}</p>
-        </div>
-      )}
+      {error && <div className="admin-alert admin-alert-error">{error}</div>}
 
-      <div className="grid" style={{ gridTemplateColumns: '380px 1fr', gap: 14 }}>
-        <div className="card" style={{ padding: 14 }}>
-          <h2 style={{ fontSize: 20, marginBottom: 10 }}>
-            {isEditing ? 'Cap nhat Flash Sale' : 'Tao Flash Sale moi'}
-          </h2>
+      <div className="admin-split-layout">
+        <div className="admin-panel">
+          <h2 className="admin-panel-title">{isEditing ? 'Cập nhật Flash Sale' : 'Tạo Flash Sale mới'}</h2>
           <form onSubmit={handleSubmit}>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-1">Ten campaign</label>
+            <div className="admin-form-group">
+              <label>Tên campaign</label>
               <input
                 className="input"
                 value={form.name}
@@ -159,8 +154,8 @@ export default function AdminFlashSales() {
                 required
               />
             </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-1">San pham</label>
+            <div className="admin-form-group">
+              <label>Sản phẩm</label>
               <select
                 className="input"
                 value={form.productId}
@@ -174,9 +169,9 @@ export default function AdminFlashSales() {
                 ))}
               </select>
             </div>
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Gia Flash</label>
+            <div className="admin-form-row-2">
+              <div className="admin-form-group">
+                <label>Giá Flash</label>
                 <input
                   type="number"
                   className="input"
@@ -186,8 +181,8 @@ export default function AdminFlashSales() {
                   required
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Quota</label>
+              <div className="admin-form-group">
+                <label>Quota</label>
                 <input
                   type="number"
                   className="input"
@@ -198,9 +193,9 @@ export default function AdminFlashSales() {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Bat dau</label>
+            <div className="admin-form-row-2">
+              <div className="admin-form-group">
+                <label>Bắt đầu</label>
                 <input
                   type="datetime-local"
                   className="input"
@@ -209,8 +204,8 @@ export default function AdminFlashSales() {
                   required
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Ket thuc</label>
+              <div className="admin-form-group">
+                <label>Kết thúc</label>
                 <input
                   type="datetime-local"
                   className="input"
@@ -220,9 +215,9 @@ export default function AdminFlashSales() {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Max moi don</label>
+            <div className="admin-form-row-2">
+              <div className="admin-form-group">
+                <label>Max mỗi đơn</label>
                 <input
                   type="number"
                   className="input"
@@ -231,39 +226,39 @@ export default function AdminFlashSales() {
                   onChange={(event) => setForm((prev) => ({ ...prev, maxPerOrderQty: event.target.value }))}
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Trang thai</label>
+              <div className="admin-form-group">
+                <label>Trạng thái</label>
                 <select
                   className="input"
                   value={String(form.isEnabled)}
                   onChange={(event) => setForm((prev) => ({ ...prev, isEnabled: event.target.value === 'true' }))}
                 >
-                  <option value="true">Bat</option>
-                  <option value="false">Tat</option>
+                  <option value="true">Bật</option>
+                  <option value="false">Tắt</option>
                 </select>
               </div>
             </div>
             <div className="flex gap-2">
               <button type="submit" className="btn btn-primary">
-                {isEditing ? 'Luu thay doi' : 'Tao flash sale'}
+                {isEditing ? 'Lưu thay đổi' : 'Tạo flash sale'}
               </button>
               {isEditing && (
                 <button type="button" className="btn btn-outline" onClick={resetForm}>
-                  Huy
+                  Hủy
                 </button>
               )}
             </div>
           </form>
         </div>
 
-        <div className="card" style={{ padding: 12 }}>
+        <div className="admin-panel">
           {loading ? (
-            <p className="text-muted">Đang tải Flash Sale...</p>
+            <p className="admin-empty">Đang tải Flash Sale...</p>
           ) : (
-            <div style={{ display: 'grid', gap: 8 }}>
+            <div className="admin-card-grid" style={{ gridTemplateColumns: '1fr' }}>
               {items.map((item) => (
-                <article key={item._id} className="card" style={{ padding: 10, border: '1px solid #e5e7eb' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                <article key={item._id} className="admin-stat-card">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                     <strong>{item.name}</strong>
                     <span className="text-sm text-muted">{item.status || 'unknown'}</span>
                   </div>
@@ -271,7 +266,7 @@ export default function AdminFlashSales() {
                     {item.product?.name || 'Unknown product'}
                   </p>
                   <p className="text-sm text-muted">
-                    Gia flash: {Number(item.flashPrice || 0).toLocaleString('vi-VN')} đ | Quota:{' '}
+                    Giá flash: {Number(item.flashPrice || 0).toLocaleString('vi-VN')} đ · Quota:{' '}
                     {item.soldCount || 0}/{item.quota || 0}
                   </p>
                   <p className="text-sm text-muted">
@@ -279,16 +274,16 @@ export default function AdminFlashSales() {
                     {item.endsAt ? new Date(item.endsAt).toLocaleString('vi-VN') : '-'}
                   </p>
                   <div className="flex gap-2 mt-2">
-                    <button className="btn btn-outline" onClick={() => handleEdit(item)}>
-                      Sua
+                    <button type="button" className="btn btn-outline" onClick={() => handleEdit(item)}>
+                      Sửa
                     </button>
-                    <button className="btn btn-outline" onClick={() => handleDelete(item._id)}>
-                      Xoa
+                    <button type="button" className="btn btn-outline" onClick={() => handleDelete(item._id)}>
+                      Xoá
                     </button>
                   </div>
                 </article>
               ))}
-              {items.length === 0 && <p className="text-muted">Chưa có chiến dịch flash sale.</p>}
+              {items.length === 0 && <p className="admin-empty">Chưa có chiến dịch flash sale.</p>}
             </div>
           )}
         </div>

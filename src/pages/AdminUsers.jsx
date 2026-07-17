@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import AdminPageHeader from '../components/admin/AdminPageHeader';
 
 export default function AdminUsers() {
   const { authFetch } = useAuth();
@@ -38,49 +39,40 @@ export default function AdminUsers() {
   };
 
   return (
-    <div>
-      <h1 style={{ fontSize: 30, marginBottom: 12 }}>Khách hàng</h1>
-      <p className="text-muted" style={{ marginBottom: 14 }}>
-        Kích hoạt / vô hiệu hóa tài khoản. Tài khoản bị vô hiệu không thể đăng nhập.
-      </p>
-      {error && <p style={{ color: '#dc2626', marginBottom: 12 }}>{error}</p>}
-      {loading ? (
-        <p className="text-muted">Đang tải...</p>
-      ) : (
-        <div className="card" style={{ padding: 12 }}>
-          <div style={{ display: 'grid', gap: 10 }}>
+    <div className="admin-page">
+      <AdminPageHeader
+        title="Khách hàng"
+        subtitle="Kích hoạt / vô hiệu hóa tài khoản. Tài khoản bị vô hiệu không thể đăng nhập."
+      />
+
+      {error && <div className="admin-alert admin-alert-error">{error}</div>}
+
+      <div className="admin-panel">
+        {loading ? (
+          <p className="admin-empty">Đang tải...</p>
+        ) : (
+          <div className="admin-list">
             {items.map((u) => {
               const id = u.id || u._id;
               const active = u.isActive !== false;
               return (
-                <div
-                  key={String(id)}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    borderBottom: '1px solid #e5e7eb',
-                    paddingBottom: 10,
-                  }}
-                >
-                  <div>
+                <div key={String(id)} className="admin-list-row">
+                  <div className="admin-list-row-meta">
                     <strong>{u.name}</strong>
-                    <p className="text-sm text-muted">{u.email}</p>
+                    <p>{u.email}</p>
                   </div>
-                  <button
-                    type="button"
-                    className="btn btn-outline"
-                    onClick={() => toggleActive(id, !active)}
-                  >
-                    {active ? 'Vô hiệu hóa' : 'Kích hoạt'}
-                  </button>
+                  <div className="admin-list-row-actions">
+                    <button type="button" className="btn btn-outline" onClick={() => toggleActive(id, !active)}>
+                      {active ? 'Vô hiệu hóa' : 'Kích hoạt'}
+                    </button>
+                  </div>
                 </div>
               );
             })}
-            {items.length === 0 && <p className="text-muted">Chưa có khách hàng.</p>}
+            {items.length === 0 && <p className="admin-empty">Chưa có khách hàng.</p>}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
