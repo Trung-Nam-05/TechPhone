@@ -98,6 +98,60 @@ router.post('/:id/ghn/retry', async (req, res, next) => {
   }
 });
 
+/** Admin xác nhận đã kiểm kho + gói hàng → tạo vận đơn GHN (staging). */
+router.post('/:id/confirm-fulfillment', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const order = await Order.findById(id);
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found.' });
+    }
+    if (order.paymentMethod === 'installment') {
+      return res.status(400).json({ message: 'Installment orders are not shipped via GHN.' });
+    }
+    if (order.paymentMethod === 'vnpay' && order.paymentStatus !== 'paid') {
+      return res.status(400).json({ message: 'VNPAY order must be paid before fulfillment.' });
+    }
+    if (order.status !== 'confirmed') {
+      return res.status(400).json({
+        message: 'Only confirmed orders can be sent to GHN.',
+        code: 'INVALID_ORDER_STATUS',
+      });
+    }
+    if (order.shipment?.labelId) {
+      return res.status(400).json({ message: 'GHN shipment already exists for this order.' });
+    }
+
+    await OrderEvent.create({
+      order: order._id,
+      fromStatus: 'confirmed',
+      toStatus: 'confirmed',
+      note: 'Admin xac nhan: da kiem kho va dong goi.',
+      actor: req.auth.userId,
+    });
+
+    const result = await createGhnShipmentForOrder(id);
+    if (!result.ok) {
+      return res.status(400).json({
+        message: result.reason || 'GHN submit failed',
+        error: result.error,
+      });
+    }
+
+    await writeAdminAuditLog({
+      actor: req.auth.userId,
+      action: 'order.confirm_fulfillment',
+      entityType: 'order',
+      entityId: order._id,
+      metadata: { labelId: result.labelId || '' },
+    });
+
+    return res.json({ order: result.order, labelId: result.labelId });
+  } catch (error) {
+    return next(error);
+  }
+});
+
 router.post('/:id/ghn/cancel', async (req, res, next) => {
   try {
     const result = await cancelGhnShipmentForOrder(req.params.id);

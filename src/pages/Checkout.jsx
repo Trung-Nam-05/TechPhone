@@ -108,6 +108,7 @@ export default function Checkout() {
         },
         body: JSON.stringify({
           shippingInfo,
+          invoiceRequested: invoiceEnabled,
           paymentMethod: selectedPayment.orderPaymentMethod,
           installment: selectedPayment.orderPaymentMethod === 'installment' ? { provider: selectedPayment.key } : null,
         }),

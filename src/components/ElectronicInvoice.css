@@ -1,0 +1,125 @@
+.e-invoice {
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: var(--radius-lg, 12px);
+  background: #fff;
+  overflow: hidden;
+  margin-bottom: 24px;
+  text-align: left;
+}
+
+.e-invoice-header {
+  background: linear-gradient(135deg, #cb1c22 0%, #a0151b 100%);
+  color: #fff;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.e-invoice-brand {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.e-invoice-sub {
+  font-size: 12px;
+  opacity: 0.9;
+  margin: 0;
+}
+
+.e-invoice-meta {
+  text-align: right;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.e-invoice-body {
+  padding: 16px 20px;
+  font-size: 14px;
+}
+
+.e-invoice-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted, #6b7280);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 8px;
+}
+
+.e-invoice-buyer {
+  margin-bottom: 16px;
+  line-height: 1.6;
+}
+
+.e-invoice-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
+.e-invoice-table th,
+.e-invoice-table td {
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  padding: 8px 6px;
+  vertical-align: top;
+}
+
+.e-invoice-table th {
+  font-weight: 600;
+  color: var(--text-muted, #6b7280);
+  text-align: left;
+}
+
+.e-invoice-table td.num,
+.e-invoice-table th.num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.e-invoice-totals {
+  margin-left: auto;
+  max-width: 280px;
+  font-size: 14px;
+}
+
+.e-invoice-totals-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.e-invoice-totals-row.grand {
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--primary, #cb1c22);
+  border-top: 1px solid var(--border-color, #e5e7eb);
+  margin-top: 6px;
+  padding-top: 10px;
+}
+
+.e-invoice-footer {
+  padding: 12px 20px 16px;
+  background: #f9fafb;
+  border-top: 1px dashed var(--border-color, #e5e7eb);
+  font-size: 12px;
+  color: var(--text-muted, #6b7280);
+  line-height: 1.5;
+}
+
+.e-invoice-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0 20px 16px;
+}
+
+@media print {
+  .e-invoice-actions {
+    display: none;
+  }
+}

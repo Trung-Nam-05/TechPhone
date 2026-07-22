@@ -178,14 +178,17 @@ export async function applyGhnStatusUpdate(payload) {
   }
 
   if (orderStatusChanged) {
+    const eventNote =
+      payload.source === 'demo_progress'
+        ? `Demo giao hang: ${statusNote}.`
+        : payload.source === 'poll'
+          ? `GHN poll: ${statusNote}.`
+          : `GHN: ${statusNote}.`;
     await OrderEvent.create({
       order: order._id,
       fromStatus: previousStatus,
       toStatus: order.status,
-      note:
-        payload.source === 'demo_progress'
-          ? `Demo GHN: ${statusNote}.`
-          : `GHN: ${statusNote}.`,
+      note: eventNote,
       actor: null,
     });
     console.log(`[ghn] Order ${order._id} ${previousStatus} -> ${order.status} (${ghnStatus})`);

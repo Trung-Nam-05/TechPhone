@@ -8,10 +8,13 @@ import {
   ACTIVE_SHIPMENT_STATUSES,
   canCustomerCancelImmediate,
   canRequestCancel,
-  getCarrierStatusLabel,
   getOrderStatusLabel,
   getPaymentMethodLabel,
 } from '../constants/orderLabels';
+import ElectronicInvoice from '../components/ElectronicInvoice';
+import { orderRequestedInvoice } from '../utils/orderInvoice';
+
+const TIMELINE_POLL_STATUSES = new Set(['confirmed', ...ACTIVE_SHIPMENT_STATUSES]);
 
 function shortOrderId(id) {
   if (!id) return '';
@@ -56,7 +59,6 @@ export default function OrderDetail() {
   const [error, setError] = useState(null);
   const [cancelNote, setCancelNote] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   const loadTimeline = useCallback(async () => {
     setError(null);
@@ -82,7 +84,7 @@ export default function OrderDetail() {
 
   useEffect(() => {
     const order = timeline?.order;
-    if (!order || !ACTIVE_SHIPMENT_STATUSES.has(order.status)) return undefined;
+    if (!order || !TIMELINE_POLL_STATUSES.has(order.status)) return undefined;
 
     const timer = setInterval(() => {
       loadTimeline();
@@ -90,16 +92,6 @@ export default function OrderDetail() {
 
     return () => clearInterval(timer);
   }, [timeline?.order?.status, loadTimeline]);
-
-  const copyLabelId = async (labelId) => {
-    try {
-      await navigator.clipboard.writeText(labelId);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setError('Không thể sao chép mã vận đơn.');
-    }
-  };
 
   const cancelImmediate = async () => {
     if (!window.confirm('Bạn có chắc muốn hủy đơn này?')) return;
@@ -187,49 +179,18 @@ export default function OrderDetail() {
             </div>
           </header>
 
+          {order.fulfillmentPending && (
+            <section className="card" style={{ padding: 16, marginBottom: 16, background: '#f8fafc' }}>
+              <p className="text-sm" style={{ margin: 0 }}>
+                Shop đang xác nhận và chuẩn bị đơn hàng. Bạn sẽ thấy cập nhật giao hàng khi đơn được chuyển vận chuyển.
+              </p>
+            </section>
+          )}
+
           <section className="card" style={{ padding: 16, marginBottom: 16 }}>
             <h2 style={{ fontSize: 18, marginBottom: 16 }}>Tiến trình đơn hàng</h2>
             <OrderStepper steps={steps} status={order.status} />
           </section>
-
-          {(order.shipment?.labelId ||
-            order.shipment?.submitError ||
-            (order.paymentMethod !== 'installment' && ['confirmed', 'await_pickup', 'picked', 'shipping'].includes(order.status))) && (
-            <section className="card" style={{ padding: 16, marginBottom: 16 }}>
-              <h2 style={{ fontSize: 18, marginBottom: 12 }}>Vận chuyển GHN</h2>
-              <div style={{ display: 'grid', gap: 8 }}>
-                {order.shipment?.labelId ? (
-                  <p>
-                    Mã vận đơn GHN:{' '}
-                    <strong>{order.shipment.labelId}</strong>{' '}
-                    <button type="button" className="btn btn-outline" style={{ marginLeft: 8 }} onClick={() => copyLabelId(order.shipment.labelId)}>
-                      {copied ? 'Đã sao chép' : 'Sao chép'}
-                    </button>
-                  </p>
-                ) : (
-                  <p className="text-sm text-muted">Đang tạo vận đơn GHN, vui lòng đợi vài giây...</p>
-                )}
-                {order.shipment?.carrierStatus && (
-                  <p className="text-sm">
-                    Trạng thái GHN: <strong>{getCarrierStatusLabel(order.shipment)}</strong>
-                  </p>
-                )}
-                {order.shipment.submitError && (
-                  <p className="text-sm" style={{ color: '#dc2626' }}>
-                    Lỗi tạo vận đơn: {order.shipment.submitError}
-                    <br />
-                    <span className="text-muted">Hệ thống sẽ thử lại tự động...</span>
-                  </p>
-                )}
-                <a href="https://5sao.ghn.dev" target="_blank" rel="noopener noreferrer" className="btn btn-outline" style={{ width: 'fit-content' }}>
-                  Tra cứu trên GHN (DEV)
-                </a>
-                <p className="text-sm text-muted" style={{ marginTop: 4 }}>
-                  Đăng nhập 5sao.ghn.dev → Quản lý đơn hàng → tìm mã vận đơn ở trên.
-                </p>
-              </div>
-            </section>
-          )}
 
           {statusHistory.length > 1 && (
             <section className="card" style={{ padding: 16, marginBottom: 16 }}>
@@ -262,6 +223,13 @@ export default function OrderDetail() {
             )}
           </section>
 
+          {orderRequestedInvoice(order) && (
+            <section style={{ marginBottom: 16 }}>
+              <h2 style={{ fontSize: 18, marginBottom: 12 }}>Hóa đơn điện tử</h2>
+              <ElectronicInvoice order={order} />
+            </section>
+          )}
+
           <section className="card" style={{ padding: 16 }}>
             <h2 style={{ fontSize: 18, marginBottom: 12 }}>Hành động</h2>
             {order.cancelRequestStatus === 'pending' && (
@@ -290,7 +258,7 @@ export default function OrderDetail() {
                 </label>
                 {(order.status === 'picked' || order.status === 'shipping') && (
                   <p className="text-sm" style={{ color: '#ca8a04' }}>
-                    Lưu ý: Đơn có thể đã được lấy hàng. Shop sẽ xem xét và liên hệ GHN nếu cần.
+                    Lưu ý: Đơn có thể đã được lấy hàng. Shop sẽ xem xét và xử lý nếu cần.
                   </p>
                 )}
                 <button type="submit" className="btn btn-outline" disabled={actionLoading}>

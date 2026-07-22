@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import { CheckCircle2, XCircle } from 'lucide-react';
 import { OrderStatusBadge, PaymentStatusBadge } from './OrderStatusBadge';
+import ElectronicInvoice from './ElectronicInvoice';
+import { orderRequestedInvoice } from '../utils/orderInvoice';
 
 /**
  * Màn hình kết quả đặt hàng / thanh toán — dùng chung cho COD và VNPAY.
@@ -16,9 +18,10 @@ export default function OrderSuccessResult({
 }) {
   const heading = title || (success ? 'Thanh toán thành công' : 'Thanh toán chưa hoàn tất');
   const detailHref = orderId ? `/account/orders/${orderId}` : '/account/orders';
+  const showInvoice = success && order && orderRequestedInvoice(order);
 
   return (
-    <div className="container" style={{ maxWidth: 560, padding: '40px 16px' }}>
+    <div className="container" style={{ maxWidth: showInvoice ? 720 : 560, padding: '40px 16px' }}>
       <div style={{ textAlign: 'center', marginBottom: 24 }}>
         {success ? <CheckCircle2 size={64} color="#16a34a" /> : <XCircle size={64} color="#dc2626" />}
       </div>
@@ -71,6 +74,12 @@ export default function OrderSuccessResult({
           {subtitle ||
             'Đơn hàng đã được xác nhận tự động. Vận đơn GHN (DEV) sẽ được tạo trong giây lát.'}
         </p>
+      )}
+      {showInvoice && (
+        <>
+          <h2 style={{ fontSize: 18, marginBottom: 12, textAlign: 'center' }}>Hóa đơn điện tử</h2>
+          <ElectronicInvoice order={order} />
+        </>
       )}
       <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
         {success && (

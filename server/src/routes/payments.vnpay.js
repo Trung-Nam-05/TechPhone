@@ -2,7 +2,6 @@ import express from 'express';
 import Order from '../models/Order.js';
 import OrderEvent from '../models/OrderEvent.js';
 import { verifyVnpayCallback, isVnpayConfigured } from '../services/vnpay.js';
-import { ensureGhnShipmentForOrder } from '../services/ghnShipment.js';
 
 const router = express.Router();
 
@@ -54,12 +53,6 @@ async function processVnpayQuery(query) {
         toStatus: order.status,
         note: 'VNPAY: payment successful (auto-confirmed).',
         actor: null,
-      });
-    }
-
-    if (order.status === 'confirmed') {
-      await ensureGhnShipmentForOrder(String(order._id)).catch((err) => {
-        console.error(`[vnpay] GHN create failed for ${order._id}:`, err.message);
       });
     }
 

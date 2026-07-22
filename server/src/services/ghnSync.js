@@ -30,7 +30,7 @@ export async function runGhnSyncTick() {
 export function startGhnSyncJob() {
   if (process.env.GHN_ENABLED !== 'true') return;
   if (process.env.GHN_DEMO_PROGRESS_ENABLED === 'true') {
-    console.log('[ghn-sync] Poll skipped — dung GHN_DEMO_PROGRESS cho tracking tren web.');
+    console.log('[ghn-sync] Poll skipped — dung GHN_DEMO_PROGRESS cho tracking demo.');
     return;
   }
   if (process.env.GHN_POLL_ENABLED !== 'true') {

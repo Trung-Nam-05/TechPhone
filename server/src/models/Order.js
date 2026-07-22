@@ -95,6 +95,7 @@ const orderSchema = new mongoose.Schema(
     cancelRequestedAt: { type: Date, default: null },
     cancelResolvedAt: { type: Date, default: null },
     installment: { type: installmentSchema, default: () => ({ status: 'draft' }) },
+    invoiceRequested: { type: Boolean, default: false },
     shippingInfo: {
       fullName: { type: String, required: true, trim: true },
       phone: { type: String, required: true, trim: true },

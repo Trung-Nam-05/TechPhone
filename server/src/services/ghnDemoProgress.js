@@ -29,8 +29,8 @@ function readMs(name, fallback) {
 }
 
 /**
- * Mô phỏng tracking trên TechPhone (timeout) — KHONG doi trang thai tren 5sao.ghn.dev.
- * await_pickup → picked → shipping → completed
+ * Demo staging: tu dong chuyen trang thai don tren TechPhone (timeout .env).
+ * Chi chay sau khi admin da tao van don GHN — khong doi GHN portal.
  */
 export async function runGhnDemoProgressTick() {
   if (process.env.GHN_DEMO_PROGRESS_ENABLED !== 'true') return;
@@ -80,7 +80,7 @@ export function startGhnDemoProgressJob() {
 
   const tickMs = readMs('GHN_DEMO_PROGRESS_MS', 5000);
   console.log(
-    `[ghn-demo] Tracking simulation (chi tren TechPhone, tick=${tickMs}ms, stages=${DEMO_STAGES.length})`,
+    `[ghn-demo] Auto progress enabled (tick=${tickMs}ms, stages=${DEMO_STAGES.length})`,
   );
 
   runGhnDemoProgressTick().catch((err) => console.error('[ghn-demo] Initial tick failed:', err));

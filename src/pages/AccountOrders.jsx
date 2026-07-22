@@ -86,9 +86,9 @@ export default function AccountOrders() {
                 {t('account.orderTotal')} {formatPrice(order.total || 0)} ·{' '}
                 {order.createdAt ? new Date(order.createdAt).toLocaleString(dateLocale) : ''}
               </p>
-              {order.shipment?.labelId && (
+              {order.fulfillmentPending && (
                 <p className="text-sm text-muted" style={{ marginTop: 4 }}>
-                  Mã vận đơn GHN: <strong>{order.shipment.labelId}</strong>
+                  Shop đang xác nhận đơn hàng
                 </p>
               )}
               <p className="text-sm text-muted" style={{ marginTop: 6 }}>

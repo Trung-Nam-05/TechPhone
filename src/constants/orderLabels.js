@@ -107,6 +107,11 @@ export function getGhnStatusLabel(status) {
   return GHN_STATUS_LABELS[key] || status || '';
 }
 
+/** Portal tra cứu vận đơn GHN staging (admin đăng nhập shop). */
+export function getGhnAdminTrackingUrl() {
+  return 'https://5sao.ghn.dev';
+}
+
 export function getCarrierStatusLabel(shipment) {
   if (!shipment) return '';
   if (shipment.carrierStatus) return getGhnStatusLabel(shipment.carrierStatus);

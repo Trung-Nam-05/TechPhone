@@ -1,4 +1,5 @@
 import OrderEvent from '../models/OrderEvent.js';
+import { sanitizeOrderForCustomer } from '../utils/orderSanitize.js';
 import { buildTrackingSteps } from './orderStateMachine.js';
 
 const ORDER_STATUS_SET = new Set([
@@ -29,7 +30,7 @@ function getOrderStatusLabelServer(status) {
 }
 
 /** Chỉ hiển thị mốc đổi trạng thái đơn — không gộp log poll GHTK trùng lặp. */
-export async function buildOrderTimeline(order) {
+export async function buildOrderTimeline(order, { forCustomer = false } = {}) {
   const orderEvents = await OrderEvent.find({ order: order._id }).sort({ createdAt: 1 }).lean();
 
   const events = [];
@@ -49,8 +50,10 @@ export async function buildOrderTimeline(order) {
     lastStatus = item.toStatus;
   }
 
+  const safeOrder = forCustomer ? sanitizeOrderForCustomer(order) : order;
+
   return {
-    order,
+    order: safeOrder,
     steps: buildTrackingSteps(order.status),
     events,
   };

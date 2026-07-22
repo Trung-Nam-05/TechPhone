@@ -1,10 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { RefreshCw, Search, ShoppingBag, Truck, XCircle, DollarSign, Clock } from 'lucide-react';
+import {
+  RefreshCw,
+  Search,
+  ShoppingBag,
+  Truck,
+  XCircle,
+  DollarSign,
+  Clock,
+  PackageCheck,
+  ExternalLink,
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import {
   ORDER_STATUS_OPTIONS,
   getOrderStatusLabel,
+  getGhnAdminTrackingUrl,
 } from '../constants/orderLabels';
 import { OrderStatusBadge, PaymentStatusBadge } from '../components/OrderStatusBadge';
 import AdminPageHeader from '../components/admin/AdminPageHeader';
@@ -33,6 +44,13 @@ function shortOrderId(id) {
   return id ? `#${String(id).slice(-8).toUpperCase()}` : '—';
 }
 
+function canConfirmFulfillment(order) {
+  if (!order || order.status !== 'confirmed' || order.shipment?.labelId) return false;
+  if (order.paymentMethod === 'installment') return false;
+  if (order.paymentMethod === 'vnpay' && order.paymentStatus !== 'paid') return false;
+  return true;
+}
+
 export default function AdminOrders() {
   const { authFetch } = useAuth();
   const [items, setItems] = useState([]);
@@ -41,6 +59,7 @@ export default function AdminOrders() {
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [events, setEvents] = useState([]);
   const [shipmentEvents, setShipmentEvents] = useState([]);
+  const [copiedLabelId, setCopiedLabelId] = useState(false);
   const [statusFilter, setStatusFilter] = useState('');
   const [cancelFilter, setCancelFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -65,12 +84,19 @@ export default function AdminOrders() {
 
   const kpis = useMemo(() => {
     const pending = items.filter((o) => o.status === 'pending').length;
+    const awaitingFulfillment = items.filter(
+      (o) =>
+        o.status === 'confirmed' &&
+        !o.shipment?.labelId &&
+        o.paymentMethod !== 'installment' &&
+        (o.paymentMethod !== 'vnpay' || o.paymentStatus === 'paid'),
+    ).length;
     const shipping = items.filter((o) => ['await_pickup', 'picked', 'shipping'].includes(o.status)).length;
     const cancelPending = items.filter((o) => o.cancelRequestStatus === 'pending').length;
     const revenue = items
       .filter((o) => o.status === 'completed')
       .reduce((sum, o) => sum + Number(o.total || 0), 0);
-    return { total: items.length, pending, shipping, cancelPending, revenue };
+    return { total: items.length, pending, awaitingFulfillment, shipping, cancelPending, revenue };
   }, [items]);
 
   const loadOrders = async () => {
@@ -127,14 +153,40 @@ export default function AdminOrders() {
 
   const selectOrder = async (orderId) => {
     setSelectedOrderId(orderId);
+    setCopiedLabelId(false);
     await loadEvents(orderId);
     await loadShipmentEvents(orderId);
+  };
+
+  const copyLabelId = async (labelId) => {
+    try {
+      await navigator.clipboard.writeText(labelId);
+      setCopiedLabelId(true);
+      setTimeout(() => setCopiedLabelId(false), 2000);
+    } catch {
+      setError('Không thể sao chép mã vận đơn.');
+    }
   };
 
   const retryGhn = async (orderId, event) => {
     event?.stopPropagation();
     try {
       const payload = await authFetch(`/api/admin/orders/${orderId}/ghn/retry`, { method: 'POST' });
+      setItems((prev) => prev.map((item) => (item._id === orderId ? payload.order : item)));
+      if (selectedOrderId === orderId) {
+        await loadEvents(orderId);
+        await loadShipmentEvents(orderId);
+      }
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const confirmFulfillment = async (orderId, event) => {
+    event?.stopPropagation();
+    if (!window.confirm('Xác nhận đã kiểm kho, đóng gói và gửi vận đơn GHN (staging)?')) return;
+    try {
+      const payload = await authFetch(`/api/admin/orders/${orderId}/confirm-fulfillment`, { method: 'POST' });
       setItems((prev) => prev.map((item) => (item._id === orderId ? payload.order : item)));
       if (selectedOrderId === orderId) {
         await loadEvents(orderId);
@@ -207,6 +259,7 @@ export default function AdminOrders() {
       <div className="admin-kpi-grid">
         <AdminKpiCard label="Tổng đơn" value={kpis.total} icon={ShoppingBag} tone="blue" />
         <AdminKpiCard label="Chờ xử lý" value={kpis.pending} icon={Clock} tone="orange" />
+        <AdminKpiCard label="Chờ xác nhận GHN" value={kpis.awaitingFulfillment} icon={PackageCheck} tone="orange" />
         <AdminKpiCard label="Đang giao" value={kpis.shipping} icon={Truck} tone="purple" />
         <AdminKpiCard label="Yêu cầu hủy" value={kpis.cancelPending} icon={XCircle} tone="red" />
         <AdminKpiCard label="Doanh thu hoàn tất" value={formatMoney(kpis.revenue)} icon={DollarSign} tone="green" />
@@ -352,9 +405,37 @@ export default function AdminOrders() {
               </div>
 
               {selectedOrder.shipment?.labelId && (
-                <p className="text-sm text-muted" style={{ marginBottom: 12 }}>
-                  Vận đơn GHN: {selectedOrder.shipment.labelId}
-                </p>
+                <div className="admin-orders-detail-section">
+                  <h3>Vận đơn GHN</h3>
+                  <p className="text-sm" style={{ margin: '0 0 8px' }}>
+                    Mã vận đơn:{' '}
+                    <strong>{selectedOrder.shipment.labelId}</strong>{' '}
+                    <button
+                      type="button"
+                      className="btn btn-outline"
+                      style={{ marginLeft: 6, padding: '2px 8px', fontSize: 12 }}
+                      onClick={() => copyLabelId(selectedOrder.shipment.labelId)}
+                    >
+                      {copiedLabelId ? 'Đã sao chép' : 'Sao chép'}
+                    </button>
+                  </p>
+                  <p className="text-sm text-muted" style={{ margin: '0 0 12px' }}>
+                    Trạng thái trên TechPhone: <strong>{getOrderStatusLabel(selectedOrder.status)}</strong>
+                  </p>
+                  <a
+                    href={getGhnAdminTrackingUrl()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-primary"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}
+                  >
+                    <ExternalLink size={16} aria-hidden />
+                    Tra cứu vận đơn GHN
+                  </a>
+                  <p className="text-sm text-muted" style={{ margin: '8px 0 0', lineHeight: 1.45 }}>
+                    Mở 5sao.ghn.dev → đăng nhập shop → dán mã vận đơn ở trên để xem trên GHN staging.
+                  </p>
+                </div>
               )}
               {selectedOrder.shipment?.submitError && (
                 <p className="text-sm" style={{ color: '#dc2626', marginBottom: 12 }}>
@@ -377,9 +458,18 @@ export default function AdminOrders() {
                 >
                   Ghi đè trạng thái
                 </button>
-                {(selectedOrder.shipment?.submitError || selectedOrder.status === 'confirmed') && (
+                {canConfirmFulfillment(selectedOrder) && (
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={(e) => confirmFulfillment(selectedOrder._id, e)}
+                  >
+                    Xác nhận & gửi GHN
+                  </button>
+                )}
+                {selectedOrder.shipment?.submitError && (
                   <button type="button" className="btn btn-outline" onClick={(e) => retryGhn(selectedOrder._id, e)}>
-                    Tạo lại GHN
+                    Thử lại tạo GHN
                   </button>
                 )}
                 {selectedOrder.shipment?.labelId && !['completed', 'cancelled', 'returned'].includes(selectedOrder.status) && (

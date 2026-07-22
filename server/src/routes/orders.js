@@ -11,11 +11,12 @@ import { calculatePricing, consumeCouponsUsage, PricingError } from '../services
 import { calculateInstallmentPlan, normalizeInstallmentInput } from '../utils/installment.js';
 import { restoreInventoryForCancelledOrder } from '../services/orderCancel.js';
 import { buildVnpayPaymentUrl, isVnpayConfigured } from '../services/vnpay.js';
-import { ensureGhnShipmentForOrder, syncGhnOrderFromApi } from '../services/ghnShipment.js';
+import { syncGhnOrderFromApi } from '../services/ghnShipment.js';
 import { isGhnConfigured } from '../services/ghn.js';
 import ShipmentEvent from '../models/ShipmentEvent.js';
 import { requireAuth } from '../middleware/auth.js';
 import { buildOrderTimeline } from '../services/orderTimeline.js';
+import { sanitizeOrderForCustomer, sanitizeOrdersForCustomer } from '../utils/orderSanitize.js';
 import {
   validateCustomerRequestCancel,
   canCustomerCancelImmediate,
@@ -56,6 +57,9 @@ router.post('/', async (req, res, next) => {
     }
 
     const installmentPayload = req.body?.installment || null;
+    const invoiceRequested =
+      req.body?.invoiceRequested === true ||
+      String(note || '').includes('Xuất hoá đơn điện tử');
     const idempotencyKey = String(req.header('x-idempotency-key') || '').trim() || null;
     if (!fullName?.trim() || !phone?.trim() || !address?.trim()) {
       return res.status(400).json({
@@ -255,6 +259,7 @@ router.post('/', async (req, res, next) => {
               paymentMethod === 'installment' ? 'installment' : paymentMethod === 'vnpay' ? 'vnpay' : 'cod',
             status: initialOrderStatus,
             installment,
+            invoiceRequested,
             shippingInfo: {
               fullName: fullName.trim(),
               phone: phone.trim(),
@@ -315,12 +320,6 @@ router.post('/', async (req, res, next) => {
       }
     }
 
-    if (paymentMethod === 'cod' && createdOrder) {
-      ensureGhnShipmentForOrder(String(createdOrder._id)).catch((err) => {
-        console.error(`[orders] GHN create failed for ${createdOrder._id}:`, err.message);
-      });
-    }
-
     return res.status(201).json({
       message: 'Order created successfully.',
       order: createdOrder,
@@ -373,7 +372,7 @@ router.get('/', async (req, res, next) => {
     }
 
     const orders = await Order.find(ownershipFilter).sort({ createdAt: -1 }).lean();
-    return res.json({ items: orders });
+    return res.json({ items: sanitizeOrdersForCustomer(orders) });
   } catch (error) {
     return next(error);
   }
@@ -395,7 +394,7 @@ router.get('/:id/timeline', requireAuth, async (req, res, next) => {
       return res.status(404).json({ message: 'Order not found.' });
     }
 
-    const timeline = await buildOrderTimeline(order);
+    const timeline = await buildOrderTimeline(order, { forCustomer: !isAdmin });
     return res.json(timeline);
   } catch (error) {
     return next(error);
@@ -419,14 +418,14 @@ router.post('/:id/refresh-shipment', requireAuth, async (req, res, next) => {
     }
 
     if (!isGhnConfigured() || !order.shipment?.labelId) {
-      const timeline = await buildOrderTimeline(order.toObject());
+      const timeline = await buildOrderTimeline(order.toObject(), { forCustomer: !isAdmin });
       return res.json({ refreshed: false, ...timeline });
     }
 
     const detail = await syncGhnOrderFromApi(order);
 
     const fresh = await Order.findById(id).lean();
-    const timeline = await buildOrderTimeline(fresh);
+    const timeline = await buildOrderTimeline(fresh, { forCustomer: !isAdmin });
     return res.json({ refreshed: Boolean(detail), ...timeline });
   } catch (error) {
     return next(error);
@@ -447,6 +446,10 @@ router.get('/:id/shipment-events', requireAuth, async (req, res, next) => {
       : await Order.findOne({ _id: id, ...ownershipFilter }).lean();
     if (!order) {
       return res.status(404).json({ message: 'Order not found.' });
+    }
+
+    if (!isAdmin) {
+      return res.status(403).json({ message: 'Shipment details are available to admin only.' });
     }
 
     const items = await ShipmentEvent.find({ order: id }).sort({ createdAt: -1 }).lean();
@@ -470,7 +473,7 @@ router.get('/:id', async (req, res, next) => {
     if (!order) {
       return res.status(404).json({ message: 'Order not found.' });
     }
-    return res.json(order);
+    return res.json(sanitizeOrderForCustomer(order));
   } catch (error) {
     return next(error);
   }
