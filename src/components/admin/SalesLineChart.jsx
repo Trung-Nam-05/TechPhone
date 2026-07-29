@@ -19,9 +19,11 @@ function buildSmoothPath(points) {
   return d;
 }
 
-export default function SalesLineChart({ data, formatMoney, formatShortDate }) {
+export default function SalesLineChart({ data, formatAxisMoney, formatTooltipMoney, formatShortDate }) {
   const [hoverIndex, setHoverIndex] = useState(null);
   const points = data || [];
+  const formatAxis = formatAxisMoney || formatTooltipMoney;
+  const formatTooltip = formatTooltipMoney || formatAxisMoney;
 
   const chart = useMemo(() => {
     const width = 920;
@@ -44,17 +46,19 @@ export default function SalesLineChart({ data, formatMoney, formatShortDate }) {
 
     const yTicks = [0, 0.25, 0.5, 0.75, 1].map((ratio) => ({
       y: pad.top + innerH - ratio * innerH,
-      label: formatMoney(maxRevenue * ratio),
+      label: formatAxis(maxRevenue * ratio),
     }));
 
     return { width, height, pad, innerH, coords, linePath, areaPath, yTicks, maxRevenue };
-  }, [points, formatMoney]);
+  }, [points, formatAxis]);
 
   if (points.length === 0) {
     return <p className="admin-chart-empty">Chưa có dữ liệu doanh thu.</p>;
   }
 
   const active = hoverIndex != null ? chart.coords[hoverIndex] : null;
+  const tooltipText = active ? `${formatTooltip(active.revenue)} · ${active.orders} đơn` : '';
+  const tooltipWidth = Math.max(140, tooltipText.length * 7.5);
 
   return (
     <div className="admin-sales-chart">
@@ -110,19 +114,19 @@ export default function SalesLineChart({ data, formatMoney, formatShortDate }) {
               className="admin-sales-chart-active-line"
             />
             <rect
-              x={Math.min(active.x + 8, chart.width - 150)}
+              x={Math.min(active.x + 8, chart.width - tooltipWidth - 8)}
               y={Math.max(active.y - 36, 8)}
-              width="140"
+              width={tooltipWidth}
               height="28"
               rx="6"
               className="admin-sales-chart-tooltip"
             />
             <text
-              x={Math.min(active.x + 16, chart.width - 142)}
+              x={Math.min(active.x + 16, chart.width - tooltipWidth)}
               y={Math.max(active.y - 17, 26)}
               className="admin-sales-chart-tooltip-text"
             >
-              {formatMoney(active.revenue)} · {active.orders} đơn
+              {tooltipText}
             </text>
           </g>
         )}

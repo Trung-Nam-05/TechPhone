@@ -29,7 +29,7 @@ function getOrderStatusLabelServer(status) {
   return labels[status] || status;
 }
 
-/** Chỉ hiển thị mốc đổi trạng thái đơn — không gộp log poll GHTK trùng lặp. */
+/** Chỉ hiển thị mốc đổi trạng thái đơn — bỏ qua log trùng trạng thái. */
 export async function buildOrderTimeline(order, { forCustomer = false } = {}) {
   const orderEvents = await OrderEvent.find({ order: order._id }).sort({ createdAt: 1 }).lean();
 

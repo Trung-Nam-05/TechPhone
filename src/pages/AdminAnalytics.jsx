@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Clock, Download, DollarSign, ShoppingCart, TrendingDown, TrendingUp, Users } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Clock, Download, DollarSign, Filter, ShoppingCart, TrendingDown, TrendingUp, Users } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { API_BASE_URL } from '../config/api';
 import { getOrderStatusLabel } from '../constants/orderLabels';
@@ -53,46 +53,111 @@ function formatDateTime(value) {
   });
 }
 
-function fillRevenueDays(rawDays, totalDays = 15) {
+function formatDisplayDate(dateStr) {
+  if (!dateStr) return '';
+  const [year, month, day] = dateStr.split('-');
+  return `${day}/${month}/${year}`;
+}
+
+function toDateInputValue(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function getDefaultDateRange() {
+  const end = new Date();
+  end.setHours(0, 0, 0, 0);
+  const start = new Date(end);
+  start.setDate(start.getDate() - 6);
+  return {
+    startDate: toDateInputValue(start),
+    endDate: toDateInputValue(end),
+  };
+}
+
+function fillRevenueDays(rawDays, startDateStr, endDateStr) {
   const map = Object.fromEntries((rawDays || []).map((d) => [d.date, d]));
   const result = [];
-  for (let i = totalDays - 1; i >= 0; i -= 1) {
-    const date = new Date();
-    date.setHours(0, 0, 0, 0);
-    date.setDate(date.getDate() - i);
-    const key = date.toISOString().slice(0, 10);
+  const [sy, sm, sd] = startDateStr.split('-').map(Number);
+  const [ey, em, ed] = endDateStr.split('-').map(Number);
+  const cursor = new Date(sy, sm - 1, sd);
+  const end = new Date(ey, em - 1, ed);
+
+  while (cursor <= end) {
+    const key = toDateInputValue(cursor);
     result.push(map[key] || { date: key, orders: 0, revenue: 0 });
+    cursor.setDate(cursor.getDate() + 1);
   }
   return result;
 }
 
+function validateDateRange(startDate, endDate) {
+  if (!startDate || !endDate) return 'Vui lòng chọn đủ ngày bắt đầu và ngày kết thúc.';
+  const today = toDateInputValue(new Date());
+  if (startDate > today) return 'Ngày bắt đầu không được lớn hơn hôm nay.';
+  if (endDate > today) return 'Ngày kết thúc không được lớn hơn hôm nay.';
+  return null;
+}
+
 export default function AdminAnalytics() {
   const { authFetch, token } = useAuth();
+  const defaultRange = useMemo(() => getDefaultDateRange(), []);
   const [refreshing, setRefreshing] = useState(true);
   const [error, setError] = useState(null);
+  const [filterError, setFilterError] = useState(null);
   const [data, setData] = useState(null);
+  const [draftStartDate, setDraftStartDate] = useState(defaultRange.startDate);
+  const [draftEndDate, setDraftEndDate] = useState(defaultRange.endDate);
+  const [appliedRange, setAppliedRange] = useState(defaultRange);
 
-  useEffect(() => {
-    let mounted = true;
-    const load = async () => {
+  const loadDashboard = useCallback(
+    async (range) => {
       setRefreshing(true);
       setError(null);
       try {
-        const payload = await authFetch('/api/analytics/dashboard');
-        if (!mounted) return;
+        const params = new URLSearchParams({
+          startDate: range.startDate,
+          endDate: range.endDate,
+        });
+        const payload = await authFetch(`/api/analytics/dashboard?${params.toString()}`);
         setData(payload);
+        if (payload?.revenueRange) {
+          setAppliedRange({
+            startDate: payload.revenueRange.startDate,
+            endDate: payload.revenueRange.endDate,
+          });
+        }
       } catch (err) {
-        if (!mounted) return;
         setError(err.message);
       } finally {
-        if (mounted) setRefreshing(false);
+        setRefreshing(false);
       }
-    };
-    load();
-    return () => {
-      mounted = false;
-    };
-  }, [authFetch]);
+    },
+    [authFetch],
+  );
+
+  useEffect(() => {
+    loadDashboard(defaultRange);
+  }, [loadDashboard, defaultRange]);
+
+  const applyDateFilter = () => {
+    const validationError = validateDateRange(draftStartDate, draftEndDate);
+    if (validationError) {
+      setFilterError(validationError);
+      return;
+    }
+    setFilterError(null);
+    loadDashboard({ startDate: draftStartDate, endDate: draftEndDate });
+  };
+
+  const resetDateFilter = () => {
+    setDraftStartDate(defaultRange.startDate);
+    setDraftEndDate(defaultRange.endDate);
+    setFilterError(null);
+    loadDashboard(defaultRange);
+  };
 
   const exportOrdersCsv = async () => {
     const headers = new Headers();
@@ -119,13 +184,21 @@ export default function AdminAnalytics() {
   };
 
   const isLoading = refreshing && !data;
+  const today = toDateInputValue(new Date());
 
   const summary = data?.summary || {};
   const ordersByStatus = data?.ordersByStatus || {};
   const maxStatusCount = Math.max(1, ...Object.values(ordersByStatus));
   const funnel = data?.funnel;
   const pendingTotal = (summary.pendingCancelRequests || 0) + (summary.openSupportCases || 0);
-  const revenueDays = fillRevenueDays(data?.revenueByDay, 15);
+  const rangeStart = data?.revenueRange?.startDate || appliedRange.startDate;
+  const rangeEnd = data?.revenueRange?.endDate || appliedRange.endDate;
+  const revenueDays = fillRevenueDays(data?.revenueByDay, rangeStart, rangeEnd);
+  const rangeLabel =
+    rangeStart === rangeEnd
+      ? formatDisplayDate(rangeStart)
+      : `${formatDisplayDate(rangeStart)} – ${formatDisplayDate(rangeEnd)}`;
+  const dayCount = revenueDays.length;
 
   return (
     <div className={`admin-page admin-analytics-page${refreshing ? ' is-refreshing' : ''}`}>
@@ -196,14 +269,66 @@ export default function AdminAnalytics() {
       </div>
 
       <section className="admin-analytics-section admin-analytics-section-wide">
-        <div className="admin-analytics-section-head">
-          <h2>Chi tiết doanh thu</h2>
-          <span className="admin-analytics-badge">15 ngày qua</span>
+        <div className="admin-analytics-section-head admin-analytics-revenue-head">
+          <div>
+            <h2>Chi tiết doanh thu</h2>
+            <p className="admin-analytics-revenue-subtitle">
+              Doanh thu đơn hoàn tất trong khoảng đã chọn:{' '}
+              <strong>{formatMoneyCompact(summary.periodRevenue)}</strong>
+              {' · '}
+              {summary.periodOrderCount || 0} đơn
+            </p>
+          </div>
+          <span className="admin-analytics-badge">
+            {dayCount} ngày · {rangeLabel}
+          </span>
         </div>
+
+        <div className="admin-analytics-date-filter">
+          <label className="admin-analytics-date-field">
+            <span>Từ ngày</span>
+            <input
+              type="date"
+              value={draftStartDate}
+              max={draftEndDate || today}
+              onChange={(e) => {
+                setDraftStartDate(e.target.value);
+                setFilterError(null);
+              }}
+            />
+          </label>
+          <label className="admin-analytics-date-field">
+            <span>Đến ngày</span>
+            <input
+              type="date"
+              value={draftEndDate}
+              min={draftStartDate || undefined}
+              max={today}
+              onChange={(e) => {
+                const nextEnd = e.target.value;
+                setDraftEndDate(nextEnd);
+                if (draftStartDate && nextEnd && draftStartDate > nextEnd) {
+                  setDraftStartDate(nextEnd);
+                }
+                setFilterError(null);
+              }}
+            />
+          </label>
+          <button type="button" className="btn btn-primary admin-analytics-filter-btn" onClick={applyDateFilter}>
+            <Filter size={16} />
+            Lọc
+          </button>
+          <button type="button" className="btn btn-outline admin-analytics-filter-btn" onClick={resetDateFilter}>
+            7 ngày gần nhất
+          </button>
+        </div>
+        {filterError && <div className="admin-alert admin-alert-error admin-analytics-filter-error">{filterError}</div>}
+
         <div className={`admin-chart-shell${isLoading ? ' is-loading' : ''}`}>
           <SalesLineChart
             data={revenueDays}
-            formatMoney={formatMoneyAxis}
+            formatAxisMoney={formatMoneyAxis}
+            formatTooltipMoney={formatMoneyCompact}
             formatShortDate={formatShortDate}
           />
         </div>

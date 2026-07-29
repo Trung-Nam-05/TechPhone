@@ -120,9 +120,9 @@ UI checkout hiển thị nhưng **chưa tích hợp API** — hiện xử lý nh
 
 ---
 
-## Luồng giao hàng GHTK (tự động)
+## Luồng giao hàng GHN (tự động)
 
-Khi `GHTK_ENABLED=true`, hệ thống **tự tạo vận đơn** sau khi đơn chuyển sang `confirmed` (COD hoặc VNPAY thành công).
+Khi `GHN_ENABLED=true`, admin **xác nhận fulfillment** để tạo vận đơn GHN; hệ thống đồng bộ trạng thái qua API GHN (staging dev: `dev-online-gateway.ghn.vn`).
 
 ```text
 pending → confirmed → await_pickup → picked → shipping → completed
@@ -133,37 +133,28 @@ pending → confirmed → await_pickup → picked → shipping → completed
 | Trạng thái | Ý nghĩa |
 |------------|---------|
 | `pending` | Chờ thanh toán (VNPAY) |
-| `confirmed` | Đã xác nhận, đang gửi sang GHTK |
+| `confirmed` | Đã xác nhận, chờ admin tạo vận đơn GHN |
 | `await_pickup` | Đã tạo vận đơn, chờ shipper lấy hàng |
-| `picked` | Đã lấy hàng / nhập kho GHTK |
+| `picked` | Đã lấy hàng / nhập kho |
 | `shipping` | Đang giao |
 | `completed` | Giao thành công (COD → `paymentStatus=paid`) |
 | `delivery_failed` | Giao thất bại |
 | `returned` | Hoàn hàng |
 | `cancelled` | Đã hủy |
 
-**Cấu hình GHTK** (xem `.env.example`):
+**Cấu hình GHN** (xem `.env.example`):
 
-1. Lấy **Token** + **Mã shop (PARTNER_CODE)** tại [khachhang.giaohangtietkiem.vn](https://khachhang.giaohangtietkiem.vn) → Thông tin shop
-2. Điền `GHTK_*` và địa chỉ kho lấy hàng `GHTK_PICK_*`
-3. Set `FULFILLMENT_DEMO_ENABLED=false` (tránh xung đột với job demo cũ)
-4. **Webhook** (khuyến nghị): đăng ký URL `{API_PUBLIC_URL}/api/shipping/ghtk/webhook` với GHTK (cần ngrok khi dev local)
-5. **Poll fallback**: `GHTK_POLL_ENABLED=true` — đồng bộ trạng thái mỗi 2 phút nếu chưa có webhook
-6. **Auto-retry**: đơn `confirmed` + `submitError` được thử lại GHTK mỗi 5 phút (`GHTK_RETRY_MS`, tối đa 3 lần)
-7. **Demo tiến trình** (`GHTK_DEMO_PROGRESS_ENABLED=true`): mô phỏng `await_pickup → picked → shipping → completed` khi **không có shipper thật** (môi trường đồ án). Tắt khi go-live có giao hàng thực.
+1. Lấy token + Shop ID tại [5sao.ghn.dev](https://5sao.ghn.dev) (môi trường dev)
+2. Điền `GHN_*` — **không** dùng `online-gateway.ghn.vn` khi dev (có shipper thật)
+3. Set `FULFILLMENT_DEMO_ENABLED=false` khi bật GHN
+4. **Demo tiến trình** (`GHN_DEMO_PROGRESS_ENABLED=true`): mô phỏng `await_pickup → picked → shipping → completed` trên staging
+5. Admin → Orders → **Xác nhận giao hàng** để tạo vận đơn GHN
 
-**Thực tế vs Demo:**
+**State machine**: trạng thái đơn chuyển tự động qua GHN/VNPAY; admin chỉ **ghi đè ngoại lệ** kèm lý do (≥ 10 ký tự) và audit log.
 
-| Môi trường | Trạng thái GHTK thay đổi khi nào |
-|------------|----------------------------------|
-| **Production / shipper thật** | GHTK cập nhật qua webhook hoặc poll khi shipper lấy hàng, giao hàng |
-| **Demo đồ án** | Bật `GHTK_DEMO_PROGRESS_ENABLED=true` — hệ thống tự chuyển bước sau vài phút (mặc định: 2p → 2p → 3p) |
+Trang khách: `/account/orders/:orderId` — stepper 6 bước + mã vận đơn GHN.
 
-**State machine**: trạng thái đơn chuyển tự động qua GHTK/VNPAY; admin chỉ **ghi đè ngoại lệ** kèm lý do (≥ 10 ký tự) và audit log.
-
-Trang khách: `/account/orders/:orderId` — stepper 6 bước + mã vận đơn GHTK (tra cứu i.ghtk.vn). Không spam log poll trùng trạng thái.
-
-Checkout yêu cầu thêm **Tỉnh/Quận/Phường** (đúng tên GHTK, vd. `TP. Ho Chi Minh`, `Quan 1`).
+Checkout yêu cầu **Tỉnh/Quận/Phường** (GHN master data).
 
 ---
 
@@ -187,22 +178,20 @@ Checkout yêu cầu thêm **Tỉnh/Quận/Phường** (đúng tên GHTK, vd. `TP
 
 ### Test theo dõi đơn hàng (User)
 
-- [ ] Đặt đơn COD mới → `/account/orders` → click vào đơn → thấy stepper + mã GHTK
-- [ ] Với `GHTK_DEMO_PROGRESS_ENABLED=true`: stepper tự tiến `await_pickup → picked → shipping → completed` (không cần admin)
-- [ ] Trang chi tiết **không** spam cùng một trạng thái GHTK nhiều lần
+- [ ] Đặt đơn COD mới → `/account/orders` → click vào đơn → thấy stepper
+- [ ] Admin xác nhận fulfillment → có mã vận đơn GHN
+- [ ] Với `GHN_DEMO_PROGRESS_ENABLED=true`: stepper tự tiến `await_pickup → picked → shipping → completed`
 - [ ] Yêu cầu hủy chỉ có trong trang chi tiết, không còn ở danh sách đơn
 - [ ] Admin **Ghi đè (ngoại lệ)** với lý do ≥ 10 ký tự → ghi audit; override ngược bị chặt
-- [ ] Admin duyệt hủy → đơn `cancelled` + GHTK cancel (nếu có `labelId`)
+- [ ] Admin duyệt hủy → đơn `cancelled`
 
-### Test GHTK (1 case)
+### Test GHN (1 case)
 
-- [ ] Lấy `GHTK_PARTNER_CODE` từ portal GHTK → điền `.env`
-- [ ] `GHTK_ENABLED=true`, `FULFILLMENT_DEMO_ENABLED=false`, restart backend
+- [ ] Lấy `GHN_API_TOKEN` + `GHN_SHOP_ID` từ 5sao.ghn.dev → điền `.env`
+- [ ] `GHN_ENABLED=true`, `FULFILLMENT_DEMO_ENABLED=false`, restart backend
 - [ ] Checkout COD với Tỉnh/Quận/Phường + địa chỉ chi tiết
-- [ ] Đơn chuyển `confirmed` → vài giây sau `await_pickup`, có `shipment.labelId`
-- [ ] `/account/orders/:id` hoặc Admin → Chi tiết → xem timeline GHTK
-- [ ] (Có webhook/ngrok hoặc poll) trạng thái cập nhật khi GHTK giao hàng
-- [ ] Đơn `confirmed` + lỗi GHTK → auto-retry mỗi 5 phút (tối đa 3 lần)
+- [ ] Admin → Xác nhận giao hàng → đơn `await_pickup`, có `shipment.labelId`
+- [ ] `/account/orders/:id` hoặc Admin → Chi tiết → xem timeline
 
 ---
 
@@ -210,11 +199,10 @@ Checkout yêu cầu thêm **Tỉnh/Quận/Phường** (đúng tên GHTK, vd. `TP
 
 - `GET /api/payments/vnpay/return` — VNPAY redirect sau thanh toán
 - `GET /api/payments/vnpay/ipn` — VNPAY IPN (server-to-server)
-- `POST /api/shipping/ghtk/webhook` — GHTK webhook cập nhật trạng thái vận chuyển
+- `POST /api/shipping/ghn/webhook` — GHN webhook cập nhật trạng thái vận chuyển
 - `GET /api/orders/:id/timeline` — Timeline đơn + stepper (khách, owner)
-- `POST /api/orders/:id/refresh-shipment` — Poll GHTK 1 lần cho đơn này
-- `GET /api/orders/:id/shipment-events` — Lịch sử GHTK (khách/admin)
+- `POST /api/orders/:id/refresh-shipment` — Đồng bộ GHN 1 lần cho đơn này
+- `GET /api/orders/:id/shipment-events` — Lịch sử vận chuyển (admin)
 - `PATCH /api/admin/orders/:id/status` — Cập nhật status (override cần `override: true` + `reason`)
-- `PATCH /api/admin/orders/:id/cancellation` — Duyệt/từ chối hủy (approve → auto GHTK cancel)
-- `POST /api/admin/orders/:id/ghtk/retry` — Tạo lại vận đơn GHTK
-- `POST /api/admin/orders/:id/ghtk/cancel` — Hủy vận đơn GHTK
+- `PATCH /api/admin/orders/:id/cancellation` — Duyệt/từ chối hủy
+- `POST /api/admin/orders/:id/confirm-fulfillment` — Tạo vận đơn GHN

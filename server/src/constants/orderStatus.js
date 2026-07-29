@@ -12,7 +12,7 @@ export const ORDER_STATUSES = [
 
 export const ORDER_STATUS_SET = new Set(ORDER_STATUSES);
 
-/** Forward progression for GHTK sync (lower → higher). */
+/** Forward progression for carrier sync (lower → higher). */
 export const ORDER_STATUS_PROGRESS = {
   pending: 0,
   confirmed: 1,

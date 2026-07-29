@@ -92,8 +92,6 @@ async function start() {
     startGhnSyncJob();
     startGhnRetryJob();
     startGhnDemoProgressJob();
-  } else if (process.env.GHTK_ENABLED === 'true') {
-    console.log('[ghtk] Legacy GHTK enabled — khuyen chuyen sang GHN_ENABLED=true');
   } else {
     startFulfillmentDemoJob();
   }

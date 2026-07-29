@@ -70,15 +70,87 @@ function startOfDay(date = new Date()) {
   return d;
 }
 
-router.get('/dashboard', requireAuth, requireAdmin, async (_req, res, next) => {
+function formatDateKey(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function parseDateParam(value) {
+  const str = String(value || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(str)) return null;
+  const [year, month, day] = str.split('-').map(Number);
+  const d = new Date(year, month - 1, day);
+  if (d.getFullYear() !== year || d.getMonth() !== month - 1 || d.getDate() !== day) return null;
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function addDays(date, days) {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+function resolveRevenueDateRange(query) {
+  const todayStart = startOfDay(new Date());
+  const todayKey = formatDateKey(todayStart);
+
+  let startDate = parseDateParam(query.startDate);
+  let endDate = parseDateParam(query.endDate);
+
+  if (!startDate || !endDate) {
+    endDate = new Date(todayStart);
+    startDate = addDays(todayStart, -6);
+    return {
+      startDate,
+      endDate,
+      startKey: formatDateKey(startDate),
+      endKey: formatDateKey(endDate),
+      isDefault: true,
+    };
+  }
+
+  const startKey = formatDateKey(startDate);
+  const endKey = formatDateKey(endDate);
+
+  if (startDate > todayStart) {
+    return { error: 'Ngày bắt đầu không được lớn hơn hôm nay.' };
+  }
+  if (endDate < startDate) {
+    return { error: 'Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.' };
+  }
+  if (endDate > todayStart) {
+    endDate = new Date(todayStart);
+  }
+
+  return {
+    startDate,
+    endDate,
+    startKey: formatDateKey(startDate),
+    endKey: formatDateKey(endDate),
+    isDefault: startKey === formatDateKey(addDays(todayStart, -6)) && endKey === todayKey,
+  };
+}
+
+router.get('/dashboard', requireAuth, requireAdmin, async (req, res, next) => {
   try {
+    const range = resolveRevenueDateRange(req.query);
+    if (range.error) {
+      return res.status(400).json({ message: range.error });
+    }
+
     const now = new Date();
     const todayStart = startOfDay(now);
-    const chartStart = new Date(todayStart);
-    chartStart.setDate(chartStart.getDate() - 14);
+    const rangeEndExclusive = addDays(range.endDate, 1);
     const weekStart = new Date(todayStart);
     weekStart.setDate(weekStart.getDate() - 6);
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const completedRangeMatch = {
+      status: 'completed',
+      createdAt: { $gte: range.startDate, $lt: rangeEndExclusive },
+    };
 
     const [
       orderCountsByStatus,
@@ -91,6 +163,7 @@ router.get('/dashboard', requireAuth, requireAdmin, async (_req, res, next) => {
       revenueToday,
       revenueWeek,
       revenueMonth,
+      periodRevenueAgg,
       revenueByDay,
       topProducts,
       totalCustomers,
@@ -123,10 +196,14 @@ router.get('/dashboard', requireAuth, requireAdmin, async (_req, res, next) => {
         { $group: { _id: null, total: { $sum: '$total' } } },
       ]),
       Order.aggregate([
-        { $match: { createdAt: { $gte: chartStart } } },
+        { $match: completedRangeMatch },
+        { $group: { _id: null, totalRevenue: { $sum: '$total' }, orderCount: { $sum: 1 } } },
+      ]),
+      Order.aggregate([
+        { $match: completedRangeMatch },
         {
           $group: {
-            _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+            _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt', timezone: 'Asia/Ho_Chi_Minh' } },
             orders: { $sum: 1 },
             revenue: { $sum: '$total' },
           },
@@ -165,6 +242,7 @@ router.get('/dashboard', requireAuth, requireAdmin, async (_req, res, next) => {
 
     const completedRow = revenueCompleted[0] || { totalRevenue: 0, orderCount: 0 };
     const allRow = revenueAll[0] || { grandTotal: 0, count: 0 };
+    const periodRow = periodRevenueAgg[0] || { totalRevenue: 0, orderCount: 0 };
     const [viewProduct, addToCart, beginCheckout, purchase] = funnelSteps;
 
     const statusMap = Object.fromEntries(orderCountsByStatus.map((row) => [row._id, row.count]));
@@ -190,6 +268,15 @@ router.get('/dashboard', requireAuth, requireAdmin, async (_req, res, next) => {
         openSupportCases: pendingSupport,
         averageOrderValue:
           completedRow.orderCount > 0 ? Math.round(completedRow.totalRevenue / completedRow.orderCount) : 0,
+        periodRevenue: periodRow.totalRevenue || 0,
+        periodOrderCount: periodRow.orderCount || 0,
+        periodAverageOrderValue:
+          periodRow.orderCount > 0 ? Math.round(periodRow.totalRevenue / periodRow.orderCount) : 0,
+      },
+      revenueRange: {
+        startDate: range.startKey,
+        endDate: range.endKey,
+        isDefault: range.isDefault,
       },
       ordersByStatus: statusMap,
       paymentMethods,

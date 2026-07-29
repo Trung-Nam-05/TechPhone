@@ -65,27 +65,6 @@ export function canCustomerCancel(status) {
   return canCustomerCancelImmediate(status) || canRequestCancel(status);
 }
 
-export const GHTK_STATUS_LABELS = {
-  [-1]: 'Đã hủy',
-  1: 'Chưa tiếp nhận',
-  2: 'Đã tiếp nhận',
-  3: 'Đã lấy hàng / nhập kho',
-  4: 'Đang giao hàng',
-  5: 'Giao thành công',
-  6: 'Đã đối soát',
-  9: 'Giao thất bại',
-  12: 'Đang lấy hàng',
-  20: 'Đang hoàn hàng',
-  21: 'Đã hoàn hàng',
-  45: 'Shipper báo giao thành công',
-  49: 'Shipper báo giao thất bại',
-  123: 'Shipper báo lấy hàng thành công',
-};
-
-export function getGhtkStatusLabel(statusId) {
-  return GHTK_STATUS_LABELS[Number(statusId)] || `GHTK #${statusId}`;
-}
-
 export const GHN_STATUS_LABELS = {
   ready_to_pick: 'Sẵn sàng lấy hàng',
   picking: 'Đang lấy hàng',
@@ -115,7 +94,6 @@ export function getGhnAdminTrackingUrl() {
 export function getCarrierStatusLabel(shipment) {
   if (!shipment) return '';
   if (shipment.carrierStatus) return getGhnStatusLabel(shipment.carrierStatus);
-  if (shipment.ghtkStatusId != null) return getGhtkStatusLabel(shipment.ghtkStatusId);
   return '';
 }
 

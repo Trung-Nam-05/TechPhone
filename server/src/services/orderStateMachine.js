@@ -44,7 +44,7 @@ export function validateCustomerRequestCancel(order) {
   return { ok: true };
 }
 
-/** System-driven transitions (GHTK, VNPAY automation). */
+/** System-driven transitions (GHN, VNPAY automation). */
 export function validateSystemTransition(fromStatus, toStatus) {
   if (!toStatus || fromStatus === toStatus) {
     return { ok: false, reason: 'NO_CHANGE' };
