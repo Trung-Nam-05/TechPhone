@@ -28,17 +28,19 @@ router.post('/adjust', async (req, res, next) => {
     const delta = Number(req.body?.delta || 0);
     const note = String(req.body?.note || '').trim();
     if (!productId || !Number.isFinite(delta) || delta === 0) {
-      return res.status(400).json({ message: 'productId and non-zero delta are required.' });
+      return res.status(400).json({
+        message: 'Cần chọn sản phẩm và số lượng điều chỉnh khác 0.',
+      });
     }
 
     const product = await Product.findById(productId);
-    if (!product) {
-      return res.status(404).json({ message: 'Product not found.' });
+    if (!product || product.deletedAt) {
+      return res.status(404).json({ message: 'Không tìm thấy sản phẩm.' });
     }
-    const previousStock = product.stock;
+    const previousStock = Number(product.stock || 0);
     const nextStock = previousStock + delta;
     if (nextStock < 0) {
-      return res.status(400).json({ message: 'Stock cannot be negative.' });
+      return res.status(400).json({ message: 'Tồn kho không được âm.' });
     }
 
     product.stock = nextStock;

@@ -7,7 +7,9 @@ export default {
   },
   categories: {
     'dien-thoai': 'Phones',
+    'may-tinh-bang': 'Tablets',
     laptop: 'Laptop',
+    'may-lanh': 'Air conditioners',
     'dien-may': 'Home appliances',
     'phu-kien': 'Accessories',
     fallback: 'Products',
@@ -206,6 +208,7 @@ export default {
     products: 'Products',
     orders: 'Orders',
     inventory: 'Inventory',
+    prices: 'Price management',
     flashSales: 'Flash sale',
     analytics: 'Funnel analytics',
     program: 'Program 30/60/90',

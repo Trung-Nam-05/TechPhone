@@ -1,6 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import AdminPageHeader from '../components/admin/AdminPageHeader';
+import {
+  getBrandLabel,
+  getBrandsForCategory,
+  normalizeBrandKey,
+} from '../data/brandsByCategory';
 
 const DEFAULT_FORM = {
   name: '',
@@ -15,9 +20,11 @@ const DEFAULT_FORM = {
   isActive: true,
 };
 
-const CATEGORY_OPTIONS = [
+const FALLBACK_CATEGORIES = [
   { key: 'dien-thoai', label: 'Điện thoại' },
+  { key: 'may-tinh-bang', label: 'Máy tính bảng' },
   { key: 'laptop', label: 'Laptop' },
+  { key: 'may-lanh', label: 'Máy lạnh' },
   { key: 'dien-may', label: 'Điện máy' },
   { key: 'phu-kien', label: 'Phụ kiện' },
 ];
@@ -26,6 +33,7 @@ export default function AdminProducts() {
   const { authFetch } = useAuth();
 
   const [items, setItems] = useState([]);
+  const [categories, setCategories] = useState(FALLBACK_CATEGORIES);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -34,17 +42,37 @@ export default function AdminProducts() {
 
   const isEditing = Boolean(editingProductId);
 
+  const brandOptions = useMemo(() => {
+    const options = getBrandsForCategory(form.categoryKey);
+    const current = normalizeBrandKey(form.categoryKey, form.brand);
+    if (current && !options.some((b) => b.key === current)) {
+      return [{ key: current, label: form.brand || current }, ...options];
+    }
+    return options;
+  }, [form.categoryKey, form.brand]);
+
   const resetForm = () => {
     setEditingProductId(null);
-    setForm(DEFAULT_FORM);
+    setForm({
+      ...DEFAULT_FORM,
+      categoryKey: categories[0]?.key || 'dien-thoai',
+      categoryLabel: categories[0]?.label || 'Điện thoại',
+    });
   };
 
   const loadProducts = async () => {
     setLoading(true);
     setError(null);
     try {
-      const payload = await authFetch('/api/admin/products');
-      setItems(payload.items || []);
+      const [productsPayload, categoriesPayload] = await Promise.all([
+        authFetch('/api/admin/products'),
+        authFetch('/api/admin/categories').catch(() => null),
+      ]);
+      setItems(productsPayload.items || []);
+      const nextCategories = (categoriesPayload?.items || []).filter((item) => item.isActive !== false);
+      if (nextCategories.length > 0) {
+        setCategories(nextCategories.map((item) => ({ key: item.key, label: item.label })));
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -58,21 +86,28 @@ export default function AdminProducts() {
   }, []);
 
   const handleCategoryChange = (key) => {
-    const selected = CATEGORY_OPTIONS.find((option) => option.key === key);
-    setForm((prev) => ({
-      ...prev,
-      categoryKey: key,
-      categoryLabel: selected?.label || prev.categoryLabel,
-    }));
+    const selected = categories.find((option) => option.key === key);
+    const nextBrands = getBrandsForCategory(key);
+    setForm((prev) => {
+      const currentBrand = normalizeBrandKey(key, prev.brand);
+      const stillValid = nextBrands.some((b) => b.key === currentBrand);
+      return {
+        ...prev,
+        categoryKey: key,
+        categoryLabel: selected?.label || prev.categoryLabel,
+        brand: stillValid ? currentBrand : '',
+      };
+    });
   };
 
   const handleEdit = (product) => {
+    const categoryKey = product.category?.key || 'dien-thoai';
     setEditingProductId(product._id);
     setForm({
       name: product.name || '',
-      categoryKey: product.category?.key || 'dien-thoai',
+      categoryKey,
       categoryLabel: product.category?.label || 'Điện thoại',
-      brand: product.brand || '',
+      brand: normalizeBrandKey(categoryKey, product.brand || ''),
       price: product.price ?? '',
       oldPrice: product.oldPrice ?? '',
       stock: product.stock ?? 0,
@@ -83,7 +118,9 @@ export default function AdminProducts() {
   };
 
   const handleDelete = async (id) => {
-    const confirmed = window.confirm('Bạn chắc chắn muốn xoá sản phẩm này?');
+    const confirmed = window.confirm(
+      'Xóa sản phẩm? Hệ thống sẽ chặn nếu sản phẩm đang bán chạy, đang trong đơn chưa xong, hoặc đang flash sale.\n\nGợi ý: tạm ngưng bán bằng cách tắt "Đang bán" thay vì xóa.',
+    );
     if (!confirmed) return;
 
     try {
@@ -101,8 +138,14 @@ export default function AdminProducts() {
     event.preventDefault();
     setError(null);
 
+    if (!form.brand) {
+      setError('Vui lòng chọn thương hiệu phù hợp với danh mục.');
+      return;
+    }
+
     const payload = {
       ...form,
+      brand: normalizeBrandKey(form.categoryKey, form.brand),
       price: Number(form.price),
       oldPrice: form.oldPrice === '' ? null : Number(form.oldPrice),
       stock: Number(form.stock),
@@ -132,7 +175,7 @@ export default function AdminProducts() {
     <div className="admin-page">
       <AdminPageHeader
         title="Quản lý sản phẩm"
-        subtitle={`CRUD sản phẩm cho admin. Tổng hiện tại: ${items.length}`}
+        subtitle={`CRUD sản phẩm. Không xóa được SP bán chạy (≥10 đã giao), đang trong đơn chưa xong, hoặc đang flash sale. Tổng: ${items.length}`}
       />
 
       {error && <div className="admin-alert admin-alert-error">{error}</div>}
@@ -159,7 +202,7 @@ export default function AdminProducts() {
                   value={form.categoryKey}
                   onChange={(event) => handleCategoryChange(event.target.value)}
                 >
-                  {CATEGORY_OPTIONS.map((category) => (
+                  {categories.map((category) => (
                     <option key={category.key} value={category.key}>
                       {category.label}
                     </option>
@@ -168,11 +211,19 @@ export default function AdminProducts() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Thương hiệu</label>
-                <input
+                <select
                   className="input"
-                  value={form.brand}
+                  value={normalizeBrandKey(form.categoryKey, form.brand)}
                   onChange={(event) => setForm((prev) => ({ ...prev, brand: event.target.value }))}
-                />
+                  required
+                >
+                  <option value="">Chọn thương hiệu</option>
+                  {brandOptions.map((brand) => (
+                    <option key={brand.key} value={brand.key}>
+                      {brand.label}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -272,7 +323,9 @@ export default function AdminProducts() {
                   <div className="admin-list-row-meta">
                     <strong>{item.name}</strong>
                     <p>
-                      {item.category?.label} · {item.price?.toLocaleString('vi-VN')} đ · Tồn: {item.stock}
+                      {item.category?.label}
+                      {item.brand ? ` · ${getBrandLabel(item.category?.key, item.brand)}` : ''} ·{' '}
+                      {item.price?.toLocaleString('vi-VN')} đ · Tồn: {item.stock}
                     </p>
                   </div>
                   <div className="admin-list-row-actions">

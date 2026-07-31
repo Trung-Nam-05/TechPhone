@@ -1,6 +1,8 @@
 export const PRODUCT_CATEGORIES = [
   { key: 'dien-thoai', label: 'Điện thoại' },
+  { key: 'may-tinh-bang', label: 'Máy tính bảng' },
   { key: 'laptop', label: 'Laptop' },
+  { key: 'may-lanh', label: 'Máy lạnh' },
   { key: 'dien-may', label: 'Điện máy' },
   { key: 'phu-kien', label: 'Phụ kiện' },
 ];
@@ -93,7 +95,7 @@ export const PRODUCTS = [
   {
     id: 8,
     name: 'Máy lạnh Inverter 1.5HP',
-    category: 'dien-may',
+    category: 'may-lanh',
     price: 8990000,
     oldPrice: 10490000,
     discount: 14,

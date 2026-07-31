@@ -12,10 +12,15 @@ import { optionalAuth } from './middleware/auth.js';
 import analyticsRoutes from './routes/analytics.js';
 import adminOrderRoutes from './routes/admin.orders.js';
 import adminInventoryRoutes from './routes/admin.inventory.js';
+import adminPriceRoutes from './routes/admin.prices.js';
 import couponRoutes from './routes/coupons.js';
 import installmentWebhookRoutes from './routes/installment.webhook.js';
 import adminFlashSaleRoutes from './routes/admin.flashsales.js';
 import adminUserRoutes from './routes/admin.users.js';
+import adminReviewRoutes from './routes/admin.reviews.js';
+import adminCategoryRoutes from './routes/admin.categories.js';
+import adminCouponRoutes from './routes/admin.coupons.js';
+import categoryRoutes from './routes/categories.js';
 import vnpayPaymentRoutes from './routes/payments.vnpay.js';
 import ghnShippingRoutes from './routes/shipping.ghn.js';
 import supportChatRoutes from './routes/support.chat.js';
@@ -27,6 +32,8 @@ import { startGhnSyncJob } from './services/ghnSync.js';
 import { startGhnRetryJob } from './services/ghnRetry.js';
 import { startGhnDemoProgressJob } from './services/ghnDemoProgress.js';
 import { isGhnConfigured, isGhnDevApi, isGhnProductionApi } from './services/ghn.js';
+import { ensureDefaultCategories } from './services/ensureCategories.js';
+import { ensureDefaultCoupons } from './services/ensureCoupons.js';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -59,6 +66,7 @@ app.get('/api/health', (_req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/categories', categoryRoutes);
 app.use(optionalAuth);
 app.use('/api/cart', cartRoutes);
 app.use('/api/coupons', couponRoutes);
@@ -66,7 +74,11 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/admin/products', adminProductRoutes);
 app.use('/api/admin/orders', adminOrderRoutes);
 app.use('/api/admin/inventory', adminInventoryRoutes);
+app.use('/api/admin/prices', adminPriceRoutes);
 app.use('/api/admin/flash-sales', adminFlashSaleRoutes);
+app.use('/api/admin/categories', adminCategoryRoutes);
+app.use('/api/admin/coupons', adminCouponRoutes);
+app.use('/api/admin/reviews', adminReviewRoutes);
 app.use('/api/admin/users', adminUserRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/webhooks/installment', installmentWebhookRoutes);
@@ -83,6 +95,8 @@ app.use((err, _req, res, _next) => {
 
 async function start() {
   await connectDatabase();
+  await ensureDefaultCategories();
+  await ensureDefaultCoupons();
   if (process.env.GHN_ENABLED === 'true') {
     if (isGhnDevApi()) {
       console.log('[ghn] DEV mode — API test GHN, khong co shipper that.');

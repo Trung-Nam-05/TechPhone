@@ -22,6 +22,7 @@ export default function AccountOrders() {
     let cancelled = false;
     const load = async () => {
       if (!isAuthenticated) {
+        setItems([]);
         setLoading(false);
         return;
       }
@@ -31,7 +32,10 @@ export default function AccountOrders() {
         const payload = await authFetch('/api/orders');
         if (!cancelled) setItems(payload.items || []);
       } catch (err) {
-        if (!cancelled) setError(err.message);
+        if (!cancelled) {
+          setItems([]);
+          setError(err.message);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -50,6 +54,7 @@ export default function AccountOrders() {
           <Link to="/login">{t('account.login')}</Link>{' '}
           {t('account.viewOrdersLoginSuffix')}
         </p>
+        {error && <p style={{ color: '#dc2626', marginTop: 12 }}>{error}</p>}
       </div>
     );
   }

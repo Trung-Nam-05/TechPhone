@@ -50,7 +50,10 @@ export async function createGhnShipmentForOrder(orderId, { force = false } = {})
 
   const order = await Order.findById(orderId);
   if (!order) return { ok: false, reason: 'order_not_found' };
-  if (order.status !== 'confirmed' && !force) {
+  const canCreate =
+    order.status === 'confirmed' ||
+    (force && order.status === 'await_pickup' && !order.shipment?.labelId);
+  if (!canCreate) {
     return { ok: false, reason: 'not_confirmed' };
   }
   if (order.shipment?.labelId && !force) {

@@ -3,11 +3,13 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, ChevronDown } from 'lucide-react';
 import ProductSearchInput from '../components/ProductSearchInput';
 import ProductCard from '../components/ProductCard';
+import ApplianceCategoryPage from '../components/products/ApplianceCategoryPage';
 import { useCart } from '../context/CartContext';
 import { PRODUCT_CATEGORIES, PRODUCTS, getCategoryLabel } from '../data/products';
 import { API_BASE_URL } from '../config/api';
 import { formatCountdown, getFlashSaleState } from '../utils/flashSale';
 import './Products.css';
+import './ApplianceCategory.css';
 
 const PHONE_HERO_BANNERS = [
   'https://cdn2.fptshop.com.vn/unsafe/1920x0/filters:format(webp):quality(75)/H1_1440x242_f7303547a2.png',
@@ -442,7 +444,9 @@ export default function Products() {
   const [queryInput, setQueryInput] = useState(searchParams.get('search') || '');
   const [remoteProducts, setRemoteProducts] = useState([]);
   const [hasRemoteLoaded, setHasRemoteLoaded] = useState(false);
+  const [relatedApplianceProducts, setRelatedApplianceProducts] = useState([]);
   const [nowMs, setNowMs] = useState(() => Date.now());
+  const isAppliancePage = filter === 'dien-may' || filter === 'may-lanh';
 
   useEffect(() => {
     const categoryFromUrl = searchParams.get('category') || 'all';
@@ -451,6 +455,58 @@ export default function Products() {
     setSearchTerm(nextSearch);
     setQueryInput(nextSearch);
   }, [searchParams]);
+
+  useEffect(() => {
+    if (!isAppliancePage) {
+      setRelatedApplianceProducts([]);
+      return undefined;
+    }
+
+    let isMounted = true;
+    const controller = new AbortController();
+
+    const loadRelated = async () => {
+      try {
+        const categories = filter === 'dien-may' ? ['dien-may', 'may-lanh'] : ['may-lanh', 'dien-may'];
+        const results = await Promise.all(
+          categories.map(async (category) => {
+            const params = new URLSearchParams({ category, limit: '48' });
+            if (searchTerm.trim()) params.set('search', searchTerm.trim());
+            const response = await fetch(`${API_BASE_URL}/api/products?${params.toString()}`, {
+              signal: controller.signal,
+              headers: { Accept: 'application/json' },
+            });
+            if (!response.ok) throw new Error('Failed to load appliance products');
+            const payload = await response.json();
+            return (payload.items || []).map((item) => ({
+              ...item,
+              id: item.legacyId || item._id,
+              category: item.category?.key || category,
+            }));
+          }),
+        );
+        if (!isMounted) return;
+        const merged = [];
+        const seen = new Set();
+        results.flat().forEach((item) => {
+          const key = String(item.id || item._id);
+          if (seen.has(key)) return;
+          seen.add(key);
+          merged.push(item);
+        });
+        setRelatedApplianceProducts(merged);
+      } catch (error) {
+        if (!isMounted || error.name === 'AbortError') return;
+        setRelatedApplianceProducts([]);
+      }
+    };
+
+    loadRelated();
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
+  }, [filter, isAppliancePage, searchTerm]);
 
   useEffect(() => {
     if (filter !== 'dien-thoai') return undefined;
@@ -909,6 +965,20 @@ export default function Products() {
             </section>
           </div>
         </div>
+      ) : isAppliancePage ? (
+        <ApplianceCategoryPage
+          categoryKey={filter}
+          title={filter === 'may-lanh' ? 'Máy lạnh' : 'Điện máy'}
+          products={filteredProducts}
+          allApplianceProducts={
+            relatedApplianceProducts.length > 0 ? relatedApplianceProducts : filteredProducts
+          }
+          nowMs={nowMs}
+          queryInput={queryInput}
+          onQueryChange={setQueryInput}
+          onSearchSubmit={handleSearchSubmit}
+          onNavigateCategory={handleFilterChange}
+        />
       ) : (
         <div>
           <div className="tp-products-toolbar">

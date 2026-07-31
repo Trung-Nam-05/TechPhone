@@ -26,9 +26,19 @@ const INSTALLMENT_METHODS = [
   { key: 'credit-installment', label: 'Trả góp qua thẻ tín dụng', icon: '💳' },
 ];
 
+const EMPTY_SHIPPING_FORM = {
+  fullName: '',
+  phone: '',
+  email: '',
+  province: '',
+  district: '',
+  ward: '',
+  address: '',
+};
+
 export default function Checkout() {
   const navigate = useNavigate();
-  const { authFetch, isAuthenticated } = useAuth();
+  const { authFetch, isAuthenticated, user, updateProfile } = useAuth();
   const { cartItems, cartCount, cartTotal, clearCart, syncCartNow } = useCart();
   const { track } = useAnalytics();
   const [isSuccess, setIsSuccess] = useState(false);
@@ -45,6 +55,53 @@ export default function Checkout() {
   const [showInstallmentModal, setShowInstallmentModal] = useState(false);
   const [selectedCouponIds] = useState(() => getStoredSelectedCouponIds());
   const [orderLoadError, setOrderLoadError] = useState(null);
+  const [shippingForm, setShippingForm] = useState(() => ({
+    ...EMPTY_SHIPPING_FORM,
+    fullName: user?.name || '',
+    phone: user?.phone || '',
+    email: user?.email || '',
+  }));
+
+  const updateShippingField = (field) => (event) => {
+    setShippingForm((prev) => ({ ...prev, [field]: event.target.value }));
+  };
+
+  // Prefill from profile + last order when logged in
+  useEffect(() => {
+    if (!isAuthenticated || !user) return undefined;
+
+    setShippingForm((prev) => ({
+      ...prev,
+      fullName: prev.fullName || user.name || '',
+      phone: prev.phone || user.phone || '',
+      email: prev.email || user.email || '',
+    }));
+
+    let cancelled = false;
+    const loadLastShipping = async () => {
+      try {
+        const payload = await authFetch('/api/orders');
+        if (cancelled) return;
+        const lastShipping = payload?.items?.[0]?.shippingInfo;
+        if (!lastShipping) return;
+        setShippingForm((prev) => ({
+          fullName: prev.fullName || lastShipping.fullName || '',
+          phone: prev.phone || lastShipping.phone || '',
+          email: prev.email || lastShipping.email || '',
+          province: prev.province || lastShipping.province || '',
+          district: prev.district || lastShipping.district || '',
+          ward: prev.ward || lastShipping.ward || '',
+          address: prev.address || lastShipping.address || '',
+        }));
+      } catch {
+        /* ignore — form still usable with profile defaults */
+      }
+    };
+    loadLastShipping();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, user?.id, user?.name, user?.phone, user?.email, authFetch]);
 
   const shippingFee = 0;
   const { selectedCoupons, totalDiscount } = useMemo(
@@ -101,7 +158,7 @@ export default function Checkout() {
         },
       });
 
-      const payload = await apiFetch('/api/orders', {
+      const orderRequest = {
         method: 'POST',
         headers: {
           'x-idempotency-key': getOrderIdempotencyKey(),
@@ -112,11 +169,18 @@ export default function Checkout() {
           paymentMethod: selectedPayment.orderPaymentMethod,
           installment: selectedPayment.orderPaymentMethod === 'installment' ? { provider: selectedPayment.key } : null,
         }),
-      });
+      };
+      // Đã login → authFetch (Bearer + session); guest → apiFetch (session)
+      const payload = isAuthenticated
+        ? await authFetch('/api/orders', orderRequest)
+        : await apiFetch('/api/orders', orderRequest);
 
       if (payload?.paymentUrl) {
         clearCart();
         rotateOrderIdempotencyKey();
+        if (isAuthenticated && shippingInfo.phone && !user?.phone) {
+          updateProfile({ phone: shippingInfo.phone }).catch(() => {});
+        }
         window.location.assign(payload.paymentUrl);
         return;
       }
@@ -125,6 +189,11 @@ export default function Checkout() {
       rotateOrderIdempotencyKey();
       setCreatedOrder(payload?.order || null);
       setIsSuccess(true);
+
+      // Lưu SĐT vào hồ sơ nếu tài khoản chưa có, để lần sau khỏi nhập lại
+      if (isAuthenticated && shippingInfo.phone && !user?.phone) {
+        updateProfile({ phone: shippingInfo.phone }).catch(() => {});
+      }
 
       await track('purchase', {
         metadata: {
@@ -217,10 +286,41 @@ export default function Checkout() {
 
             <div className="tp-checkout-card">
               <h3>Người đặt hàng</h3>
+              {isAuthenticated && (
+                <p className="text-sm text-muted" style={{ marginTop: 0, marginBottom: '0.75rem' }}>
+                  Đã điền sẵn theo tài khoản{shippingForm.address ? ' và đơn gần nhất' : ''}. Bạn có thể chỉnh sửa nếu cần.
+                </p>
+              )}
               <div className="tp-checkout-input-grid">
-                <input required name="fullName" type="text" className="input" placeholder="Họ và tên" />
-                <input required name="phone" type="tel" className="input" placeholder="Số điện thoại" />
-                <input name="email" type="email" className="input" placeholder="Email (Không bắt buộc)" />
+                <input
+                  required
+                  name="fullName"
+                  type="text"
+                  className="input"
+                  placeholder="Họ và tên"
+                  value={shippingForm.fullName}
+                  onChange={updateShippingField('fullName')}
+                  autoComplete="name"
+                />
+                <input
+                  required
+                  name="phone"
+                  type="tel"
+                  className="input"
+                  placeholder="Số điện thoại"
+                  value={shippingForm.phone}
+                  onChange={updateShippingField('phone')}
+                  autoComplete="tel"
+                />
+                <input
+                  name="email"
+                  type="email"
+                  className="input"
+                  placeholder="Email (Không bắt buộc)"
+                  value={shippingForm.email}
+                  onChange={updateShippingField('email')}
+                  autoComplete="email"
+                />
               </div>
             </div>
 
@@ -255,6 +355,9 @@ export default function Checkout() {
                   type="text"
                   className="input"
                   placeholder="Tỉnh/Thành phố (vd: Hồ Chí Minh)"
+                  value={shippingForm.province}
+                  onChange={updateShippingField('province')}
+                  autoComplete="address-level1"
                 />
                 <input
                   required
@@ -262,14 +365,27 @@ export default function Checkout() {
                   type="text"
                   className="input"
                   placeholder="Quận/Huyện (vd: Quận 1)"
+                  value={shippingForm.district}
+                  onChange={updateShippingField('district')}
+                  autoComplete="address-level2"
                 />
-                <input name="ward" type="text" className="input" placeholder="Phường/Xã (vd: Phuong Ben Nghe)" />
+                <input
+                  name="ward"
+                  type="text"
+                  className="input"
+                  placeholder="Phường/Xã (vd: Phuong Ben Nghe)"
+                  value={shippingForm.ward}
+                  onChange={updateShippingField('ward')}
+                />
                 <input
                   required
                   name="address"
                   type="text"
                   className="input"
                   placeholder={deliveryMethod === 'home' ? 'Số nhà, tên đường' : 'Chọn cửa hàng gần bạn'}
+                  value={shippingForm.address}
+                  onChange={updateShippingField('address')}
+                  autoComplete="street-address"
                 />
               </div>
             </div>

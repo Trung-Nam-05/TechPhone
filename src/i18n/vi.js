@@ -7,7 +7,9 @@ export default {
   },
   categories: {
     'dien-thoai': 'Điện thoại',
+    'may-tinh-bang': 'Máy tính bảng',
     laptop: 'Laptop',
+    'may-lanh': 'Máy lạnh',
     'dien-may': 'Điện máy',
     'phu-kien': 'Phụ kiện',
     fallback: 'Sản phẩm',
@@ -206,6 +208,7 @@ export default {
     products: 'Sản phẩm',
     orders: 'Đơn hàng',
     inventory: 'Tồn kho',
+    prices: 'Quản lý giá',
     flashSales: 'Flash sale',
     analytics: 'Phân tích funnel',
     program: 'Chương trình 30/60/90',

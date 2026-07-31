@@ -44,6 +44,19 @@ function shortOrderId(id) {
   return id ? `#${String(id).slice(-8).toUpperCase()}` : '—';
 }
 
+function toDateInputValue(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function formatVnDate(dateKey) {
+  if (!dateKey) return '';
+  const [y, m, d] = dateKey.split('-');
+  return `${d}/${m}/${y}`;
+}
+
 function canConfirmFulfillment(order) {
   if (!order || order.status !== 'confirmed' || order.shipment?.labelId) return false;
   if (order.paymentMethod === 'installment') return false;
@@ -56,14 +69,18 @@ export default function AdminOrders() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [events, setEvents] = useState([]);
   const [shipmentEvents, setShipmentEvents] = useState([]);
   const [copiedLabelId, setCopiedLabelId] = useState(false);
   const [statusFilter, setStatusFilter] = useState('');
   const [cancelFilter, setCancelFilter] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [overrideModal, setOverrideModal] = useState(null);
+  const [listMeta, setListMeta] = useState({ count: 0, from: null, to: null });
 
   const selectedOrder = useMemo(
     () => items.find((item) => item._id === selectedOrderId) || null,
@@ -82,22 +99,31 @@ export default function AdminOrders() {
     });
   }, [items, searchQuery]);
 
+  const dateFilterLabel = useMemo(() => {
+    if (!listMeta.from && !listMeta.to) return null;
+    if (listMeta.from && listMeta.to && listMeta.from === listMeta.to) {
+      return `Ngày ${formatVnDate(listMeta.from)}`;
+    }
+    return `Từ ${formatVnDate(listMeta.from)} đến ${formatVnDate(listMeta.to)}`;
+  }, [listMeta]);
+
   const kpis = useMemo(() => {
-    const pending = items.filter((o) => o.status === 'pending').length;
-    const awaitingFulfillment = items.filter(
+    const source = filteredItems;
+    const pending = source.filter((o) => o.status === 'pending').length;
+    const awaitingFulfillment = source.filter(
       (o) =>
         o.status === 'confirmed' &&
         !o.shipment?.labelId &&
         o.paymentMethod !== 'installment' &&
         (o.paymentMethod !== 'vnpay' || o.paymentStatus === 'paid'),
     ).length;
-    const shipping = items.filter((o) => ['await_pickup', 'picked', 'shipping'].includes(o.status)).length;
-    const cancelPending = items.filter((o) => o.cancelRequestStatus === 'pending').length;
-    const revenue = items
+    const shipping = source.filter((o) => ['await_pickup', 'picked', 'shipping'].includes(o.status)).length;
+    const cancelPending = source.filter((o) => o.cancelRequestStatus === 'pending').length;
+    const revenue = source
       .filter((o) => o.status === 'completed')
       .reduce((sum, o) => sum + Number(o.total || 0), 0);
-    return { total: items.length, pending, awaitingFulfillment, shipping, cancelPending, revenue };
-  }, [items]);
+    return { total: source.length, pending, awaitingFulfillment, shipping, cancelPending, revenue };
+  }, [filteredItems]);
 
   const loadOrders = async () => {
     setLoading(true);
@@ -106,8 +132,19 @@ export default function AdminOrders() {
       const query = new URLSearchParams();
       if (statusFilter) query.set('status', statusFilter);
       if (cancelFilter) query.set('cancelRequestStatus', cancelFilter);
+      if (fromDate && toDate && fromDate === toDate) {
+        query.set('date', fromDate);
+      } else {
+        if (fromDate) query.set('from', fromDate);
+        if (toDate) query.set('to', toDate);
+      }
       const payload = await authFetch(`/api/admin/orders?${query.toString()}`);
       setItems(payload.items || []);
+      setListMeta({
+        count: payload.meta?.count ?? (payload.items || []).length,
+        from: payload.meta?.from || fromDate || null,
+        to: payload.meta?.to || toDate || null,
+      });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -118,7 +155,18 @@ export default function AdminOrders() {
   useEffect(() => {
     loadOrders();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, cancelFilter]);
+  }, [statusFilter, cancelFilter, fromDate, toDate]);
+
+  const clearDateFilter = () => {
+    setFromDate('');
+    setToDate('');
+  };
+
+  const filterToday = () => {
+    const today = toDateInputValue();
+    setFromDate(today);
+    setToDate(today);
+  };
 
   const resolveCancellation = async (orderId, action) => {
     try {
@@ -158,6 +206,13 @@ export default function AdminOrders() {
     await loadShipmentEvents(orderId);
   };
 
+  const closeOrderDetail = () => {
+    setSelectedOrderId(null);
+    setEvents([]);
+    setShipmentEvents([]);
+    setCopiedLabelId(false);
+  };
+
   const copyLabelId = async (labelId) => {
     try {
       await navigator.clipboard.writeText(labelId);
@@ -182,15 +237,36 @@ export default function AdminOrders() {
     }
   };
 
+  const confirmOrder = async (orderId, event) => {
+    event?.stopPropagation();
+    setError(null);
+    setSuccess(null);
+    const updated = await updateOrder(orderId, {
+      status: 'confirmed',
+      note: 'Admin xác nhận đơn hàng.',
+    });
+    if (updated) {
+      setSuccess('Đã xác nhận đơn hàng. Tiến trình phía khách đã cập nhật.');
+    }
+  };
+
   const confirmFulfillment = async (orderId, event) => {
     event?.stopPropagation();
     if (!window.confirm('Xác nhận đã kiểm kho, đóng gói và gửi vận đơn GHN (staging)?')) return;
+    setError(null);
+    setSuccess(null);
     try {
       const payload = await authFetch(`/api/admin/orders/${orderId}/confirm-fulfillment`, { method: 'POST' });
       setItems((prev) => prev.map((item) => (item._id === orderId ? payload.order : item)));
       if (selectedOrderId === orderId) {
         await loadEvents(orderId);
         await loadShipmentEvents(orderId);
+      }
+      if (payload.ghnOk === false) {
+        setSuccess(payload.message || 'Đã xác nhận đóng gói. GHN chưa tạo được vận đơn.');
+        setError(`GHN: ${payload.error || 'tạo vận đơn thất bại'}`);
+      } else {
+        setSuccess(`Đã xác nhận đóng gói${payload.labelId ? ` · Mã GHN: ${payload.labelId}` : ''}.`);
       }
     } catch (err) {
       setError(err.message);
@@ -257,7 +333,12 @@ export default function AdminOrders() {
       />
 
       <div className="admin-kpi-grid">
-        <AdminKpiCard label="Tổng đơn" value={kpis.total} icon={ShoppingBag} tone="blue" />
+        <AdminKpiCard
+          label={dateFilterLabel ? `${dateFilterLabel}` : 'Tổng đơn'}
+          value={kpis.total}
+          icon={ShoppingBag}
+          tone="blue"
+        />
         <AdminKpiCard label="Chờ xử lý" value={kpis.pending} icon={Clock} tone="orange" />
         <AdminKpiCard label="Chờ xác nhận GHN" value={kpis.awaitingFulfillment} icon={PackageCheck} tone="orange" />
         <AdminKpiCard label="Đang giao" value={kpis.shipping} icon={Truck} tone="purple" />
@@ -276,6 +357,43 @@ export default function AdminOrders() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
+        <label className="admin-orders-date-field">
+          <span>Từ ngày</span>
+          <input
+            type="date"
+            className="input"
+            value={fromDate}
+            max={toDateInputValue()}
+            onChange={(e) => {
+              const next = e.target.value;
+              setFromDate(next);
+              if (toDate && next && next > toDate) setToDate(next);
+            }}
+          />
+        </label>
+        <label className="admin-orders-date-field">
+          <span>Đến ngày</span>
+          <input
+            type="date"
+            className="input"
+            value={toDate}
+            min={fromDate || undefined}
+            max={toDateInputValue()}
+            onChange={(e) => {
+              const next = e.target.value;
+              setToDate(next);
+              if (fromDate && next && next < fromDate) setFromDate(next);
+            }}
+          />
+        </label>
+        <button type="button" className="btn btn-outline" onClick={filterToday}>
+          Hôm nay
+        </button>
+        {(fromDate || toDate) && (
+          <button type="button" className="btn btn-outline" onClick={clearDateFilter}>
+            Xóa ngày
+          </button>
+        )}
         <select className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
           <option value="">Tất cả trạng thái</option>
           {ORDER_STATUS_OPTIONS.map((status) => (
@@ -296,7 +414,20 @@ export default function AdminOrders() {
         </button>
       </div>
 
+      {dateFilterLabel && (
+        <div className="admin-orders-date-summary">
+          <strong>{dateFilterLabel}</strong>
+          <span>
+            có <strong>{listMeta.count}</strong> đơn hàng
+            {searchQuery.trim() && filteredItems.length !== listMeta.count
+              ? ` (hiển thị ${filteredItems.length} sau tìm kiếm)`
+              : ''}
+          </span>
+        </div>
+      )}
+
       {error && <p style={{ color: '#dc2626', margin: 0 }}>{error}</p>}
+      {success && <p style={{ color: '#0f766e', margin: 0 }}>{success}</p>}
 
       <div className="admin-orders-layout">
         <div className="admin-orders-table-wrap">
@@ -322,7 +453,6 @@ export default function AdminOrders() {
                   <tr
                     key={order._id}
                     className={selectedOrderId === order._id ? 'is-selected' : ''}
-                    onClick={() => selectOrder(order._id)}
                   >
                     <td>
                       <span className="admin-order-code">{shortOrderId(order._id)}</span>
@@ -349,9 +479,17 @@ export default function AdminOrders() {
                       <OrderStatusBadge status={order.status} />
                     </td>
                     <td className="admin-order-date">
-                      {order.createdAt ? new Date(order.createdAt).toLocaleString('vi-VN') : '—'}
+                      {order.createdAt
+                        ? new Date(order.createdAt).toLocaleString('vi-VN', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                          })
+                        : '—'}
                     </td>
-                    <td onClick={(e) => e.stopPropagation()}>
+                    <td>
                       <div className="admin-order-actions">
                         <button type="button" className="btn btn-outline" onClick={() => selectOrder(order._id)}>
                           Chi tiết
@@ -374,19 +512,31 @@ export default function AdminOrders() {
             </table>
           )}
         </div>
+      </div>
 
-        <aside className="admin-orders-detail">
-          <h2>Chi tiết đơn hàng</h2>
-          {!selectedOrder && <p className="text-muted">Chọn một dòng trong bảng để xem timeline và thao tác.</p>}
-          {selectedOrder && (
-            <>
-              <p style={{ margin: '0 0 12px', fontSize: 13 }}>
-                <strong>{shortOrderId(selectedOrder._id)}</strong>
-                {' · '}
-                {selectedOrder.shippingInfo?.fullName}
-                {' · '}
-                {formatMoney(selectedOrder.total)}
-              </p>
+      {selectedOrder && (
+        <div className="admin-orders-modal-backdrop" onClick={closeOrderDetail}>
+          <aside
+            className="admin-orders-detail-modal"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-order-detail-title"
+          >
+            <div className="admin-orders-detail-header">
+              <h2 id="admin-order-detail-title">Chi tiết đơn hàng</h2>
+              <button type="button" className="btn btn-outline" onClick={closeOrderDetail}>
+                Đóng
+              </button>
+            </div>
+
+            <p style={{ margin: '0 0 12px', fontSize: 13 }}>
+              <strong>{shortOrderId(selectedOrder._id)}</strong>
+              {' · '}
+              {selectedOrder.shippingInfo?.fullName}
+              {' · '}
+              {formatMoney(selectedOrder.total)}
+            </p>
 
               <div className="admin-orders-detail-section">
                 <h3>Hỗ trợ nội bộ</h3>
@@ -444,6 +594,15 @@ export default function AdminOrders() {
               )}
 
               <div className="admin-order-actions" style={{ marginBottom: 16 }}>
+                {selectedOrder.status === 'pending' && (
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={(e) => confirmOrder(selectedOrder._id, e)}
+                  >
+                    Xác nhận đơn
+                  </button>
+                )}
                 <button
                   type="button"
                   className="btn btn-outline"
@@ -546,10 +705,9 @@ export default function AdminOrders() {
                   </div>
                 </div>
               )}
-            </>
-          )}
-        </aside>
-      </div>
+          </aside>
+        </div>
+      )}
 
       {overrideModal && (
         <div className="admin-orders-modal-backdrop" onClick={() => setOverrideModal(null)}>

@@ -37,6 +37,8 @@ export default function ProductDetail() {
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewEligibility, setReviewEligibility] = useState(null);
+  const [reviewNotice, setReviewNotice] = useState(null);
 
   const dateLocale = locale === 'en' ? 'en-US' : 'vi-VN';
 
@@ -51,6 +53,8 @@ export default function ProductDetail() {
       setLoading(true);
       setError(null);
       setProduct(null);
+      setReviewEligibility(null);
+      setReviewNotice(null);
       try {
         const [pRes, rRes] = await Promise.all([
           fetch(`${API_BASE_URL}/api/products/${encodeURIComponent(id)}`),
@@ -79,6 +83,28 @@ export default function ProductDetail() {
     };
   }, [id]);
 
+  useEffect(() => {
+    let cancelled = false;
+    const loadEligibility = async () => {
+      if (!isAuthenticated || !id) {
+        setReviewEligibility(null);
+        return;
+      }
+      try {
+        const payload = await authFetch(
+          `/api/products/${encodeURIComponent(id)}/reviews/eligibility`,
+        );
+        if (!cancelled) setReviewEligibility(payload);
+      } catch {
+        if (!cancelled) setReviewEligibility(null);
+      }
+    };
+    loadEligibility();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, id, authFetch]);
+
   const mainGallery =
     product?.images?.length > 0
       ? product.images
@@ -92,8 +118,9 @@ export default function ProductDetail() {
     e.preventDefault();
     if (!isAuthenticated || !id) return;
     setReviewSubmitting(true);
+    setReviewNotice(null);
     try {
-      await authFetch(`/api/products/${encodeURIComponent(id)}/reviews`, {
+      const result = await authFetch(`/api/products/${encodeURIComponent(id)}/reviews`, {
         method: 'POST',
         body: JSON.stringify({
           rating: reviewRating,
@@ -101,12 +128,15 @@ export default function ProductDetail() {
           title: '',
         }),
       });
-      const rRes = await fetch(`${API_BASE_URL}/api/products/${encodeURIComponent(id)}/reviews`);
-      const rJson = rRes.ok ? await rRes.json() : { items: [] };
-      setReviews(rJson.items || []);
       setReviewComment('');
+      setReviewNotice(result?.message || 'Đánh giá đã gửi và đang chờ duyệt.');
+      setReviewEligibility((prev) =>
+        prev
+          ? { ...prev, canReview: false, alreadyReviewed: true, pendingApproval: true }
+          : { canReview: false, purchased: true, alreadyReviewed: true, pendingApproval: true },
+      );
     } catch (err) {
-      setError(err.message);
+      setReviewNotice(err.message);
     } finally {
       setReviewSubmitting(false);
     }
@@ -211,34 +241,49 @@ export default function ProductDetail() {
           </ul>
 
           {isAuthenticated ? (
-            <form onSubmit={submitReview} className="card" style={{ padding: 14, marginTop: 16 }}>
-              <h3>{t('productDetail.reviewFormHeading')}</h3>
-              <div style={{ marginBottom: 8 }}>
-                <label className="text-sm">{t('productDetail.ratingLabel')} </label>
-                <select
+            reviewEligibility?.canReview ? (
+              <form onSubmit={submitReview} className="card" style={{ padding: 14, marginTop: 16 }}>
+                <h3>{t('productDetail.reviewFormHeading')}</h3>
+                <p className="text-sm text-muted">Đánh giá sẽ hiển thị sau khi admin duyệt.</p>
+                <div style={{ marginBottom: 8 }}>
+                  <label className="text-sm">{t('productDetail.ratingLabel')} </label>
+                  <select
+                    className="input"
+                    style={{ maxWidth: 80 }}
+                    value={reviewRating}
+                    onChange={(e) => setReviewRating(Number(e.target.value))}
+                  >
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <textarea
                   className="input"
-                  style={{ maxWidth: 80 }}
-                  value={reviewRating}
-                  onChange={(e) => setReviewRating(Number(e.target.value))}
-                >
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <textarea
-                className="input"
-                rows={3}
-                placeholder={t('productDetail.commentPlaceholder')}
-                value={reviewComment}
-                onChange={(e) => setReviewComment(e.target.value)}
-              />
-              <button type="submit" className="btn btn-primary" style={{ marginTop: 8 }} disabled={reviewSubmitting}>
-                {reviewSubmitting ? t('productDetail.submitting') : t('productDetail.submitReview')}
-              </button>
-            </form>
+                  rows={3}
+                  required
+                  placeholder={t('productDetail.commentPlaceholder')}
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                />
+                <button type="submit" className="btn btn-primary" style={{ marginTop: 8 }} disabled={reviewSubmitting}>
+                  {reviewSubmitting ? t('productDetail.submitting') : t('productDetail.submitReview')}
+                </button>
+                {reviewNotice && <p className="text-sm" style={{ marginTop: 8 }}>{reviewNotice}</p>}
+              </form>
+            ) : (
+              <p className="text-muted" style={{ marginTop: 12 }}>
+                {reviewEligibility?.pendingApproval
+                  ? 'Bạn đã gửi đánh giá và đang chờ duyệt.'
+                  : reviewEligibility?.alreadyReviewed
+                    ? 'Bạn đã đánh giá sản phẩm này.'
+                    : reviewEligibility?.purchased === false
+                      ? 'Chỉ khách đã mua và nhận hàng thành công mới được đánh giá.'
+                      : reviewNotice || 'Đang kiểm tra quyền đánh giá...'}
+              </p>
+            )
           ) : (
             <p className="text-muted" style={{ marginTop: 12 }}>
               {t('productDetail.reviewLoginPrefix')}{' '}

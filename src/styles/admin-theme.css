@@ -307,6 +307,12 @@
   border: 1px solid #f5c4bf;
 }
 
+.admin-alert-success {
+  background: color-mix(in srgb, var(--admin-success) 12%, white);
+  color: #0f766e;
+  border: 1px solid color-mix(in srgb, var(--admin-success) 35%, white);
+}
+
 .admin-card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));

@@ -12,7 +12,7 @@ const HIGHLIGHT_CATEGORIES = [
   },
   {
     label: 'Máy tính bảng',
-    href: '/products',
+    href: '/products?category=may-tinh-bang',
     image:
       'https://cdn2.fptshop.com.vn/unsafe/360x0/filters:format(webp):quality(75)/may_tinh_bang_ic_cate_dccb57ff5c.png',
   },
@@ -60,7 +60,7 @@ const HIGHLIGHT_CATEGORIES = [
   },
   {
     label: 'Máy lạnh - Điều hòa',
-    href: '/products?category=dien-may',
+    href: '/products?category=may-lanh',
     image: 'https://cdn2.fptshop.com.vn/thumb/thumb/may_lanh_dieu_hoa_42f5e11390.gif',
     badge: true,
   },

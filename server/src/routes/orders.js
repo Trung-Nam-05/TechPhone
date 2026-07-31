@@ -7,6 +7,7 @@ import FlashSale from '../models/FlashSale.js';
 import InventoryMovement from '../models/InventoryMovement.js';
 import OrderEvent from '../models/OrderEvent.js';
 import { getOwnershipFilter, getOwnershipForWrite } from '../utils/ownership.js';
+import { claimSessionOwnership } from '../services/claimSessionOwnership.js';
 import { calculatePricing, consumeCouponsUsage, PricingError } from '../services/pricing.js';
 import { calculateInstallmentPlan, normalizeInstallmentInput } from '../utils/installment.js';
 import { restoreInventoryForCancelledOrder } from '../services/orderCancel.js';
@@ -366,7 +367,12 @@ router.post('/', async (req, res, next) => {
 
 router.get('/', async (req, res, next) => {
   try {
-    const ownershipFilter = getOwnershipFilter(req);
+    // Đã login + còn session guest → gắn đơn cũ vào tài khoản (không cần logout/login lại)
+    if (req.auth?.userId) {
+      await claimSessionOwnership(req, req.auth.userId);
+    }
+
+    const ownershipFilter = getOwnershipFilter(req, { includeGuestSession: true });
     if (!ownershipFilter) {
       return res.status(400).json({ message: 'Missing order ownership context.' });
     }
@@ -385,7 +391,7 @@ router.get('/:id/timeline', requireAuth, async (req, res, next) => {
       return res.status(400).json({ message: 'Invalid order id.' });
     }
 
-    const ownershipFilter = getOwnershipFilter(req);
+    const ownershipFilter = getOwnershipFilter(req, { includeGuestSession: true });
     const isAdmin = req.auth?.role === 'admin';
     const order = isAdmin
       ? await Order.findById(id).lean()
@@ -408,7 +414,7 @@ router.post('/:id/refresh-shipment', requireAuth, async (req, res, next) => {
       return res.status(400).json({ message: 'Invalid order id.' });
     }
 
-    const ownershipFilter = getOwnershipFilter(req);
+    const ownershipFilter = getOwnershipFilter(req, { includeGuestSession: true });
     const isAdmin = req.auth?.role === 'admin';
     const order = isAdmin
       ? await Order.findById(id)
@@ -439,7 +445,7 @@ router.get('/:id/shipment-events', requireAuth, async (req, res, next) => {
       return res.status(400).json({ message: 'Invalid order id.' });
     }
 
-    const ownershipFilter = getOwnershipFilter(req);
+    const ownershipFilter = getOwnershipFilter(req, { includeGuestSession: true });
     const isAdmin = req.auth?.role === 'admin';
     const order = isAdmin
       ? await Order.findById(id).lean()
@@ -465,7 +471,7 @@ router.get('/:id', async (req, res, next) => {
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ message: 'Invalid order id.' });
     }
-    const ownershipFilter = getOwnershipFilter(req);
+    const ownershipFilter = getOwnershipFilter(req, { includeGuestSession: true });
     if (!ownershipFilter) {
       return res.status(400).json({ message: 'Missing order ownership context.' });
     }
@@ -486,7 +492,7 @@ router.post('/:id/request-cancellation', async (req, res, next) => {
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ message: 'Invalid order id.' });
     }
-    const ownershipFilter = getOwnershipFilter(req);
+    const ownershipFilter = getOwnershipFilter(req, { includeGuestSession: true });
     if (!ownershipFilter) {
       return res.status(400).json({ message: 'Missing order ownership context.' });
     }
@@ -528,7 +534,7 @@ router.post('/:id/cancel-immediate', async (req, res, next) => {
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ message: 'Invalid order id.' });
     }
-    const ownershipFilter = getOwnershipFilter(req);
+    const ownershipFilter = getOwnershipFilter(req, { includeGuestSession: true });
     if (!ownershipFilter) {
       return res.status(400).json({ message: 'Missing order ownership context.' });
     }

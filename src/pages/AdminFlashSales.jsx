@@ -121,7 +121,7 @@ export default function AdminFlashSales() {
   };
 
   const handleDelete = async (id) => {
-    const confirmed = window.confirm('Ban chac chan muon xoa flash sale nay?');
+    const confirmed = window.confirm('Bạn chắc chắn muốn xóa flash sale này?');
     if (!confirmed) return;
     try {
       await authFetch(`/api/admin/flash-sales/${id}`, { method: 'DELETE' });

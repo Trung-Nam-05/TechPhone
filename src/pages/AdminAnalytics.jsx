@@ -7,6 +7,7 @@ import { OrderStatusBadge } from '../components/OrderStatusBadge';
 import AdminPageHeader from '../components/admin/AdminPageHeader';
 import AdminKpiCard from '../components/admin/AdminKpiCard';
 import SalesLineChart from '../components/admin/SalesLineChart';
+import OrdersBarChart from '../components/admin/OrdersBarChart';
 import TopProductsBarChart from '../components/admin/TopProductsBarChart';
 import './AdminAnalytics.css';
 
@@ -87,7 +88,7 @@ function fillRevenueDays(rawDays, startDateStr, endDateStr) {
 
   while (cursor <= end) {
     const key = toDateInputValue(cursor);
-    result.push(map[key] || { date: key, orders: 0, revenue: 0 });
+    result.push(map[key] || { date: key, orders: 0, completedOrders: 0, revenue: 0 });
     cursor.setDate(cursor.getDate() + 1);
   }
   return result;
@@ -193,12 +194,14 @@ export default function AdminAnalytics() {
   const pendingTotal = (summary.pendingCancelRequests || 0) + (summary.openSupportCases || 0);
   const rangeStart = data?.revenueRange?.startDate || appliedRange.startDate;
   const rangeEnd = data?.revenueRange?.endDate || appliedRange.endDate;
-  const revenueDays = fillRevenueDays(data?.revenueByDay, rangeStart, rangeEnd);
+  const revenueDays = fillRevenueDays(data?.revenueByDay || data?.ordersByDay, rangeStart, rangeEnd);
   const rangeLabel =
     rangeStart === rangeEnd
       ? formatDisplayDate(rangeStart)
       : `${formatDisplayDate(rangeStart)} – ${formatDisplayDate(rangeEnd)}`;
   const dayCount = revenueDays.length;
+  const totalOrdersInRange = revenueDays.reduce((sum, day) => sum + Number(day.orders || 0), 0);
+  const maxOrdersInDay = Math.max(0, ...revenueDays.map((day) => Number(day.orders || 0)));
 
   return (
     <div className={`admin-page admin-analytics-page${refreshing ? ' is-refreshing' : ''}`}>
@@ -271,7 +274,7 @@ export default function AdminAnalytics() {
       <section className="admin-analytics-section admin-analytics-section-wide">
         <div className="admin-analytics-section-head admin-analytics-revenue-head">
           <div>
-            <h2>Chi tiết doanh thu</h2>
+            <h2>Chi tiết doanh thu & số đơn theo ngày</h2>
             <p className="admin-analytics-revenue-subtitle">
               Doanh thu đơn hoàn tất trong khoảng đã chọn:{' '}
               <strong>{formatMoneyCompact(summary.periodRevenue)}</strong>
@@ -280,7 +283,7 @@ export default function AdminAnalytics() {
             </p>
           </div>
           <span className="admin-analytics-badge">
-            {dayCount} ngày · {rangeLabel}
+            {dayCount} ngày · {rangeLabel} · {totalOrdersInRange} đơn/ngày (tổng)
           </span>
         </div>
 
@@ -331,6 +334,69 @@ export default function AdminAnalytics() {
             formatTooltipMoney={formatMoneyCompact}
             formatShortDate={formatShortDate}
           />
+        </div>
+
+        <div className="admin-analytics-section-head admin-analytics-subhead">
+          <h3>Số đơn hàng theo ngày</h3>
+          <span className="admin-analytics-badge">{totalOrdersInRange} đơn trong kỳ</span>
+        </div>
+        <div className={`admin-chart-shell${isLoading ? ' is-loading' : ''}`}>
+          <OrdersBarChart data={revenueDays} formatShortDate={formatShortDate} />
+        </div>
+        <div className="admin-table-wrap admin-orders-by-day-table">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Ngày</th>
+                <th className="admin-table-num">Số đơn</th>
+                <th className="admin-table-num">Hoàn tất</th>
+                <th className="admin-table-num">Doanh thu</th>
+                <th>Tỷ lệ trong kỳ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[...revenueDays].reverse().map((day) => {
+                const share = totalOrdersInRange > 0
+                  ? Math.round((Number(day.orders || 0) / totalOrdersInRange) * 100)
+                  : 0;
+                return (
+                  <tr key={day.date}>
+                    <td className="admin-table-nowrap">{formatDisplayDate(day.date)}</td>
+                    <td className="admin-table-num">
+                      <strong>{day.orders || 0}</strong>
+                    </td>
+                    <td className="admin-table-num">{day.completedOrders || 0}</td>
+                    <td className="admin-table-num admin-table-money">{formatMoney(day.revenue)}</td>
+                    <td>
+                      <div className="admin-analytics-bar-row admin-orders-day-share">
+                        <div className="admin-analytics-bar-track">
+                          <div
+                            className="admin-analytics-bar-fill"
+                            style={{
+                              width: `${totalOrdersInRange > 0 ? (Number(day.orders || 0) / Math.max(maxOrdersInDay, 1)) * 100 : 0}%`,
+                            }}
+                          />
+                        </div>
+                        <span className="admin-analytics-bar-value">{share}%</span>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {!isLoading && revenueDays.every((d) => !d.orders) && (
+                <tr>
+                  <td colSpan={5} className="admin-table-empty">
+                    Chưa có đơn hàng trong khoảng đã chọn.
+                  </td>
+                </tr>
+              )}
+              {isLoading && (
+                <tr>
+                  <td colSpan={5} className="admin-table-empty">Đang tải dữ liệu...</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </section>
 

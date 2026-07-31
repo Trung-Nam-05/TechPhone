@@ -18,8 +18,11 @@ import ExecutionProgram from './pages/ExecutionProgram';
 import AdminAnalytics from './pages/AdminAnalytics';
 import AdminOrders from './pages/AdminOrders';
 import AdminInventory from './pages/AdminInventory';
-import AdminProgram from './pages/AdminProgram';
+import AdminPrices from './pages/AdminPrices';
 import AdminFlashSales from './pages/AdminFlashSales';
+import AdminReviews from './pages/AdminReviews';
+import AdminCategories from './pages/AdminCategories';
+import AdminCoupons from './pages/AdminCoupons';
 import Installment from './pages/Installment';
 import Coupon from './pages/Coupon';
 import AccountLayout from './layouts/AccountLayout';
@@ -49,8 +52,11 @@ function App() {
         <Route path="orders" element={<AdminOrders />} />
         <Route path="support" element={<AdminSupport />} />
         <Route path="inventory" element={<AdminInventory />} />
+        <Route path="prices" element={<AdminPrices />} />
         <Route path="flash-sales" element={<AdminFlashSales />} />
-        <Route path="program" element={<AdminProgram />} />
+        <Route path="categories" element={<AdminCategories />} />
+        <Route path="coupons" element={<AdminCoupons />} />
+        <Route path="reviews" element={<AdminReviews />} />
         <Route path="users" element={<AdminUsers />} />
       </Route>
 

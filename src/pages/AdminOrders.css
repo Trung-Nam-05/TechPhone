@@ -21,6 +21,36 @@
   min-width: 140px;
 }
 
+.admin-orders-date-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.admin-orders-date-field .input {
+  min-width: 150px;
+}
+
+.admin-orders-date-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 12px 16px;
+  border-radius: var(--admin-radius);
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e3a8a;
+  font-size: 14px;
+}
+
+.admin-orders-date-summary strong {
+  font-weight: 700;
+}
+
 .admin-orders-search {
   flex: 1;
   min-width: 220px;
@@ -28,7 +58,7 @@
 
 .admin-orders-layout {
   display: grid;
-  grid-template-columns: 1fr 360px;
+  grid-template-columns: 1fr;
   gap: 20px;
   align-items: start;
 }
@@ -39,21 +69,23 @@
   border-radius: var(--admin-radius);
   overflow: hidden;
   box-shadow: var(--admin-shadow-sm);
+  width: 100%;
 }
 
 .admin-orders-table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
   font-size: 13px;
 }
 
 .admin-orders-table th {
   text-align: left;
-  padding: 14px 16px;
+  padding: 12px 10px;
   background: var(--admin-bg);
   color: var(--admin-muted);
   font-weight: 600;
-  font-size: 12px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   border-bottom: 1px solid var(--admin-border-light);
@@ -61,13 +93,47 @@
 }
 
 .admin-orders-table td {
-  padding: 14px 16px;
+  padding: 12px 10px;
   border-bottom: 1px solid var(--admin-border-light);
   vertical-align: middle;
 }
 
+.admin-orders-table th:nth-child(1),
+.admin-orders-table td:nth-child(1) {
+  width: 11%;
+}
+
+.admin-orders-table th:nth-child(2),
+.admin-orders-table td:nth-child(2) {
+  width: 16%;
+}
+
+.admin-orders-table th:nth-child(3),
+.admin-orders-table td:nth-child(3) {
+  width: 13%;
+}
+
+.admin-orders-table th:nth-child(4),
+.admin-orders-table td:nth-child(4) {
+  width: 14%;
+}
+
+.admin-orders-table th:nth-child(5),
+.admin-orders-table td:nth-child(5) {
+  width: 13%;
+}
+
+.admin-orders-table th:nth-child(6),
+.admin-orders-table td:nth-child(6) {
+  width: 15%;
+}
+
+.admin-orders-table th:nth-child(7),
+.admin-orders-table td:nth-child(7) {
+  width: 18%;
+}
+
 .admin-orders-table tbody tr {
-  cursor: pointer;
   transition: background 0.15s;
 }
 
@@ -94,10 +160,14 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
 .admin-order-customer strong {
   font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .admin-order-customer span {
@@ -109,12 +179,13 @@
   font-weight: 600;
   color: var(--admin-text);
   white-space: nowrap;
+  font-size: 13px;
 }
 
 .admin-order-date {
   font-size: 12px;
   color: var(--admin-muted);
-  white-space: nowrap;
+  line-height: 1.35;
 }
 
 .admin-order-actions {
@@ -126,6 +197,7 @@
 .admin-order-actions .btn {
   font-size: 12px;
   padding: 4px 10px;
+  white-space: nowrap;
 }
 
 .admin-orders-empty {
@@ -134,19 +206,28 @@
   color: var(--admin-muted);
 }
 
-.admin-orders-detail {
+.admin-orders-detail-modal {
   background: var(--admin-surface);
-  border: 1px solid var(--admin-border-light);
   border-radius: var(--admin-radius);
-  padding: 20px;
-  box-shadow: var(--admin-shadow-sm);
-  position: sticky;
-  top: 88px;
+  padding: 24px;
+  max-width: 640px;
+  width: 100%;
+  max-height: min(88vh, 900px);
+  overflow-y: auto;
+  box-shadow: 0 24px 48px rgba(32, 34, 36, 0.18);
 }
 
-.admin-orders-detail h2 {
+.admin-orders-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.admin-orders-detail-header h2 {
   font-size: 18px;
-  margin: 0 0 14px;
+  margin: 0;
   color: var(--admin-text);
 }
 
@@ -200,22 +281,14 @@
   box-shadow: 0 24px 48px rgba(32, 34, 36, 0.18);
 }
 
-@media (max-width: 1100px) {
-  .admin-orders-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .admin-orders-detail {
-    position: static;
-  }
-}
-
-@media (max-width: 768px) {
-  .admin-orders-table-wrap {
-    overflow-x: auto;
-  }
-
+@media (max-width: 900px) {
   .admin-orders-table {
-    min-width: 820px;
+    table-layout: auto;
+    font-size: 12px;
+  }
+
+  .admin-orders-table th,
+  .admin-orders-table td {
+    padding: 10px 8px;
   }
 }

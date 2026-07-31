@@ -88,7 +88,7 @@ export default function OrderDetail() {
 
     const timer = setInterval(() => {
       loadTimeline();
-    }, 30000);
+    }, 10000);
 
     return () => clearInterval(timer);
   }, [timeline?.order?.status, loadTimeline]);
@@ -97,7 +97,9 @@ export default function OrderDetail() {
     if (!window.confirm('Bạn có chắc muốn hủy đơn này?')) return;
     setActionLoading(true);
     try {
-      await apiFetch(`/api/orders/${orderId}/cancel-immediate`, { method: 'POST' });
+      const request = { method: 'POST' };
+      if (isAuthenticated) await authFetch(`/api/orders/${orderId}/cancel-immediate`, request);
+      else await apiFetch(`/api/orders/${orderId}/cancel-immediate`, request);
       await loadTimeline();
     } catch (err) {
       setError(err.message);
@@ -110,10 +112,12 @@ export default function OrderDetail() {
     event.preventDefault();
     setActionLoading(true);
     try {
-      await apiFetch(`/api/orders/${orderId}/request-cancellation`, {
+      const request = {
         method: 'POST',
         body: JSON.stringify({ note: cancelNote }),
-      });
+      };
+      if (isAuthenticated) await authFetch(`/api/orders/${orderId}/request-cancellation`, request);
+      else await apiFetch(`/api/orders/${orderId}/request-cancellation`, request);
       setCancelNote('');
       await loadTimeline();
     } catch (err) {

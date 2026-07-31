@@ -206,6 +206,9 @@ router.get('/dashboard', requireAuth, requireAdmin, async (req, res, next) => {
             _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt', timezone: 'Asia/Ho_Chi_Minh' } },
             orders: { $sum: 1 },
             revenue: { $sum: '$total' },
+            completedOrders: {
+              $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] },
+            },
           },
         },
         { $sort: { _id: 1 } },
@@ -284,6 +287,13 @@ router.get('/dashboard', requireAuth, requireAdmin, async (req, res, next) => {
       revenueByDay: revenueByDay.map((row) => ({
         date: row._id,
         orders: row.orders,
+        completedOrders: row.completedOrders || 0,
+        revenue: row.revenue,
+      })),
+      ordersByDay: revenueByDay.map((row) => ({
+        date: row._id,
+        orders: row.orders,
+        completedOrders: row.completedOrders || 0,
         revenue: row.revenue,
       })),
       topProducts: topProducts.map((row) => ({

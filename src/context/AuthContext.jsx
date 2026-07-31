@@ -1,5 +1,5 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { API_BASE_URL } from '../config/api';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { API_BASE_URL, getSessionId } from '../config/api';
 
 const AUTH_STORAGE_KEY = 'techphone-auth';
 const AuthContext = createContext();
@@ -9,23 +9,18 @@ async function parseError(response) {
   return payload?.message || `Request failed with status ${response.status}`;
 }
 
+function readStoredAuth() {
+  try {
+    const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : {};
+  } catch {
+    return {};
+  }
+}
+
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(() => {
-    try {
-      const stored = localStorage.getItem(AUTH_STORAGE_KEY);
-      return stored ? JSON.parse(stored)?.token || null : null;
-    } catch {
-      return null;
-    }
-  });
-  const [user, setUser] = useState(() => {
-    try {
-      const stored = localStorage.getItem(AUTH_STORAGE_KEY);
-      return stored ? JSON.parse(stored)?.user || null : null;
-    } catch {
-      return null;
-    }
-  });
+  const [token, setToken] = useState(() => readStoredAuth()?.token || null);
+  const [user, setUser] = useState(() => readStoredAuth()?.user || null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -33,13 +28,49 @@ export function AuthProvider({ children }) {
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ token, user }));
   }, [token, user]);
 
+  const logout = useCallback(() => {
+    setToken(null);
+    setUser(null);
+  }, []);
+
+  const authFetch = useCallback(
+    async (path, options = {}) => {
+      const headers = new Headers(options.headers || {});
+      if (!headers.has('Content-Type') && options.body) {
+        headers.set('Content-Type', 'application/json');
+      }
+      headers.set('x-session-id', getSessionId());
+      if (token) {
+        headers.set('Authorization', `Bearer ${token}`);
+      }
+
+      const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
+
+      if (response.status === 401) {
+        setToken(null);
+        setUser(null);
+        throw new Error(await parseError(response));
+      }
+
+      if (!response.ok) {
+        throw new Error(await parseError(response));
+      }
+      if (response.status === 204) return null;
+      return response.json();
+    },
+    [token],
+  );
+
   const login = async ({ email, password }) => {
     setLoading(true);
     setError(null);
     try {
       const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-session-id': getSessionId(),
+        },
         body: JSON.stringify({ email, password }),
       });
       if (!response.ok) {
@@ -63,7 +94,10 @@ export function AuthProvider({ children }) {
     try {
       const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-session-id': getSessionId(),
+        },
         body: JSON.stringify({ name, email, password }),
       });
       if (!response.ok) {
@@ -81,11 +115,6 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const logout = () => {
-    setToken(null);
-    setUser(null);
-  };
-
   const refreshUser = async () => {
     if (!token) return null;
     try {
@@ -95,7 +124,7 @@ export function AuthProvider({ children }) {
         return payload.user;
       }
     } catch {
-      /* ignore */
+      /* ignore — authFetch clears bad token */
     }
     return null;
   };
@@ -109,22 +138,6 @@ export function AuthProvider({ children }) {
       setUser(payload.user);
     }
     return payload?.user;
-  };
-
-  const authFetch = async (path, options = {}) => {
-    const headers = new Headers(options.headers || {});
-    if (!headers.has('Content-Type') && options.body) {
-      headers.set('Content-Type', 'application/json');
-    }
-    if (token) {
-      headers.set('Authorization', `Bearer ${token}`);
-    }
-    const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
-    if (!response.ok) {
-      throw new Error(await parseError(response));
-    }
-    if (response.status === 204) return null;
-    return response.json();
   };
 
   const value = useMemo(
@@ -142,7 +155,7 @@ export function AuthProvider({ children }) {
       updateProfile,
       authFetch,
     }),
-    [token, user, loading, error],
+    [token, user, loading, error, authFetch, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

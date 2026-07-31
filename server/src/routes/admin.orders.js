@@ -19,6 +19,50 @@ const router = express.Router();
 const ALLOWED_ORDER_STATUS = ORDER_STATUS_SET;
 const ALLOWED_SUPPORT_STATUS = new Set(['none', 'customer_contacted', 'awaiting_response', 'resolved']);
 const ALLOWED_INSTALLMENT_STATUS = new Set(INSTALLMENT_STATUS);
+const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Parse YYYY-MM-DD as start of day in Asia/Ho_Chi_Minh (+07). */
+function vnDayStart(dateKey) {
+  if (!DATE_KEY_RE.test(dateKey)) return null;
+  const start = new Date(`${dateKey}T00:00:00+07:00`);
+  return Number.isNaN(start.getTime()) ? null : start;
+}
+
+function resolveCreatedAtRange(query) {
+  const date = String(query.date || '').trim();
+  const from = String(query.from || query.startDate || '').trim();
+  const to = String(query.to || query.endDate || '').trim();
+
+  if (date) {
+    const start = vnDayStart(date);
+    if (!start) return { error: 'Ngày không hợp lệ. Dùng định dạng YYYY-MM-DD.' };
+    return {
+      start,
+      endExclusive: new Date(start.getTime() + 24 * 60 * 60 * 1000),
+      fromKey: date,
+      toKey: date,
+    };
+  }
+
+  if (!from && !to) return null;
+
+  const startKey = from || to;
+  const endKey = to || from;
+  const start = vnDayStart(startKey);
+  const endDay = vnDayStart(endKey);
+  if (!start || !endDay) {
+    return { error: 'Khoảng ngày không hợp lệ. Dùng định dạng YYYY-MM-DD.' };
+  }
+  if (startKey > endKey) {
+    return { error: 'Ngày bắt đầu không được lớn hơn ngày kết thúc.' };
+  }
+  return {
+    start,
+    endExclusive: new Date(endDay.getTime() + 24 * 60 * 60 * 1000),
+    fromKey: startKey,
+    toKey: endKey,
+  };
+}
 
 router.use(requireAuth, requireAdmin);
 
@@ -63,15 +107,30 @@ router.get('/', async (req, res, next) => {
     const supportStatus = String(req.query.supportStatus || '').trim();
     const cancelRequestStatus = String(req.query.cancelRequestStatus || '').trim();
 
+    const dateRange = resolveCreatedAtRange(req.query);
+    if (dateRange?.error) {
+      return res.status(400).json({ message: dateRange.error });
+    }
+
     const query = {};
     if (status && ALLOWED_ORDER_STATUS.has(status)) query.status = status;
     if (supportStatus && ALLOWED_SUPPORT_STATUS.has(supportStatus)) query.supportStatus = supportStatus;
     if (cancelRequestStatus && ['none', 'pending', 'approved', 'rejected'].includes(cancelRequestStatus)) {
       query.cancelRequestStatus = cancelRequestStatus;
     }
+    if (dateRange) {
+      query.createdAt = { $gte: dateRange.start, $lt: dateRange.endExclusive };
+    }
 
     const items = await Order.find(query).sort({ createdAt: -1 }).lean();
-    return res.json({ items });
+    return res.json({
+      items,
+      meta: {
+        count: items.length,
+        from: dateRange?.fromKey || null,
+        to: dateRange?.toKey || null,
+      },
+    });
   } catch (error) {
     return next(error);
   }
@@ -98,7 +157,7 @@ router.post('/:id/ghn/retry', async (req, res, next) => {
   }
 });
 
-/** Admin xác nhận đã kiểm kho + gói hàng → tạo vận đơn GHN (staging). */
+/** Admin xác nhận đã kiểm kho + gói hàng → cập nhật tiến trình khách + tạo vận đơn GHN (staging). */
 router.post('/:id/confirm-fulfillment', async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -122,31 +181,49 @@ router.post('/:id/confirm-fulfillment', async (req, res, next) => {
       return res.status(400).json({ message: 'GHN shipment already exists for this order.' });
     }
 
+    // Luôn đẩy tiến trình phía khách trước (kể cả khi GHN lỗi SĐT/địa chỉ).
+    const previousStatus = order.status;
+    order.status = 'await_pickup';
+    await order.save();
     await OrderEvent.create({
       order: order._id,
-      fromStatus: 'confirmed',
-      toStatus: 'confirmed',
-      note: 'Admin xac nhan: da kiem kho va dong goi.',
+      fromStatus: previousStatus,
+      toStatus: 'await_pickup',
+      note: 'Admin xác nhận: đã kiểm kho và đóng gói.',
       actor: req.auth.userId,
     });
 
-    const result = await createGhnShipmentForOrder(id);
-    if (!result.ok) {
-      return res.status(400).json({
-        message: result.reason || 'GHN submit failed',
-        error: result.error,
-      });
-    }
+    const result = await createGhnShipmentForOrder(id, { force: true });
+    const freshOrder = result.order || (await Order.findById(id));
 
     await writeAdminAuditLog({
       actor: req.auth.userId,
       action: 'order.confirm_fulfillment',
       entityType: 'order',
       entityId: order._id,
-      metadata: { labelId: result.labelId || '' },
+      metadata: {
+        labelId: result.labelId || '',
+        ghnOk: Boolean(result.ok),
+        ghnError: result.error || result.reason || '',
+      },
     });
 
-    return res.json({ order: result.order, labelId: result.labelId });
+    if (!result.ok) {
+      return res.status(200).json({
+        order: freshOrder,
+        ghnOk: false,
+        labelId: null,
+        message:
+          'Đã xác nhận đóng gói — tiến trình khách đã chuyển sang “Chờ lấy hàng”. Tạo vận đơn GHN thất bại, có thể thử lại sau.',
+        error: result.error || result.reason || 'GHN submit failed',
+      });
+    }
+
+    return res.json({
+      order: result.order,
+      labelId: result.labelId,
+      ghnOk: true,
+    });
   } catch (error) {
     return next(error);
   }

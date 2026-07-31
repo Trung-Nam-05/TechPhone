@@ -531,6 +531,44 @@
   }
 }
 
+.admin-orders-chart {
+  width: 100%;
+  min-height: 240px;
+}
+
+.admin-orders-chart-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.admin-orders-chart-bar {
+  fill: #4880ff;
+  cursor: pointer;
+  transition: fill 0.15s ease, opacity 0.15s ease;
+}
+
+.admin-orders-chart-bar.is-active,
+.admin-orders-chart-bar:hover {
+  fill: #2f5fd6;
+}
+
+.admin-orders-chart-count {
+  fill: var(--admin-text, #1f2937);
+  font-size: 11px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.admin-orders-by-day-table {
+  margin-top: 16px;
+}
+
+.admin-orders-day-share {
+  min-width: 140px;
+  margin: 0;
+}
+
 @media (max-width: 640px) {
   .admin-analytics-kpi-row {
     grid-template-columns: 1fr;

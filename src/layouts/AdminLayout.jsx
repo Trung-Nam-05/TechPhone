@@ -1,12 +1,15 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
-  CalendarDays,
+  BadgeDollarSign,
   ExternalLink,
+  FolderTree,
   LayoutDashboard,
   MessageCircle,
+  MessageSquareText,
   Package,
   Search,
   ShoppingBag,
+  TicketPercent,
   Users,
   Warehouse,
   Zap,
@@ -59,6 +62,10 @@ export default function AdminLayout() {
             <Package size={20} />
             <span className="admin-nav-label">{t('admin.products')}</span>
           </NavLink>
+          <NavLink to="/admin/categories" className={navClass}>
+            <FolderTree size={20} />
+            <span className="admin-nav-label">Danh mục</span>
+          </NavLink>
           <NavLink to="/admin/users" className={navClass}>
             <Users size={20} />
             <span className="admin-nav-label">{t('admin.customers')}</span>
@@ -70,6 +77,10 @@ export default function AdminLayout() {
               <span className="admin-nav-badge">{adminUnreadTotal > 9 ? '9+' : adminUnreadTotal}</span>
             )}
           </NavLink>
+          <NavLink to="/admin/reviews" className={navClass}>
+            <MessageSquareText size={20} />
+            <span className="admin-nav-label">Đánh giá</span>
+          </NavLink>
         </nav>
 
         <p className="admin-nav-section">Vận hành</p>
@@ -78,13 +89,17 @@ export default function AdminLayout() {
             <Warehouse size={20} />
             <span className="admin-nav-label">{t('admin.inventory')}</span>
           </NavLink>
+          <NavLink to="/admin/prices" className={navClass}>
+            <BadgeDollarSign size={20} />
+            <span className="admin-nav-label">{t('admin.prices')}</span>
+          </NavLink>
           <NavLink to="/admin/flash-sales" className={navClass}>
             <Zap size={20} />
             <span className="admin-nav-label">{t('admin.flashSales')}</span>
           </NavLink>
-          <NavLink to="/admin/program" className={navClass}>
-            <CalendarDays size={20} />
-            <span className="admin-nav-label">{t('admin.program')}</span>
+          <NavLink to="/admin/coupons" className={navClass}>
+            <TicketPercent size={20} />
+            <span className="admin-nav-label">Mã giảm giá</span>
           </NavLink>
         </nav>
 

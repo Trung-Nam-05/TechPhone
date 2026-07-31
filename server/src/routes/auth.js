@@ -9,6 +9,7 @@ import {
   toSafeUser,
   verifyPassword,
 } from '../utils/auth.js';
+import { claimSessionOwnership } from '../services/claimSessionOwnership.js';
 
 const router = express.Router();
 
@@ -36,10 +37,12 @@ router.post('/register', async (req, res, next) => {
       role: 'customer',
     });
 
+    const claim = await claimSessionOwnership(req, user._id);
     const token = signAccessToken({ sub: String(user._id), role: user.role });
     return res.status(201).json({
       token,
       user: toSafeUser(user),
+      claim,
     });
   } catch (error) {
     return next(error);
@@ -83,10 +86,12 @@ router.post('/login', async (req, res, next) => {
     }
     registerLoginAttempt(throttleKey, true);
 
+    const claim = await claimSessionOwnership(req, user._id);
     const token = signAccessToken({ sub: String(user._id), role: user.role });
     return res.json({
       token,
       user: toSafeUser(user),
+      claim,
     });
   } catch (error) {
     return next(error);

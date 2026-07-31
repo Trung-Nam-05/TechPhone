@@ -2,6 +2,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import Product from '../models/Product.js';
 import Review from '../models/Review.js';
+import Order from '../models/Order.js';
 import { enrichProductsWithFlashSale } from '../services/flashSale.js';
 import {
   buildProductSearchFilter,
@@ -22,6 +23,18 @@ async function resolveActiveProductId(rawId) {
   }
   const p = await Product.findOne({ slug: rawId, isActive: true, deletedAt: null }).select('_id').lean();
   return p?._id || null;
+}
+
+async function userHasPurchasedProduct(userId, productId) {
+  if (!userId || !productId) return false;
+  const order = await Order.findOne({
+    user: userId,
+    status: 'completed',
+    'items.product': productId,
+  })
+    .select('_id')
+    .lean();
+  return Boolean(order);
 }
 
 const SORT_MAP = {
@@ -132,31 +145,75 @@ router.get('/:id/reviews', async (req, res, next) => {
   }
 });
 
+/** Kiểm tra user đăng nhập có được phép đánh giá (đã mua + đơn hoàn tất). */
+router.get('/:id/reviews/eligibility', requireAuth, async (req, res, next) => {
+  try {
+    const productMongoId = await resolveActiveProductId(req.params.id);
+    if (!productMongoId) {
+      return res.status(404).json({ message: 'Product not found.' });
+    }
+    const purchased = await userHasPurchasedProduct(req.auth.userId, productMongoId);
+    const existing = await Review.findOne({
+      product: productMongoId,
+      user: req.auth.userId,
+      isDeleted: false,
+    })
+      .select('_id isApproved')
+      .lean();
+
+    return res.json({
+      canReview: purchased && !existing,
+      purchased,
+      alreadyReviewed: Boolean(existing),
+      pendingApproval: Boolean(existing && !existing.isApproved),
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
 router.post('/:id/reviews', requireAuth, async (req, res, next) => {
   try {
     const productMongoId = await resolveActiveProductId(req.params.id);
     if (!productMongoId) {
       return res.status(404).json({ message: 'Product not found.' });
     }
+
+    const purchased = await userHasPurchasedProduct(req.auth.userId, productMongoId);
+    if (!purchased) {
+      return res.status(403).json({
+        message: 'Chỉ khách đã mua và nhận hàng thành công mới được đánh giá sản phẩm này.',
+        code: 'REVIEW_REQUIRES_PURCHASE',
+      });
+    }
+
     const rating = Number(req.body?.rating);
     const comment = String(req.body?.comment || '').trim();
     const title = String(req.body?.title || '').trim();
     if (!Number.isFinite(rating) || rating < 1 || rating > 5) {
       return res.status(400).json({ message: 'rating must be between 1 and 5.' });
     }
+    if (!comment) {
+      return res.status(400).json({ message: 'comment is required.' });
+    }
+
     const review = await Review.create({
       product: productMongoId,
       user: req.auth.userId,
       rating,
       title,
       comment,
-      isApproved: true,
+      // Chờ admin duyệt trước khi hiển thị công khai
+      isApproved: false,
     });
     const populated = await Review.findById(review._id).populate('user', 'name').lean();
-    return res.status(201).json(populated);
+    return res.status(201).json({
+      ...populated,
+      message: 'Đánh giá đã gửi và đang chờ duyệt.',
+    });
   } catch (error) {
     if (error?.code === 11000) {
-      return res.status(409).json({ message: 'You already reviewed this product.' });
+      return res.status(409).json({ message: 'Bạn đã đánh giá sản phẩm này rồi.' });
     }
     return next(error);
   }

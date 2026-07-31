@@ -1,7 +1,11 @@
 import express from 'express';
 import Product from '../models/Product.js';
+import Category from '../models/Category.js';
 import { requireAdmin, requireAuth } from '../middleware/auth.js';
 import { writeAdminAuditLog } from '../utils/audit.js';
+import { recordProductPriceChange } from '../services/priceHistory.js';
+import { getBrandsForCategory, normalizeBrandKey } from '../../../src/data/brandsByCategory.js';
+import { assertProductCanBeDeleted } from '../services/productGuards.js';
 
 const router = express.Router();
 
@@ -12,6 +16,38 @@ function slugify(value) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '');
+}
+
+function assertBrandForCategory(categoryKey, brand) {
+  const brands = getBrandsForCategory(categoryKey);
+  if (!brands.length) return { ok: true, brand: String(brand || '').trim() };
+  const normalized = normalizeBrandKey(categoryKey, brand);
+  if (!normalized || !brands.some((item) => item.key === normalized)) {
+    return {
+      ok: false,
+      message: `Thương hiệu không hợp lệ cho danh mục. Chọn một trong: ${brands.map((b) => b.label).join(', ')}.`,
+    };
+  }
+  return { ok: true, brand: normalized };
+}
+
+async function resolveCategory(categoryKey, categoryLabel) {
+  const key = String(categoryKey || '').trim().toLowerCase();
+  if (!key) {
+    return { ok: false, message: 'categoryKey is required.' };
+  }
+  const category = await Category.findOne({ key, isDeleted: false, isActive: true }).lean();
+  if (!category) {
+    return {
+      ok: false,
+      message: `Danh mục "${key}" không tồn tại hoặc đã bị tắt. Hãy tạo/bật danh mục trước.`,
+    };
+  }
+  return {
+    ok: true,
+    key: category.key,
+    label: String(categoryLabel || category.label || '').trim() || category.label,
+  };
 }
 
 router.use(requireAuth, requireAdmin);
@@ -41,8 +77,18 @@ router.post('/', async (req, res, next) => {
       slug,
     } = req.body || {};
 
-    if (!name?.trim() || !categoryKey?.trim() || !categoryLabel?.trim() || Number(price) < 0) {
+    if (!name?.trim() || !categoryKey?.trim() || Number(price) < 0) {
       return res.status(400).json({ message: 'Invalid payload.' });
+    }
+
+    const categoryCheck = await resolveCategory(categoryKey, categoryLabel);
+    if (!categoryCheck.ok) {
+      return res.status(400).json({ message: categoryCheck.message });
+    }
+
+    const brandCheck = assertBrandForCategory(categoryCheck.key, brand);
+    if (!brandCheck.ok) {
+      return res.status(400).json({ message: brandCheck.message });
     }
 
     const computedSlug = (slug?.trim() || slugify(name)).toLowerCase();
@@ -55,10 +101,10 @@ router.post('/', async (req, res, next) => {
       name: name.trim(),
       slug: computedSlug,
       category: {
-        key: categoryKey.trim(),
-        label: categoryLabel.trim(),
+        key: categoryCheck.key,
+        label: categoryCheck.label,
       },
-      brand: brand.trim(),
+      brand: brandCheck.brand,
       price: Number(price),
       oldPrice: oldPrice === null || oldPrice === '' ? null : Number(oldPrice),
       stock: Number(stock),
@@ -68,6 +114,14 @@ router.post('/', async (req, res, next) => {
       isActive: Boolean(isActive),
       deletedAt: null,
       deletedBy: null,
+    });
+    await recordProductPriceChange({
+      product,
+      oldPrice: null,
+      newPrice: product.price,
+      actor: req.auth.userId,
+      source: 'create',
+      note: 'Giá khởi tạo khi tạo sản phẩm.',
     });
     await writeAdminAuditLog({
       actor: req.auth.userId,
@@ -105,28 +159,86 @@ router.put('/:id', async (req, res, next) => {
       return res.status(404).json({ message: 'Product not found.' });
     }
 
+    const previousPrice = Number(product.price);
+    let priceChanged = false;
+    let nextPrice = previousPrice;
+
     if (name !== undefined) product.name = name;
-    if (categoryKey !== undefined) product.category.key = categoryKey;
-    if (categoryLabel !== undefined) product.category.label = categoryLabel;
-    if (price !== undefined) product.price = Number(price);
-    if (oldPrice !== undefined) product.oldPrice = oldPrice === null || oldPrice === '' ? null : Number(oldPrice);
+    if (categoryKey !== undefined || categoryLabel !== undefined) {
+      const categoryCheck = await resolveCategory(
+        categoryKey !== undefined ? categoryKey : product.category.key,
+        categoryLabel !== undefined ? categoryLabel : product.category.label,
+      );
+      if (!categoryCheck.ok) {
+        return res.status(400).json({ message: categoryCheck.message });
+      }
+      product.category.key = categoryCheck.key;
+      product.category.label = categoryCheck.label;
+    }
+    if (price !== undefined) {
+      nextPrice = Number(price);
+      if (!Number.isFinite(nextPrice) || nextPrice < 0) {
+        return res.status(400).json({ message: 'price is invalid.' });
+      }
+      if (nextPrice !== previousPrice) {
+        priceChanged = true;
+        product.price = nextPrice;
+        // Tự điền giá cũ = giá trước khi đổi nếu admin không gửi oldPrice
+        if (oldPrice === undefined) {
+          product.oldPrice = previousPrice;
+        }
+      }
+    }
+    if (oldPrice !== undefined) {
+      product.oldPrice = oldPrice === null || oldPrice === '' ? null : Number(oldPrice);
+    } else if (priceChanged && previousPrice > 0 && nextPrice < previousPrice) {
+      product.discount = Math.max(0, Math.round(((previousPrice - nextPrice) / previousPrice) * 100));
+    }
     if (stock !== undefined) product.stock = Number(stock);
     if (image !== undefined) {
       product.image = image;
       product.images = image ? [image] : [];
     }
     if (description !== undefined) product.description = description;
-    if (brand !== undefined) product.brand = brand;
+    if (brand !== undefined || categoryKey !== undefined) {
+      const brandCheck = assertBrandForCategory(
+        product.category.key,
+        brand !== undefined ? brand : product.brand,
+      );
+      if (!brandCheck.ok) {
+        return res.status(400).json({ message: brandCheck.message });
+      }
+      product.brand = brandCheck.brand;
+    }
     if (isActive !== undefined) product.isActive = Boolean(isActive);
     if (slug !== undefined && slug.trim()) product.slug = slugify(slug.trim());
 
     await product.save();
+
+    if (priceChanged) {
+      await recordProductPriceChange({
+        product,
+        oldPrice: previousPrice,
+        newPrice: nextPrice,
+        actor: req.auth.userId,
+        source: 'product_update',
+        note: 'Cập nhật giá từ trang Quản lý sản phẩm.',
+      });
+    }
+
     await writeAdminAuditLog({
       actor: req.auth.userId,
       action: 'product.update',
       entityType: 'product',
       entityId: product._id,
-      metadata: { name: product.name, price: product.price, stock: product.stock, isActive: product.isActive },
+      metadata: {
+        name: product.name,
+        price: product.price,
+        stock: product.stock,
+        isActive: product.isActive,
+        priceChanged,
+        previousPrice: priceChanged ? previousPrice : undefined,
+      },
     });
     return res.json(product);
   } catch (error) {
@@ -141,6 +253,19 @@ router.delete('/:id', async (req, res, next) => {
     if (!product) {
       return res.status(404).json({ message: 'Product not found.' });
     }
+    if (product.deletedAt) {
+      return res.status(404).json({ message: 'Product not found.' });
+    }
+
+    const guard = await assertProductCanBeDeleted(product._id);
+    if (!guard.ok) {
+      return res.status(409).json({
+        message: guard.message,
+        code: guard.code,
+        details: guard.details || null,
+      });
+    }
+
     product.isActive = false;
     product.deletedAt = new Date();
     product.deletedBy = req.auth.userId;
@@ -150,7 +275,7 @@ router.delete('/:id', async (req, res, next) => {
       action: 'product.soft_delete',
       entityType: 'product',
       entityId: product._id,
-      metadata: { name: product.name },
+      metadata: { name: product.name, soldUnits: guard.soldUnits || 0 },
     });
     return res.status(204).send();
   } catch (error) {

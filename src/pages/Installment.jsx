@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CircleAlert, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { apiFetch, getOrderIdempotencyKey, rotateOrderIdempotencyKey } from '../config/api';
 import { useAnalytics } from '../context/AnalyticsContext';
+import { useAuth } from '../context/AuthContext';
 import { calculateCouponPricing, getStoredSelectedCouponIds } from '../data/coupons';
 import './Installment.css';
 
@@ -21,6 +22,7 @@ function formatCurrency(value) {
 export default function Installment() {
   const { cartItems, cartCount, cartTotal, clearCart } = useCart();
   const { track } = useAnalytics();
+  const { authFetch, isAuthenticated, user } = useAuth();
   const [searchParams] = useSearchParams();
   const providerFromQuery = searchParams.get('provider');
 
@@ -34,6 +36,54 @@ export default function Installment() {
   const [orderError, setOrderError] = useState('');
   const [successOrderId, setSuccessOrderId] = useState('');
   const [selectedCouponIds] = useState(() => getStoredSelectedCouponIds());
+  const [shippingForm, setShippingForm] = useState(() => ({
+    fullName: user?.name || '',
+    phone: user?.phone || '',
+    email: user?.email || '',
+    address: '',
+  }));
+
+  const updateShippingField = (field) => (event) => {
+    setShippingForm((prev) => ({ ...prev, [field]: event.target.value }));
+  };
+
+  useEffect(() => {
+    if (!isAuthenticated || !user) return undefined;
+
+    setShippingForm((prev) => ({
+      ...prev,
+      fullName: prev.fullName || user.name || '',
+      phone: prev.phone || user.phone || '',
+      email: prev.email || user.email || '',
+    }));
+
+    let cancelled = false;
+    const loadLastShipping = async () => {
+      try {
+        const payload = await authFetch('/api/orders');
+        if (cancelled) return;
+        const lastShipping = payload?.items?.[0]?.shippingInfo;
+        if (!lastShipping) return;
+        setShippingForm((prev) => ({
+          fullName: prev.fullName || lastShipping.fullName || '',
+          phone: prev.phone || lastShipping.phone || '',
+          email: prev.email || lastShipping.email || '',
+          address:
+            prev.address ||
+            [lastShipping.address, lastShipping.ward, lastShipping.district, lastShipping.province]
+              .filter(Boolean)
+              .join(', ') ||
+            '',
+        }));
+      } catch {
+        /* ignore */
+      }
+    };
+    loadLastShipping();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, user?.id, user?.name, user?.phone, user?.email, authFetch]);
 
   const amountOptions = useMemo(() => {
     const raw = [cartTotal, 50000000, Math.max(Math.round(cartTotal * 0.8), 3000000)];
@@ -198,9 +248,32 @@ export default function Installment() {
             <div className="tp-installment-card">
               <h3>Người đặt hàng</h3>
               <div className="tp-installment-inputs">
-                <input required name="fullName" className="input" placeholder="Họ và tên" />
-                <input required name="phone" className="input" placeholder="Số điện thoại" />
-                <input name="email" className="input" placeholder="Email (Không bắt buộc)" />
+                <input
+                  required
+                  name="fullName"
+                  className="input"
+                  placeholder="Họ và tên"
+                  value={shippingForm.fullName}
+                  onChange={updateShippingField('fullName')}
+                  autoComplete="name"
+                />
+                <input
+                  required
+                  name="phone"
+                  className="input"
+                  placeholder="Số điện thoại"
+                  value={shippingForm.phone}
+                  onChange={updateShippingField('phone')}
+                  autoComplete="tel"
+                />
+                <input
+                  name="email"
+                  className="input"
+                  placeholder="Email (Không bắt buộc)"
+                  value={shippingForm.email}
+                  onChange={updateShippingField('email')}
+                  autoComplete="email"
+                />
               </div>
             </div>
 
@@ -233,6 +306,9 @@ export default function Installment() {
                 required
                 className="input"
                 placeholder={deliveryMethod === 'home' ? 'Tỉnh/Thành Phố, Phường Xã' : 'Chọn cửa hàng gần bạn'}
+                value={shippingForm.address}
+                onChange={updateShippingField('address')}
+                autoComplete="street-address"
               />
               <textarea name="note" className="input" rows={3} placeholder="Ghi chú (Ví dụ: Hãy gọi tôi khi chuẩn bị hàng xong)" />
             </div>
