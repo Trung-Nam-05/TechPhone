@@ -4,6 +4,13 @@ import PriceHistory from '../models/PriceHistory.js';
 import { requireAdmin, requireAuth } from '../middleware/auth.js';
 import { writeAdminAuditLog } from '../utils/audit.js';
 import { getPriceHistorySince, recordProductPriceChange } from '../services/priceHistory.js';
+import {
+  applyProductPriceFields,
+  assertNewPriceAboveFlashSales,
+  assertValidProductObjectId,
+  parseVndPrice,
+  trimPriceNote,
+} from '../services/productPrice.js';
 
 const router = express.Router();
 
@@ -21,6 +28,10 @@ router.get('/history', async (req, res, next) => {
 
     const filter = { createdAt: { $gte: getPriceHistorySince(days) } };
     if (productId) {
+      const idCheck = assertValidProductObjectId(productId);
+      if (!idCheck.ok) {
+        return res.status(400).json({ message: idCheck.message });
+      }
       filter.product = productId;
     }
 
@@ -51,17 +62,21 @@ router.get('/history', async (req, res, next) => {
  */
 router.post('/adjust', async (req, res, next) => {
   try {
-    const productId = String(req.body?.productId || '').trim();
-    const newPrice = Number(req.body?.newPrice);
-    const note = String(req.body?.note || '').trim();
+    const productIdRaw = String(req.body?.productId || '').trim();
+    const note = trimPriceNote(req.body?.note);
 
-    if (!productId || !Number.isFinite(newPrice) || newPrice < 0) {
-      return res.status(400).json({
-        message: 'Cần chọn sản phẩm và nhập giá mới hợp lệ (>= 0).',
-      });
+    const idCheck = assertValidProductObjectId(productIdRaw);
+    if (!idCheck.ok) {
+      return res.status(400).json({ message: idCheck.message });
     }
 
-    const product = await Product.findById(productId);
+    const priceCheck = parseVndPrice(req.body?.newPrice);
+    if (!priceCheck.ok) {
+      return res.status(400).json({ message: priceCheck.message });
+    }
+    const newPrice = priceCheck.price;
+
+    const product = await Product.findById(productIdRaw);
     if (!product || product.deletedAt) {
       return res.status(404).json({ message: 'Không tìm thấy sản phẩm.' });
     }
@@ -71,11 +86,15 @@ router.post('/adjust', async (req, res, next) => {
       return res.status(400).json({ message: 'Giá mới phải khác giá hiện tại.' });
     }
 
-    product.oldPrice = previousPrice;
-    product.price = newPrice;
-    if (previousPrice > 0) {
-      product.discount = Math.max(0, Math.round(((previousPrice - newPrice) / previousPrice) * 100));
+    const flashCheck = await assertNewPriceAboveFlashSales(product._id, newPrice);
+    if (!flashCheck.ok) {
+      return res.status(400).json({
+        message: flashCheck.message,
+        code: flashCheck.code,
+      });
     }
+
+    applyProductPriceFields(product, previousPrice, newPrice);
     await product.save();
 
     const history = await recordProductPriceChange({
@@ -92,10 +111,14 @@ router.post('/adjust', async (req, res, next) => {
       action: 'price.adjust',
       entityType: 'product',
       entityId: product._id,
-      metadata: { oldPrice: previousPrice, newPrice, note },
+      metadata: { oldPrice: previousPrice, newPrice, note, isActive: product.isActive },
     });
 
-    return res.json({ product, history });
+    return res.json({
+      product,
+      history,
+      warning: product.isActive === false ? 'Sản phẩm đang tắt hiển thị (isActive = false).' : null,
+    });
   } catch (error) {
     return next(error);
   }

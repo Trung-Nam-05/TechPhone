@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   RefreshCw,
   Search,
@@ -20,6 +20,7 @@ import {
 import { OrderStatusBadge, PaymentStatusBadge } from '../components/OrderStatusBadge';
 import AdminPageHeader from '../components/admin/AdminPageHeader';
 import AdminKpiCard from '../components/admin/AdminKpiCard';
+import { orderMatchesQuery } from '../utils/adminSearch';
 import './AdminOrders.css';
 
 const SUPPORT_STATUS_OPTIONS = ['none', 'customer_contacted', 'awaiting_response', 'resolved'];
@@ -64,8 +65,21 @@ function canConfirmFulfillment(order) {
   return true;
 }
 
+function readInitialFilters(searchParams) {
+  const date = searchParams.get('date')?.trim() || '';
+  const from = searchParams.get('from')?.trim() || '';
+  const to = searchParams.get('to')?.trim() || '';
+  const q = searchParams.get('q')?.trim() || '';
+  const orderId = searchParams.get('orderId')?.trim() || '';
+  const dates =
+    date ? { fromDate: date, toDate: date } : { fromDate: from, toDate: to };
+  return { ...dates, searchQuery: q, focusOrderId: orderId };
+}
+
 export default function AdminOrders() {
   const { authFetch } = useAuth();
+  const [searchParams] = useSearchParams();
+  const initialFilters = useMemo(() => readInitialFilters(searchParams), [searchParams]);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -76,9 +90,10 @@ export default function AdminOrders() {
   const [copiedLabelId, setCopiedLabelId] = useState(false);
   const [statusFilter, setStatusFilter] = useState('');
   const [cancelFilter, setCancelFilter] = useState('');
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [fromDate, setFromDate] = useState(initialFilters.fromDate);
+  const [toDate, setToDate] = useState(initialFilters.toDate);
+  const [searchQuery, setSearchQuery] = useState(initialFilters.searchQuery);
+  const [focusOrderId, setFocusOrderId] = useState(initialFilters.focusOrderId);
   const [overrideModal, setOverrideModal] = useState(null);
   const [listMeta, setListMeta] = useState({ count: 0, from: null, to: null });
 
@@ -88,15 +103,9 @@ export default function AdminOrders() {
   );
 
   const filteredItems = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
+    const q = searchQuery.trim();
     if (!q) return items;
-    return items.filter((order) => {
-      const id = String(order._id || '').toLowerCase();
-      const name = String(order.shippingInfo?.fullName || '').toLowerCase();
-      const phone = String(order.shippingInfo?.phone || '').toLowerCase();
-      const email = String(order.shippingInfo?.email || '').toLowerCase();
-      return id.includes(q) || name.includes(q) || phone.includes(q) || email.includes(q);
-    });
+    return items.filter((order) => orderMatchesQuery(order, q));
   }, [items, searchQuery]);
 
   const dateFilterLabel = useMemo(() => {
@@ -151,6 +160,26 @@ export default function AdminOrders() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const next = readInitialFilters(searchParams);
+    setFromDate(next.fromDate);
+    setToDate(next.toDate);
+    setSearchQuery(next.searchQuery);
+    setFocusOrderId(next.focusOrderId);
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!focusOrderId || loading || filteredItems.length === 0) return;
+    const matched = filteredItems.find((order) => String(order._id) === focusOrderId);
+    if (matched) {
+      setSelectedOrderId(matched._id);
+      loadEvents(matched._id);
+      loadShipmentEvents(matched._id);
+      setFocusOrderId('');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusOrderId, loading, filteredItems]);
 
   useEffect(() => {
     loadOrders();

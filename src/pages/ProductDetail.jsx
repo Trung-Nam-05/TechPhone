@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { ChevronRight } from 'lucide-react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/I18nContext';
 import { API_BASE_URL } from '../config/api';
+import { getProductPath } from '../utils/productUrl';
 import './ProductDetail.css';
 
 function toCartShape(p) {
@@ -25,7 +26,10 @@ function toCartShape(p) {
 const NOT_FOUND = '__NOT_FOUND__';
 
 export default function ProductDetail() {
-  const { id } = useParams();
+  const { productSlug, id: legacyRouteId } = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const lookupKey = productSlug || legacyRouteId;
   const { addToCart } = useCart();
   const { isAuthenticated, authFetch } = useAuth();
   const { t, formatPrice, locale } = useI18n();
@@ -57,8 +61,8 @@ export default function ProductDetail() {
       setReviewNotice(null);
       try {
         const [pRes, rRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/api/products/${encodeURIComponent(id)}`),
-          fetch(`${API_BASE_URL}/api/products/${encodeURIComponent(id)}/reviews`),
+          fetch(`${API_BASE_URL}/api/products/${encodeURIComponent(lookupKey)}`),
+          fetch(`${API_BASE_URL}/api/products/${encodeURIComponent(lookupKey)}/reviews`),
         ]);
         if (!pRes.ok) {
           if (!cancelled) setError(NOT_FOUND);
@@ -70,6 +74,10 @@ export default function ProductDetail() {
           setProduct(pJson);
           setReviews(rJson.items || []);
           setActiveImage(0);
+          const canonicalPath = getProductPath(pJson);
+          if (location.pathname !== canonicalPath) {
+            navigate(canonicalPath, { replace: true });
+          }
         }
       } catch (e) {
         if (!cancelled) setError(e.message);
@@ -77,22 +85,22 @@ export default function ProductDetail() {
         if (!cancelled) setLoading(false);
       }
     };
-    if (id) load();
+    if (lookupKey) load();
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [lookupKey, navigate]);
 
   useEffect(() => {
     let cancelled = false;
     const loadEligibility = async () => {
-      if (!isAuthenticated || !id) {
+      if (!isAuthenticated || !lookupKey) {
         setReviewEligibility(null);
         return;
       }
       try {
         const payload = await authFetch(
-          `/api/products/${encodeURIComponent(id)}/reviews/eligibility`,
+          `/api/products/${encodeURIComponent(lookupKey)}/reviews/eligibility`,
         );
         if (!cancelled) setReviewEligibility(payload);
       } catch {
@@ -103,7 +111,7 @@ export default function ProductDetail() {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, id, authFetch]);
+  }, [isAuthenticated, lookupKey, authFetch]);
 
   const mainGallery =
     product?.images?.length > 0
@@ -116,11 +124,11 @@ export default function ProductDetail() {
 
   const submitReview = async (e) => {
     e.preventDefault();
-    if (!isAuthenticated || !id) return;
+    if (!isAuthenticated || !lookupKey) return;
     setReviewSubmitting(true);
     setReviewNotice(null);
     try {
-      const result = await authFetch(`/api/products/${encodeURIComponent(id)}/reviews`, {
+      const result = await authFetch(`/api/products/${encodeURIComponent(lookupKey)}/reviews`, {
         method: 'POST',
         body: JSON.stringify({
           rating: reviewRating,

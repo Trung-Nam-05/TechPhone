@@ -296,6 +296,33 @@
   cursor: pointer;
 }
 
+.admin-sales-chart-dot.is-clickable:hover,
+.admin-orders-chart-bar.is-clickable:hover {
+  opacity: 0.92;
+}
+
+.admin-orders-chart-bar.is-clickable {
+  cursor: pointer;
+}
+
+.admin-analytics-chart-hint {
+  color: var(--admin-muted);
+  font-size: 13px;
+}
+
+.admin-analytics-day-row.is-clickable {
+  cursor: pointer;
+}
+
+.admin-analytics-day-row.is-clickable:hover {
+  background: var(--admin-primary-light);
+}
+
+.admin-analytics-day-link {
+  font-size: 12px;
+  padding: 4px 10px;
+}
+
 .admin-sales-chart-active-line {
   stroke: var(--admin-primary);
   stroke-width: 1;

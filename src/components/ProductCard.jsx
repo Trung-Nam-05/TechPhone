@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useI18n } from '../context/I18nContext';
 import { formatCountdown, getFlashSaleState } from '../utils/flashSale';
+import { getProductPath } from '../utils/productUrl';
 
 export default function ProductCard({ product, nowMs }) {
   const { addToCart } = useCart();
@@ -18,6 +19,8 @@ export default function ProductCard({ product, nowMs }) {
     e.preventDefault(); // Prevent navigating to detail page if button is inside a link wrapper
     addToCart(product);
   };
+
+  const productPath = getProductPath(product);
 
   return (
     <div className="card relative flex flex-col h-full group">
@@ -37,7 +40,7 @@ export default function ProductCard({ product, nowMs }) {
       )}
 
       <Link
-        to={`/product/${product.id || product.legacyId || product._id}`}
+        to={productPath}
         className="block overflow-hidden bg-subtle aspect-square relative p-4 flex items-center justify-center"
       >
         <img
@@ -49,7 +52,7 @@ export default function ProductCard({ product, nowMs }) {
 
       <div className="p-4 flex flex-col flex-grow">
         <p className="text-muted text-sm mb-1">{categoryLabel}</p>
-        <Link to={`/product/${product.id || product.legacyId || product._id}`}>
+        <Link to={productPath}>
           <h3 className="font-semibold text-sm line-clamp-2 mb-2 min-h-[40px] hover:text-primary transition">{product.name}</h3>
         </Link>
         <div className="mt-auto flex flex-col gap-1 mb-4">

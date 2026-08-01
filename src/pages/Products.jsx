@@ -8,6 +8,7 @@ import { useCart } from '../context/CartContext';
 import { PRODUCT_CATEGORIES, PRODUCTS, getCategoryLabel } from '../data/products';
 import { API_BASE_URL } from '../config/api';
 import { formatCountdown, getFlashSaleState } from '../utils/flashSale';
+import { getProductPath } from '../utils/productUrl';
 import './Products.css';
 import './ApplianceCategory.css';
 
@@ -926,7 +927,7 @@ export default function Products() {
               <div className="tp-phone-grid">
                 {sortedPhoneProducts.map((product) => (
                   <article key={product.id || product.legacyId || product._id} className="tp-phone-card">
-                    <Link to={`/product/${product.id || product.legacyId || product._id}`}>
+                    <Link to={getProductPath(product)}>
                       <img src={product.image} alt={product.name} />
                     </Link>
                     <span className="tp-installment">
@@ -943,7 +944,7 @@ export default function Products() {
                     </span>
                     <p className="tp-price">{Number(product.price || 0).toLocaleString('vi-VN')} đ</p>
                     {product.oldPrice && <p className="tp-old-price">{product.oldPrice.toLocaleString('vi-VN')} đ</p>}
-                    <Link to={`/product/${product.id || product.legacyId || product._id}`}>
+                    <Link to={getProductPath(product)}>
                       <h4>{product.name}</h4>
                     </Link>
                     {product.flashSale && (

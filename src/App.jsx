@@ -81,6 +81,7 @@ function App() {
         <Route index element={<Home />} />
         <Route path="products" element={<Products />} />
         <Route path="product/:id" element={<ProductDetail />} />
+        <Route path=":categoryKey/:productSlug" element={<ProductDetail />} />
         <Route path="cart" element={<Cart />} />
         <Route path="checkout" element={<Checkout />} />
         <Route path="checkout/vnpay-result" element={<VnpayResult />} />

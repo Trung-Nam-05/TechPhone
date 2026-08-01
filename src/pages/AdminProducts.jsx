@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Search } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import AdminPageHeader from '../components/admin/AdminPageHeader';
 import {
@@ -6,6 +8,7 @@ import {
   getBrandsForCategory,
   normalizeBrandKey,
 } from '../data/brandsByCategory';
+import { productMatchesQuery } from '../utils/adminSearch';
 
 const DEFAULT_FORM = {
   name: '',
@@ -13,7 +16,6 @@ const DEFAULT_FORM = {
   categoryLabel: 'Điện thoại',
   brand: '',
   price: '',
-  oldPrice: '',
   stock: 0,
   image: '',
   description: '',
@@ -31,6 +33,7 @@ const FALLBACK_CATEGORIES = [
 
 export default function AdminProducts() {
   const { authFetch } = useAuth();
+  const [searchParams] = useSearchParams();
 
   const [items, setItems] = useState([]);
   const [categories, setCategories] = useState(FALLBACK_CATEGORIES);
@@ -38,9 +41,17 @@ export default function AdminProducts() {
   const [error, setError] = useState(null);
 
   const [editingProductId, setEditingProductId] = useState(null);
+  const [editingSnapshot, setEditingSnapshot] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [form, setForm] = useState(DEFAULT_FORM);
 
   const isEditing = Boolean(editingProductId);
+
+  const filteredItems = useMemo(() => {
+    const q = searchQuery.trim();
+    if (!q) return items;
+    return items.filter((item) => productMatchesQuery(item, q));
+  }, [items, searchQuery]);
 
   const brandOptions = useMemo(() => {
     const options = getBrandsForCategory(form.categoryKey);
@@ -53,6 +64,7 @@ export default function AdminProducts() {
 
   const resetForm = () => {
     setEditingProductId(null);
+    setEditingSnapshot(null);
     setForm({
       ...DEFAULT_FORM,
       categoryKey: categories[0]?.key || 'dien-thoai',
@@ -85,6 +97,11 @@ export default function AdminProducts() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    const q = searchParams.get('q')?.trim() || '';
+    if (q) setSearchQuery(q);
+  }, [searchParams]);
+
   const handleCategoryChange = (key) => {
     const selected = categories.find((option) => option.key === key);
     const nextBrands = getBrandsForCategory(key);
@@ -103,13 +120,16 @@ export default function AdminProducts() {
   const handleEdit = (product) => {
     const categoryKey = product.category?.key || 'dien-thoai';
     setEditingProductId(product._id);
+    setEditingSnapshot({
+      price: product.price ?? null,
+      oldPrice: product.oldPrice ?? null,
+    });
     setForm({
       name: product.name || '',
       categoryKey,
       categoryLabel: product.category?.label || 'Điện thoại',
       brand: normalizeBrandKey(categoryKey, product.brand || ''),
       price: product.price ?? '',
-      oldPrice: product.oldPrice ?? '',
       stock: product.stock ?? 0,
       image: product.image || '',
       description: product.description || '',
@@ -147,7 +167,6 @@ export default function AdminProducts() {
       ...form,
       brand: normalizeBrandKey(form.categoryKey, form.brand),
       price: Number(form.price),
-      oldPrice: form.oldPrice === '' ? null : Number(form.oldPrice),
       stock: Number(form.stock),
     };
 
@@ -175,7 +194,7 @@ export default function AdminProducts() {
     <div className="admin-page">
       <AdminPageHeader
         title="Quản lý sản phẩm"
-        subtitle={`CRUD sản phẩm. Không xóa được SP bán chạy (≥10 đã giao), đang trong đơn chưa xong, hoặc đang flash sale. Tổng: ${items.length}`}
+        subtitle="Tạo/sửa sản phẩm. Giá cũ chỉ tự sinh khi giảm giá. Xóa là soft-delete — SP bán chạy hoặc đang trong đơn sẽ bị chặn."
       />
 
       {error && <div className="admin-alert admin-alert-error">{error}</div>}
@@ -239,16 +258,19 @@ export default function AdminProducts() {
                   required
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Giá cũ</label>
-                <input
-                  type="number"
-                  className="input"
-                  value={form.oldPrice}
-                  onChange={(event) => setForm((prev) => ({ ...prev, oldPrice: event.target.value }))}
-                  min={0}
-                />
-              </div>
+              {isEditing && (
+                <div>
+                  <label className="block text-sm font-medium mb-1">Giá cũ hiển thị</label>
+                  <p className="text-muted" style={{ margin: 0, fontSize: 14, lineHeight: 1.5 }}>
+                    {editingSnapshot?.oldPrice != null
+                      ? `${Number(editingSnapshot.oldPrice).toLocaleString('vi-VN')} đ`
+                      : 'Chưa có'}
+                  </p>
+                  <p className="text-muted" style={{ margin: '4px 0 0', fontSize: 12 }}>
+                    Tự lưu giá trước khi đổi khi bạn giảm giá bán. Không nhập tay.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4 mb-4">
@@ -310,11 +332,21 @@ export default function AdminProducts() {
         </div>
 
         <div className="admin-panel">
+          <div className="admin-products-search" style={{ marginBottom: 12, position: 'relative' }}>
+            <Search size={16} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+            <input
+              className="input"
+              style={{ paddingLeft: 34, width: '100%' }}
+              placeholder="Tìm tên, thương hiệu, danh mục..."
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+            />
+          </div>
           {loading ? (
             <p className="admin-empty">Đang tải dữ liệu...</p>
           ) : (
             <div>
-              {items.map((item) => (
+              {filteredItems.map((item) => (
                 <div key={item._id} className="admin-product-row">
                   <img
                     src={item.image || 'https://via.placeholder.com/52x52.png?text=P'}
@@ -338,7 +370,16 @@ export default function AdminProducts() {
                   </div>
                 </div>
               ))}
-              {items.length === 0 && <p className="admin-empty">Chưa có sản phẩm.</p>}
+              {filteredItems.length === 0 && !loading && (
+                <p className="admin-empty">
+                  {searchQuery.trim() ? 'Không tìm thấy sản phẩm phù hợp.' : 'Chưa có sản phẩm.'}
+                </p>
+              )}
+              {items.length > 0 && searchQuery.trim() && filteredItems.length > 0 && (
+                <p className="text-muted" style={{ marginTop: 8, fontSize: 13 }}>
+                  Hiển thị {filteredItems.length}/{items.length} sản phẩm
+                </p>
+              )}
             </div>
           )}
         </div>

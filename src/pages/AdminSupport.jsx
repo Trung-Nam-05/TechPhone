@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
-import { Send } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Send, Search } from 'lucide-react';
 import { useSupportChat } from '../context/SupportChatContext';
 import { getOwnMessageStatus } from '../utils/supportMessageStatus';
+import { supportCustomerMatchesQuery } from '../utils/adminSearch';
 import AdminPageHeader from '../components/admin/AdminPageHeader';
 import './AdminSupport.css';
 
@@ -38,9 +39,16 @@ export default function AdminSupport() {
     peerTyping,
   } = useSupportChat();
   const [draft, setDraft] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [sending, setSending] = useState(false);
   const listRef = useRef(null);
   const typingTimerRef = useRef(null);
+
+  const filteredCustomers = useMemo(() => {
+    const q = searchQuery.trim();
+    if (!q) return supportCustomers;
+    return supportCustomers.filter((item) => supportCustomerMatchesQuery(item, q));
+  }, [supportCustomers, searchQuery]);
 
   useEffect(() => {
     loadAdminSupportCustomers().catch(() => {});
@@ -95,10 +103,22 @@ export default function AdminSupport() {
 
       <div className="admin-support-layout">
         <aside className="admin-support-list">
-          {supportCustomers.length === 0 && (
-            <p className="admin-support-empty">Chưa có khách hàng đã chat.</p>
+          <div className="admin-support-search" style={{ position: 'relative', marginBottom: 8 }}>
+            <Search size={16} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+            <input
+              className="input"
+              style={{ paddingLeft: 34, width: '100%' }}
+              placeholder="Tìm khách, email..."
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+            />
+          </div>
+          {filteredCustomers.length === 0 && (
+            <p className="admin-support-empty">
+              {searchQuery.trim() ? 'Không tìm thấy khách phù hợp.' : 'Chưa có khách hàng đã chat.'}
+            </p>
           )}
-          {supportCustomers.map((item) => {
+          {filteredCustomers.map((item) => {
             const id = getCustomerId(item);
             const isActive = id === String(selectedCustomerId || '');
             return (

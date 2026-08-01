@@ -7,7 +7,6 @@ import {
   MessageCircle,
   MessageSquareText,
   Package,
-  Search,
   ShoppingBag,
   TicketPercent,
   Users,
@@ -17,6 +16,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useSupportChat } from '../context/SupportChatContext';
 import { useI18n } from '../context/I18nContext';
+import AdminGlobalSearch from '../components/admin/AdminGlobalSearch';
 import './AdminLayout.css';
 
 function navClass({ isActive }) {
@@ -113,10 +113,7 @@ export default function AdminLayout() {
 
       <div className="admin-main">
         <header className="admin-topbar">
-          <div className="admin-topbar-search">
-            <Search size={18} />
-            <input type="search" placeholder="Tìm kiếm..." aria-label="Tìm kiếm" />
-          </div>
+          <AdminGlobalSearch />
           <div className="admin-topbar-right">
             <div className="admin-topbar-user">
               <span className="admin-topbar-avatar">{getInitials(user?.name)}</span>

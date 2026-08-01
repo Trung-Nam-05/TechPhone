@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Clock, Download, DollarSign, Filter, ShoppingCart, TrendingDown, TrendingUp, Users } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { API_BASE_URL } from '../config/api';
@@ -104,6 +105,7 @@ function validateDateRange(startDate, endDate) {
 
 export default function AdminAnalytics() {
   const { authFetch, token } = useAuth();
+  const navigate = useNavigate();
   const defaultRange = useMemo(() => getDefaultDateRange(), []);
   const [refreshing, setRefreshing] = useState(true);
   const [error, setError] = useState(null);
@@ -203,6 +205,14 @@ export default function AdminAnalytics() {
   const totalOrdersInRange = revenueDays.reduce((sum, day) => sum + Number(day.orders || 0), 0);
   const maxOrdersInDay = Math.max(0, ...revenueDays.map((day) => Number(day.orders || 0)));
 
+  const openOrdersForDay = useCallback(
+    (day) => {
+      if (!day?.date) return;
+      navigate(`/admin/orders?date=${encodeURIComponent(day.date)}`);
+    },
+    [navigate],
+  );
+
   return (
     <div className={`admin-page admin-analytics-page${refreshing ? ' is-refreshing' : ''}`}>
       {error && <div className="admin-alert admin-alert-error">{error}</div>}
@@ -280,6 +290,12 @@ export default function AdminAnalytics() {
               <strong>{formatMoneyCompact(summary.periodRevenue)}</strong>
               {' · '}
               {summary.periodOrderCount || 0} đơn
+              {dayCount > 7 && (
+                <span className="admin-analytics-chart-hint">
+                  {' · '}
+                  Bấm điểm/cột hoặc dòng bảng để xem đơn trong ngày
+                </span>
+              )}
             </p>
           </div>
           <span className="admin-analytics-badge">
@@ -333,6 +349,8 @@ export default function AdminAnalytics() {
             formatAxisMoney={formatMoneyAxis}
             formatTooltipMoney={formatMoneyCompact}
             formatShortDate={formatShortDate}
+            formatFullDate={formatDisplayDate}
+            onDaySelect={openOrdersForDay}
           />
         </div>
 
@@ -341,7 +359,12 @@ export default function AdminAnalytics() {
           <span className="admin-analytics-badge">{totalOrdersInRange} đơn trong kỳ</span>
         </div>
         <div className={`admin-chart-shell${isLoading ? ' is-loading' : ''}`}>
-          <OrdersBarChart data={revenueDays} formatShortDate={formatShortDate} />
+          <OrdersBarChart
+            data={revenueDays}
+            formatShortDate={formatShortDate}
+            formatFullDate={formatDisplayDate}
+            onDaySelect={openOrdersForDay}
+          />
         </div>
         <div className="admin-table-wrap admin-orders-by-day-table">
           <table className="admin-table">
@@ -352,6 +375,7 @@ export default function AdminAnalytics() {
                 <th className="admin-table-num">Hoàn tất</th>
                 <th className="admin-table-num">Doanh thu</th>
                 <th>Tỷ lệ trong kỳ</th>
+                <th aria-label="Thao tác" />
               </tr>
             </thead>
             <tbody>
@@ -360,7 +384,11 @@ export default function AdminAnalytics() {
                   ? Math.round((Number(day.orders || 0) / totalOrdersInRange) * 100)
                   : 0;
                 return (
-                  <tr key={day.date}>
+                  <tr
+                    key={day.date}
+                    className={Number(day.orders || 0) > 0 ? 'admin-analytics-day-row is-clickable' : ''}
+                    onClick={() => Number(day.orders || 0) > 0 && openOrdersForDay(day)}
+                  >
                     <td className="admin-table-nowrap">{formatDisplayDate(day.date)}</td>
                     <td className="admin-table-num">
                       <strong>{day.orders || 0}</strong>
@@ -380,19 +408,33 @@ export default function AdminAnalytics() {
                         <span className="admin-analytics-bar-value">{share}%</span>
                       </div>
                     </td>
+                    <td className="admin-table-nowrap">
+                      {Number(day.orders || 0) > 0 && (
+                        <button
+                          type="button"
+                          className="btn btn-outline admin-analytics-day-link"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openOrdersForDay(day);
+                          }}
+                        >
+                          Xem đơn
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
               {!isLoading && revenueDays.every((d) => !d.orders) && (
                 <tr>
-                  <td colSpan={5} className="admin-table-empty">
+                  <td colSpan={6} className="admin-table-empty">
                     Chưa có đơn hàng trong khoảng đã chọn.
                   </td>
                 </tr>
               )}
               {isLoading && (
                 <tr>
-                  <td colSpan={5} className="admin-table-empty">Đang tải dữ liệu...</td>
+                  <td colSpan={6} className="admin-table-empty">Đang tải dữ liệu...</td>
                 </tr>
               )}
             </tbody>

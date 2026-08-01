@@ -4,6 +4,11 @@ import Category from '../models/Category.js';
 import { requireAdmin, requireAuth } from '../middleware/auth.js';
 import { writeAdminAuditLog } from '../utils/audit.js';
 import { recordProductPriceChange } from '../services/priceHistory.js';
+import {
+  applyProductPriceFields,
+  assertNewPriceAboveFlashSales,
+  parseVndPrice,
+} from '../services/productPrice.js';
 import { getBrandsForCategory, normalizeBrandKey } from '../../../src/data/brandsByCategory.js';
 import { assertProductCanBeDeleted } from '../services/productGuards.js';
 
@@ -68,7 +73,6 @@ router.post('/', async (req, res, next) => {
       categoryKey,
       categoryLabel,
       price,
-      oldPrice = null,
       stock = 0,
       image = '',
       description = '',
@@ -106,7 +110,8 @@ router.post('/', async (req, res, next) => {
       },
       brand: brandCheck.brand,
       price: Number(price),
-      oldPrice: oldPrice === null || oldPrice === '' ? null : Number(oldPrice),
+      oldPrice: null,
+      discount: 0,
       stock: Number(stock),
       image: image.trim(),
       images: image ? [image.trim()] : [],
@@ -145,7 +150,6 @@ router.put('/:id', async (req, res, next) => {
       categoryKey,
       categoryLabel,
       price,
-      oldPrice,
       stock,
       image,
       description,
@@ -176,23 +180,22 @@ router.put('/:id', async (req, res, next) => {
       product.category.label = categoryCheck.label;
     }
     if (price !== undefined) {
-      nextPrice = Number(price);
-      if (!Number.isFinite(nextPrice) || nextPrice < 0) {
-        return res.status(400).json({ message: 'price is invalid.' });
+      const priceCheck = parseVndPrice(price);
+      if (!priceCheck.ok) {
+        return res.status(400).json({ message: priceCheck.message });
       }
+      nextPrice = priceCheck.price;
       if (nextPrice !== previousPrice) {
-        priceChanged = true;
-        product.price = nextPrice;
-        // Tự điền giá cũ = giá trước khi đổi nếu admin không gửi oldPrice
-        if (oldPrice === undefined) {
-          product.oldPrice = previousPrice;
+        const flashCheck = await assertNewPriceAboveFlashSales(product._id, nextPrice);
+        if (!flashCheck.ok) {
+          return res.status(400).json({
+            message: flashCheck.message,
+            code: flashCheck.code,
+          });
         }
+        priceChanged = true;
+        applyProductPriceFields(product, previousPrice, nextPrice);
       }
-    }
-    if (oldPrice !== undefined) {
-      product.oldPrice = oldPrice === null || oldPrice === '' ? null : Number(oldPrice);
-    } else if (priceChanged && previousPrice > 0 && nextPrice < previousPrice) {
-      product.discount = Math.max(0, Math.round(((previousPrice - nextPrice) / previousPrice) * 100));
     }
     if (stock !== undefined) product.stock = Number(stock);
     if (image !== undefined) {

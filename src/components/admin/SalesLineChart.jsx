@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { getChartLabelIndices } from '../../utils/chartLabels';
 
 function buildSmoothPath(points) {
   if (points.length === 0) return '';
@@ -19,24 +20,34 @@ function buildSmoothPath(points) {
   return d;
 }
 
-export default function SalesLineChart({ data, formatAxisMoney, formatTooltipMoney, formatShortDate }) {
+export default function SalesLineChart({
+  data,
+  formatAxisMoney,
+  formatTooltipMoney,
+  formatShortDate,
+  formatFullDate,
+  onDaySelect,
+}) {
   const [hoverIndex, setHoverIndex] = useState(null);
   const points = data || [];
   const formatAxis = formatAxisMoney || formatTooltipMoney;
   const formatTooltip = formatTooltipMoney || formatAxisMoney;
+  const formatDayLabel = formatShortDate || ((date) => date);
+  const formatDayFull = formatFullDate || formatDayLabel;
 
   const chart = useMemo(() => {
     const width = 920;
     const height = 300;
-    const pad = { top: 24, right: 24, bottom: 40, left: 64 };
+    const pad = { top: 24, right: 24, bottom: 44, left: 64 };
     const innerW = width - pad.left - pad.right;
     const innerH = height - pad.top - pad.bottom;
     const maxRevenue = Math.max(1, ...points.map((d) => d.revenue || 0));
+    const labelIndices = new Set(getChartLabelIndices(points.length));
 
     const coords = points.map((day, index) => {
       const x = pad.left + (points.length <= 1 ? innerW / 2 : (index / (points.length - 1)) * innerW);
       const y = pad.top + innerH - ((day.revenue || 0) / maxRevenue) * innerH;
-      return { x, y, ...day };
+      return { x, y, index, showLabel: labelIndices.has(index), ...day };
     });
 
     const linePath = buildSmoothPath(coords);
@@ -57,8 +68,16 @@ export default function SalesLineChart({ data, formatAxisMoney, formatTooltipMon
   }
 
   const active = hoverIndex != null ? chart.coords[hoverIndex] : null;
-  const tooltipText = active ? `${formatTooltip(active.revenue)} · ${active.orders} đơn` : '';
-  const tooltipWidth = Math.max(140, tooltipText.length * 7.5);
+  const tooltipText = active
+    ? `${formatDayFull(active.date)} · ${formatTooltip(active.revenue)} · ${active.orders} đơn`
+    : '';
+  const tooltipWidth = Math.max(180, tooltipText.length * 6.5);
+
+  const handleSelect = (index) => {
+    if (onDaySelect && chart.coords[index]?.date) {
+      onDaySelect(chart.coords[index]);
+    }
+  };
 
   return (
     <div className="admin-sales-chart">
@@ -88,24 +107,27 @@ export default function SalesLineChart({ data, formatAxisMoney, formatTooltipMon
         <path d={chart.areaPath} fill="url(#salesAreaGradient)" />
         <path d={chart.linePath} className="admin-sales-chart-line" fill="none" />
 
-        {chart.coords.map((point, index) => (
-          <g key={point.date || index}>
+        {chart.coords.map((point) => (
+          <g key={point.date || point.index}>
             <circle
               cx={point.x}
               cy={point.y}
-              r={hoverIndex === index ? 6 : 4}
-              className="admin-sales-chart-dot"
-              onMouseEnter={() => setHoverIndex(index)}
+              r={hoverIndex === point.index ? 6 : 4}
+              className={`admin-sales-chart-dot${onDaySelect ? ' is-clickable' : ''}`}
+              onMouseEnter={() => setHoverIndex(point.index)}
               onMouseLeave={() => setHoverIndex(null)}
+              onClick={() => handleSelect(point.index)}
             />
-            <text x={point.x} y={chart.height - 12} className="admin-sales-chart-x-label" textAnchor="middle">
-              {formatShortDate(point.date)}
-            </text>
+            {point.showLabel && (
+              <text x={point.x} y={chart.height - 12} className="admin-sales-chart-x-label" textAnchor="middle">
+                {formatDayLabel(point.date)}
+              </text>
+            )}
           </g>
         ))}
 
         {active && (
-          <g>
+          <g pointerEvents="none">
             <line
               x1={active.x}
               y1={chart.pad.top}
