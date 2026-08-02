@@ -1,4 +1,5 @@
 import Coupon from '../models/Coupon.js';
+import { calculateDiscountAmount } from '../patterns/discount/discountStrategyRegistry.js';
 
 export const DEFAULT_SHIPPING_FEE = 30000;
 
@@ -53,20 +54,7 @@ function checkCouponAvailability(coupon, subtotal, nowDate) {
 }
 
 function calculateCouponAmount(coupon, baseAmount) {
-  if (baseAmount <= 0) return 0;
-
-  let amount = 0;
-  if (coupon.discountType === 'percentage') {
-    amount = (baseAmount * Number(coupon.discountValue || 0)) / 100;
-  } else {
-    amount = Number(coupon.discountValue || 0);
-  }
-
-  if (coupon.maxDiscountValue !== null && coupon.maxDiscountValue !== undefined) {
-    amount = Math.min(amount, Number(coupon.maxDiscountValue || 0));
-  }
-  amount = Math.min(amount, baseAmount);
-  return Math.max(Math.floor(amount), 0);
+  return calculateDiscountAmount(coupon, baseAmount);
 }
 
 async function loadCoupons(couponCodes, session = null) {

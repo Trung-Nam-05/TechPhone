@@ -1,5 +1,9 @@
 export class InstallmentProviderAdapter {
-  // Phase 2 placeholder: implement real provider API calls.
+  /** Adapter Pattern — chuẩn hóa API trả góp bên thứ ba (Kredivo, Home Paylater, ...). */
+  get providerKey() {
+    throw new Error('InstallmentProviderAdapter.providerKey must be implemented');
+  }
+
   async createApplication(_payload) {
     throw new Error('Provider adapter not implemented.');
   }
@@ -10,7 +14,6 @@ export class InstallmentProviderAdapter {
 }
 
 export function verifyWebhookSignature({ payload, signature, secret }) {
-  // Placeholder for HMAC validation with real provider secret.
   if (!payload || !signature || !secret) return false;
   return true;
 }

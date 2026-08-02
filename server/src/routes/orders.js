@@ -9,9 +9,7 @@ import OrderEvent from '../models/OrderEvent.js';
 import { getOwnershipFilter, getOwnershipForWrite } from '../utils/ownership.js';
 import { claimSessionOwnership } from '../services/claimSessionOwnership.js';
 import { calculatePricing, consumeCouponsUsage, PricingError } from '../services/pricing.js';
-import { calculateInstallmentPlan, normalizeInstallmentInput } from '../utils/installment.js';
 import { restoreInventoryForCancelledOrder } from '../services/orderCancel.js';
-import { buildVnpayPaymentUrl, isVnpayConfigured } from '../services/vnpay.js';
 import { syncGhnOrderFromApi } from '../services/ghnShipment.js';
 import { isGhnConfigured } from '../services/ghn.js';
 import ShipmentEvent from '../models/ShipmentEvent.js';
@@ -22,6 +20,7 @@ import {
   validateCustomerRequestCancel,
   canCustomerCancelImmediate,
 } from '../services/orderStateMachine.js';
+import { resolvePaymentStrategy, getPaymentStrategy } from '../patterns/payment/paymentStrategyRegistry.js';
 import { MAX_LINE_QUANTITY } from '../constants/cartLimits.js';
 
 const router = express.Router();
@@ -44,17 +43,15 @@ router.post('/', async (req, res, next) => {
     const shippingInfo = req.body?.shippingInfo || {};
     const { fullName, phone, email = '', province = '', district = '', ward = '', address, note = '' } = shippingInfo;
     const rawPaymentMethod = String(req.body?.paymentMethod || 'cod').trim();
-    let paymentMethod = 'cod';
-    if (rawPaymentMethod === 'installment') paymentMethod = 'installment';
-    else if (rawPaymentMethod === 'vnpay') paymentMethod = 'vnpay';
-    else if (rawPaymentMethod !== 'cod') {
+    const paymentStrategy = resolvePaymentStrategy(rawPaymentMethod);
+    if (!paymentStrategy) {
       return res.status(400).json({ message: 'Invalid payment method.' });
     }
+    const paymentMethod = paymentStrategy.key;
 
-    if (paymentMethod === 'vnpay' && !isVnpayConfigured()) {
-      return res.status(503).json({
-        message: 'VNPAY is not configured. Set VNPAY_TMN_CODE and VNPAY_HASH_SECRET (and API_PUBLIC_URL for callbacks).',
-      });
+    const paymentValidation = paymentStrategy.validateCheckout({ shippingInfo: req.body?.shippingInfo });
+    if (!paymentValidation.ok) {
+      return res.status(paymentValidation.status || 400).json({ message: paymentValidation.message });
     }
 
     const installmentPayload = req.body?.installment || null;
@@ -68,7 +65,7 @@ router.post('/', async (req, res, next) => {
       });
     }
     if (!province?.trim() || !district?.trim()) {
-      if (paymentMethod !== 'installment') {
+      if (paymentStrategy.requiresProvinceDistrict()) {
         return res.status(400).json({
           message: 'shippingInfo.province and shippingInfo.district are required for delivery.',
         });
@@ -84,25 +81,13 @@ router.post('/', async (req, res, next) => {
         idempotencyKey,
       }).lean();
       if (existed) {
-        let paymentUrl = null;
-        if (existed.paymentMethod === 'vnpay' && existed.paymentStatus === 'pending') {
-          try {
-            paymentUrl = buildVnpayPaymentUrl({
-              amountVnd: existed.total,
-              orderId: String(existed._id),
-              orderInfo: `TechPhone ${String(existed._id).slice(-8)}`,
-              ipAddr: clientIp,
-            });
-          } catch (e) {
-            console.error(e);
-          }
-        }
+        const existedStrategy = getPaymentStrategy(existed.paymentMethod) || paymentStrategy;
+        const idempotentPayload = await existedStrategy.buildIdempotentResponse(existed, { clientIp });
         return res.status(200).json({
           message: 'Order already created.',
           order: existed,
           duplicated: true,
-          paymentUrl,
-          paymentProvider: existed.paymentMethod === 'vnpay' ? 'vnpay' : undefined,
+          ...idempotentPayload,
         });
       }
     }
@@ -217,30 +202,9 @@ router.post('/', async (req, res, next) => {
       });
       await consumeCouponsUsage(pricing.couponDocs, session);
 
-      let installment = {
-        status: 'draft',
-      };
-      if (paymentMethod === 'installment') {
-        const normalized = normalizeInstallmentInput(installmentPayload || {});
-        const plan = calculateInstallmentPlan({
-          total: pricing.total,
-          planMonths: normalized.planMonths,
-          downPaymentRate: normalized.downPaymentRate,
-        });
-        installment = {
-          provider: normalized.provider,
-          planMonths: normalized.planMonths,
-          downPaymentRate: normalized.downPaymentRate,
-          downPaymentAmount: plan.downPaymentAmount,
-          financedAmount: plan.financedAmount,
-          monthlyAmount: plan.monthlyAmount,
-          status: 'pending_review',
-          note: normalized.note,
-          requestedAt: new Date(),
-        };
-      }
+      const installment = paymentStrategy.buildInstallmentPayload(pricing, installmentPayload);
 
-      const initialOrderStatus = paymentMethod === 'cod' ? 'confirmed' : 'pending';
+      const initialOrderStatus = paymentStrategy.getInitialOrderStatus();
 
       const [order] = await Order.create(
         [
@@ -256,8 +220,7 @@ router.post('/', async (req, res, next) => {
             couponDiscountTotal: pricing.couponDiscountTotal,
             total: pricing.total,
             coupons: pricing.appliedCoupons,
-            paymentMethod:
-              paymentMethod === 'installment' ? 'installment' : paymentMethod === 'vnpay' ? 'vnpay' : 'cod',
+            paymentMethod,
             status: initialOrderStatus,
             installment,
             invoiceRequested,
@@ -287,14 +250,7 @@ router.post('/', async (req, res, next) => {
             order: order._id,
             fromStatus: '',
             toStatus: initialOrderStatus,
-            note:
-              paymentMethod === 'cod'
-                ? 'Don COD duoc tu dong xac nhan. Thanh toan khi nhan hang.'
-                : paymentMethod === 'installment'
-                  ? 'Order created with installment request pending review.'
-                  : paymentMethod === 'vnpay'
-                    ? 'Order created; awaiting VNPAY payment.'
-                    : 'Order created by checkout flow.',
+            note: paymentStrategy.getOrderCreatedNote(),
             actor: ownershipForWrite.user,
           },
         ],
@@ -303,29 +259,18 @@ router.post('/', async (req, res, next) => {
       createdOrder = order;
     });
 
-    let paymentUrl = null;
-    if (paymentMethod === 'vnpay' && createdOrder) {
-      try {
-        paymentUrl = buildVnpayPaymentUrl({
-          amountVnd: createdOrder.total,
-          orderId: String(createdOrder._id),
-          orderInfo: `TechPhone ${String(createdOrder._id).slice(-8)}`,
-          ipAddr: clientIp,
-        });
-      } catch (e) {
-        console.error(e);
-        return res.status(500).json({
-          message: 'Order was created but VNPAY payment URL could not be generated.',
-          order: createdOrder,
-        });
-      }
+    const postCreatePayload = await paymentStrategy.buildPostCreatePayload(createdOrder, { clientIp });
+    if (postCreatePayload.paymentUrlError) {
+      return res.status(500).json({
+        message: 'Order was created but VNPAY payment URL could not be generated.',
+        order: createdOrder,
+      });
     }
 
     return res.status(201).json({
       message: 'Order created successfully.',
       order: createdOrder,
-      paymentUrl,
-      paymentProvider: paymentMethod === 'vnpay' ? 'vnpay' : undefined,
+      ...postCreatePayload,
     });
   } catch (error) {
     if (error instanceof PricingError) {

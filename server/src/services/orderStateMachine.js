@@ -3,6 +3,7 @@ import {
   TERMINAL_ORDER_STATUSES,
   shouldTransitionOrderStatus,
 } from '../constants/orderStatus.js';
+import { CUSTOMER_TRACKING_FLOW, ORDER_STATE_REGISTRY } from '../patterns/state/orderTransitionRegistry.js';
 
 export const ADMIN_OVERRIDE_STATUSES = new Set([
   'cancelled',
@@ -87,14 +88,7 @@ export function validateAdminStatusChange(fromStatus, toStatus, { override = fal
   return { ok: true, override: false };
 }
 
-export const TRACKING_STEP_KEYS = [
-  'placed',
-  'confirmed',
-  'await_pickup',
-  'picked',
-  'shipping',
-  'completed',
-];
+export const TRACKING_STEP_KEYS = CUSTOMER_TRACKING_FLOW;
 
 const STATUS_TO_STEP = {
   pending: 0,
@@ -112,11 +106,11 @@ export function buildTrackingSteps(currentStatus) {
   const activeIndex = STATUS_TO_STEP[currentStatus] ?? 0;
   const labels = {
     placed: 'Đặt hàng',
-    confirmed: 'Xác nhận',
-    await_pickup: 'Chờ lấy hàng',
-    picked: 'Đã lấy hàng',
-    shipping: 'Đang giao',
-    completed: 'Hoàn tất',
+    confirmed: ORDER_STATE_REGISTRY.confirmed?.label || 'Xác nhận',
+    await_pickup: ORDER_STATE_REGISTRY.await_pickup?.label || 'Chờ lấy hàng',
+    picked: ORDER_STATE_REGISTRY.picked?.label || 'Đã lấy hàng',
+    shipping: ORDER_STATE_REGISTRY.shipping?.label || 'Đang giao',
+    completed: ORDER_STATE_REGISTRY.completed?.label || 'Hoàn tất',
   };
 
   return TRACKING_STEP_KEYS.map((key, index) => ({
@@ -132,3 +126,5 @@ export function buildTrackingSteps(currentStatus) {
 }
 
 export const ACTIVE_SHIPMENT_STATUSES = new Set(['await_pickup', 'picked', 'shipping']);
+
+export { describeOrderStateFlow, ORDER_STATE_REGISTRY } from '../patterns/state/orderTransitionRegistry.js';

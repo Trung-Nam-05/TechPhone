@@ -7,17 +7,10 @@ import { useAnalytics } from '../context/AnalyticsContext';
 import { useAuth } from '../context/AuthContext';
 import { calculateCouponPricing, getStoredSelectedCouponIds } from '../data/coupons';
 import OrderSuccessResult from '../components/OrderSuccessResult';
+import { PAYMENT_UI_STRATEGIES, resolvePaymentUiStrategy } from '../patterns/paymentUiStrategies';
 import './Checkout.css';
 
-const PAYMENT_OPTIONS = [
-  { key: 'cod', label: 'Thanh toán khi nhận hàng', icon: '💵', orderPaymentMethod: 'cod' },
-  { key: 'bank', label: 'Chuyển khoản ngân hàng (QR Code)', icon: '🏦', orderPaymentMethod: 'cod', demoNote: 'Demo: xử lý như COD' },
-  { key: 'vnpay', label: 'Thẻ ATM / Ví (VNPAY)', icon: '💳', orderPaymentMethod: 'vnpay' },
-  { key: 'international', label: 'Thẻ Quốc tế Visa/Master/JCB/AMEX', icon: '💳', orderPaymentMethod: 'cod', demoNote: 'Coming soon — hiện xử lý như COD' },
-  { key: 'zalopay', label: 'Ví ZaloPay', icon: '🟦', orderPaymentMethod: 'cod', demoNote: 'Coming soon — hiện xử lý như COD' },
-  { key: 'momo', label: 'Ví điện tử MoMo', icon: '🟪', orderPaymentMethod: 'cod', demoNote: 'Coming soon — hiện xử lý như COD' },
-  { key: 'installment', label: 'Trả góp', icon: '💰', orderPaymentMethod: 'installment' },
-];
+const PAYMENT_OPTIONS = PAYMENT_UI_STRATEGIES;
 
 const INSTALLMENT_METHODS = [
   { key: 'kredivo', label: 'Trả góp qua Kredivo', icon: '🟧' },
@@ -112,7 +105,7 @@ export default function Checkout() {
   const voucherDiscount = totalDiscount;
   const totalPromotion = productDiscount + voucherDiscount;
   const totalAmount = Math.max(cartTotal + shippingFee - totalPromotion, 0);
-  const selectedPayment = PAYMENT_OPTIONS.find((item) => item.key === selectedPaymentKey) || PAYMENT_OPTIONS[0];
+  const selectedPayment = resolvePaymentUiStrategy(selectedPaymentKey);
   const isInstallmentSelected = selectedPayment.orderPaymentMethod === 'installment';
 
   const handleSpecialRequest = (key) => {

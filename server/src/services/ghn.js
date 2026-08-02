@@ -1,7 +1,10 @@
 /**
  * GHN Open API client — DEV only by default.
  * Docs: https://api.ghn.vn/
+ *
+ * Adapter Pattern: mapGhnStatusToOrderStatus / ghnStatusLabel delegate qua GhnStatusAdapter.
  */
+import { ghnStatusAdapter } from '../patterns/adapters/GhnStatusAdapter.js';
 
 const DEV_API_V2 = 'https://dev-online-gateway.ghn.vn/shiip/public-api/v2';
 const DEV_API_MASTER = 'https://dev-online-gateway.ghn.vn/shiip/public-api/master-data';
@@ -37,35 +40,11 @@ export function isGhnConfigured() {
 }
 
 export function mapGhnStatusToOrderStatus(ghnStatus) {
-  const s = String(ghnStatus || '').toLowerCase().trim();
-  if (!s) return null;
-  if (['cancel', 'cancelled', 'canceled'].includes(s)) return 'cancelled';
-  if (['ready_to_pick', 'picking'].includes(s)) return 'await_pickup';
-  if (['picked', 'storing'].includes(s)) return 'picked';
-  if (['transporting', 'delivering'].includes(s)) return 'shipping';
-  if (['delivered'].includes(s)) return 'completed';
-  if (['delivery_fail'].includes(s)) return 'delivery_failed';
-  if (['waiting_to_return', 'return', 'returned', 'return_transporting'].includes(s)) return 'returned';
-  return null;
+  return ghnStatusAdapter.toOrderStatus(ghnStatus);
 }
 
 export function ghnStatusLabel(status) {
-  const labels = {
-    ready_to_pick: 'Sẵn sàng lấy hàng',
-    picking: 'Đang lấy hàng',
-    picked: 'Đã lấy hàng',
-    storing: 'Đang nhập kho',
-    transporting: 'Đang vận chuyển',
-    delivering: 'Đang giao hàng',
-    delivered: 'Giao thành công',
-    delivery_fail: 'Giao thất bại',
-    waiting_to_return: 'Chờ hoàn hàng',
-    return: 'Đang hoàn hàng',
-    returned: 'Đã hoàn hàng',
-    cancel: 'Đã hủy',
-    cancelled: 'Đã hủy',
-  };
-  return labels[String(status || '').toLowerCase()] || String(status || 'GHN');
+  return ghnStatusAdapter.toLabel(status);
 }
 
 async function ghnRequest(path, { method = 'GET', body, shopId, base = 'v2' } = {}) {
