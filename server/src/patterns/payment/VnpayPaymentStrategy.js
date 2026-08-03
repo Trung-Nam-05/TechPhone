@@ -1,4 +1,8 @@
 import { buildVnpayPaymentUrl, isVnpayConfigured } from '../../services/vnpay.js';
+import {
+  applyVnpayPaymentFailure,
+  applyVnpayPaymentSuccess,
+} from '../state/orderTransitionService.js';
 import { PaymentStrategy } from './PaymentStrategy.js';
 
 /** Strategy: Thanh toán online qua cổng VNPAY — đơn ở trạng thái pending cho đến khi IPN xác nhận. */
@@ -55,5 +59,14 @@ export class VnpayPaymentStrategy extends PaymentStrategy {
       console.error(error);
       return {};
     }
+  }
+
+  /** Strategy + State: xử lý IPN/return VNPAY qua orderTransitionService. */
+  async applyPaymentSuccess(order) {
+    return applyVnpayPaymentSuccess(order);
+  }
+
+  async applyPaymentFailure(order, responseCode) {
+    return applyVnpayPaymentFailure(order, responseCode);
   }
 }

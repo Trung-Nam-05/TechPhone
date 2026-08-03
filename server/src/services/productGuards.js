@@ -1,23 +1,11 @@
 import mongoose from 'mongoose';
 import Order from '../models/Order.js';
 import FlashSale from '../models/FlashSale.js';
+import { ACTIVE_FULFILLMENT_ORDER_STATUSES } from '../constants/orderStatus.js';
+import { isFlashSaleBlockingDelete, resolveFlashSaleState } from '../patterns/state/flashSaleStateRegistry.js';
 
-/** Đơn còn đang xử lý / giao — không được xóa SP đang nằm trong các đơn này. */
-export const ACTIVE_ORDER_STATUSES = [
-  'pending',
-  'confirmed',
-  'await_pickup',
-  'picked',
-  'shipping',
-  'delivery_failed',
-];
-
-/** Ngưỡng "bán chạy": đủ số lượng đã giao thành công thì không cho soft-delete. */
 export const BESTSELLER_SOLD_UNITS = Number(process.env.PRODUCT_BESTSELLER_SOLD_UNITS || 10);
 
-/**
- * Tổng số lượng đã bán (đơn hoàn tất) của một sản phẩm.
- */
 export async function getCompletedSoldUnits(productId) {
   const oid = new mongoose.Types.ObjectId(String(productId));
   const [row] = await Order.aggregate([
@@ -37,29 +25,12 @@ export async function getCompletedSoldUnits(productId) {
 export async function countActiveOrdersContainingProduct(productId) {
   const oid = new mongoose.Types.ObjectId(String(productId));
   return Order.countDocuments({
-    status: { $in: ACTIVE_ORDER_STATUSES },
+    status: { $in: ACTIVE_FULFILLMENT_ORDER_STATUSES },
     'items.product': oid,
   });
 }
 
-export async function hasActiveFlashSale(productId) {
-  const now = new Date();
-  const sale = await FlashSale.findOne({
-    product: productId,
-    isDeleted: false,
-    isEnabled: true,
-    startsAt: { $lte: now },
-    endsAt: { $gt: now },
-  })
-    .select('_id')
-    .lean();
-  return Boolean(sale);
-}
-
-/**
- * Kiểm tra có được soft-delete sản phẩm không.
- * @returns {{ ok: true } | { ok: false, code: string, message: string, details?: object }}
- */
+/** Kiểm tra sản phẩm có được soft-delete không. */
 export async function assertProductCanBeDeleted(productId) {
   const activeOrders = await countActiveOrdersContainingProduct(productId);
   if (activeOrders > 0) {
@@ -81,7 +52,18 @@ export async function assertProductCanBeDeleted(productId) {
     };
   }
 
-  if (await hasActiveFlashSale(productId)) {
+  const now = new Date();
+  const sale = await FlashSale.findOne({
+    product: productId,
+    isDeleted: false,
+    isEnabled: true,
+    startsAt: { $lte: now },
+    endsAt: { $gt: now },
+  })
+    .select('_id name startsAt endsAt soldCount quota isDeleted isEnabled')
+    .lean();
+
+  if (sale && isFlashSaleBlockingDelete(resolveFlashSaleState(sale, now))) {
     return {
       ok: false,
       code: 'PRODUCT_IN_FLASH_SALE',
@@ -91,3 +73,5 @@ export async function assertProductCanBeDeleted(productId) {
 
   return { ok: true, soldUnits };
 }
+
+export { ACTIVE_FULFILLMENT_ORDER_STATUSES as ACTIVE_ORDER_STATUSES } from '../constants/orderStatus.js';

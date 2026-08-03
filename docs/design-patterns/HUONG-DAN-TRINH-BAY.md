@@ -1,303 +1,401 @@
 # Hướng dẫn trình bày Design Pattern — TechPhone
 
-Tài liệu này giúp bạn trả lời giảng viên: **pattern nào, ở đâu, chạy thế nào, hiển thị trên website chỗ nào**.
+> **Bản đồ đầy đủ mọi vị trí áp dụng:** xem [`PATTERN-MAP.md`](./PATTERN-MAP.md)
 
-Thang mức áp dụng trong project (sau refactor):
+Tài liệu này giúp bạn trả lời giảng viên: **pattern nào, ở đâu, chạy thế nào, demo được không, hiển thị trên website chỗ nào**.
+
+**Chú thích nguồn pattern:**
+- 🏠 **Tự viết** — code trong `server/src/patterns/` hoặc service tách class/interface rõ
+- 📦 **Thư viện** — pattern có sẵn trong Express, React, Mongoose, Socket.io… (project **dùng** pattern, không tự implement lại)
+
+**Thang mức:**
 - ⭐ = nhận diện được / pattern ngầm
-- ⭐⭐ = tách module rõ, còn if/else
-- ⭐⭐⭐ = class/registry/interface rõ ràng, dễ mở rộng
+- ⭐⭐ = tách module rõ hoặc qua thư viện
+- ⭐⭐⭐ = class/registry/interface rõ ràng, dễ trình bày
 
 ---
 
-## Bản đồ pattern core (⭐⭐⭐)
+## Bảng tổng hợp TẤT CẢ pattern (15 mục)
 
-| Pattern | Mức | Thư mục code | Trang web liên quan |
-|---------|-----|--------------|---------------------|
-| **State** | ⭐⭐⭐ | `server/src/patterns/state/` + `orderStateMachine.js` | `/account/orders/:id`, Admin Orders |
-| **Strategy (Payment)** | ⭐⭐⭐ | `server/src/patterns/payment/` + `src/patterns/paymentUiStrategies.js` | `/checkout` |
-| **Strategy (Discount)** | ⭐⭐⭐ | `server/src/patterns/discount/` + `pricing.js` | `/checkout`, `/coupon` |
-| **Adapter (GHN)** | ⭐⭐⭐ | `server/src/patterns/adapters/GhnStatusAdapter.js` | Order tracking, Admin Orders |
-| **Proxy (Order)** | ⭐⭐⭐ | `server/src/patterns/proxy/OrderCustomerProxy.js` | `/account/orders`, API khách |
-| **Command (AI Tools)** | ⭐⭐⭐ | `server/src/patterns/commands/` | Chat widget AI |
-| **Chain of Responsibility** | ⭐⭐⭐ | `server/src/middleware/auth.js` | Mọi API cần login/admin |
-| **Observer** | ⭐⭐⭐ | `server/src/socket.js` + React Context | Chat hỗ trợ, Support admin |
+| # | Pattern | Nguồn | Mức | Demo live? | Trang / tính năng demo |
+|---|---------|-------|-----|------------|------------------------|
+| 1 | **State** (đơn hàng) | 🏠 Tự viết | ⭐⭐⭐ | ✅ Có | `/checkout`, Order Detail stepper, Admin Orders |
+| 2 | **State** (flash sale) | 🏠 Tự viết | ⭐⭐⭐ | ✅ Có | Trang flash sale, countdown |
+| 3 | **Strategy** (thanh toán) | 🏠 Tự viết | ⭐⭐⭐ | ✅ Có | `/checkout` — COD / VNPAY / trả góp |
+| 4 | **Strategy** (giảm giá) | 🏠 Tự viết | ⭐⭐⭐ | ✅ Có | `/checkout` + nhập coupon |
+| 5 | **Adapter** (GHN) | 🏠 Tự viết | ⭐⭐⭐ | ✅ Có* | Order tracking (cần GHN sync/webhook) |
+| 6 | **Singleton** (database) | 🏠 Tự viết | ⭐⭐⭐ | ✅ Có | Start server — một connection MongoDB duy nhất |
+| 7 | **Command** (AI tools) | 🏠 Tự viết | ⭐⭐⭐ | ✅ Có | Chat widget AI — hỏi "iPhone rẻ nhất" |
+| 8 | **Template Method** | 🏠 Tự viết | ⭐⭐ | ✅ Có | Order Detail — stepper 6 bước |
+| 9 | **Facade** | 🏠 Tự viết | ⭐⭐ | ✅ Có | Mọi trang gọi `api.js` thay vì fetch thô |
+| 10 | **Chain of Responsibility** | 📦 Express | ⭐⭐⭐ | ✅ Có | Vào `/admin` không login → 401/redirect |
+| 11 | **Observer** (real-time chat) | 📦 Socket.io + React | ⭐⭐⭐ | ✅ Có | 2 tab: khách chat + admin `/admin/support` |
+| 12 | **Composite** (UI tree) | 📦 React | ⭐⭐ | ✅ Có | Mở React DevTools — cây component |
+| 13 | **Repository** | 📦 Mongoose | ⭐⭐ | ⚠️ Gián tiếp | Checkout trừ stock — model `Order`, `Product` |
+| 14 | **Front Controller** | 📦 React Router | ⭐⭐ | ✅ Có | Đổi URL → `App.jsx` route map |
+| 15 | **Unit of Work** | 📦 MongoDB session | ⭐⭐ | ⚠️ Gián tiếp | Checkout transaction — rollback nếu lỗi |
+
+\* Adapter GHN: demo tốt nhất khi có vận đơn GHN thật hoặc bật demo fulfillment env.
+
+**Chưa có pattern tự viết rõ:** Decorator (pricing stack coupon + flash sale còn if/else — chỉ nhắc nếu giảng viên hỏi mở rộng).
 
 ---
 
-## 1. State Pattern — Máy trạng thái đơn hàng ⭐⭐⭐
+## Giải đáp nhanh 3 câu hỏi hay nhầm
+
+### Adapter — có phải chuyển trạng thái GHN sang trạng thái web không?
+
+**Đúng.** GHN API trả mã riêng (`ready_to_pick`, `transporting`, `delivered`…). TechPhone dùng mã nội bộ (`await_pickup`, `shipping`, `completed`…). `GhnStatusAdapter.toOrderStatus()` **chuyển đổi** mã GHN → `order.status` của web. Sau đó **State Pattern** mới validate và lưu.
+
+| Thuật ngữ GoF | Trong TechPhone |
+|---------------|-----------------|
+| **Adaptee** | GHN API (mã status bên ngoài) |
+| **Target** | `CarrierStatusAdapter.toOrderStatus()` — interface web mong muốn |
+| **Adapter** | `GhnStatusAdapter` |
+| **Client** | `ghnShipment.js`, `ghnSync.js`, webhook GHN |
+
+### Command — có phải tạo lệnh cho chatbox AI không?
+
+**Đúng.** Mỗi chức năng AI (tìm SP, xem đơn, timeline…) là một **Command object** có `execute()` và `declaration` (schema cho Gemini). Gemini quyết định gọi lệnh nào → registry tìm command → `execute()` query DB → trả kết quả cho AI tóm tắt.
+
+| Thuật ngữ GoF | Trong TechPhone |
+|---------------|-----------------|
+| **Command** | Class `AiToolCommand` |
+| **ConcreteCommand** | `searchProducts`, `getTopProducts`, `getMyOrders`… |
+| **Invoker** | `gemini.js` — gọi `executeToolCommand()` |
+| **Receiver** | `aiChatToolHandlers.js` — logic MongoDB |
+
+**Không nhầm với:** Command trong terminal/CMD. Ở đây là **Command Pattern OOP** — đóng gói request thành object.
+
+### Observer — có phải user abstract báo cho user con không?
+
+**Không đúng với TechPhone.** Mô hình bạn mô tả (cha truyền xuống con) gần **Composite + notification** hơn. Trong project, Observer là **Pub-Sub real-time**:
+
+| Thuật ngữ GoF | Trong TechPhone (chat hỗ trợ) |
+|---------------|-------------------------------|
+| **Subject** (phát sự kiện) | Server Socket.io: `io.to(room).emit('message:new', …)` |
+| **Observer** (đăng ký lắng nghe) | Client: `socket.on('message:new', handler)` trong `SupportChatContext.jsx` |
+| **Notify** | Khi khách gửi tin → server lưu DB → emit tới **room** `conversation:{id}` và room `admin:support` |
+| **Update** | Mọi observer trong room cập nhật UI (không F5) |
+
+**Không có** class `AbstractUser` hay cây user cha-con. Có **room** (nhóm socket): ai `join` room thì nhận event — admin room nhận mọi tin mới.
+
+**Observer thứ hai (📦 React):** `SupportChatProvider` giữ state → component con `useContext` → state đổi thì re-render (Observer qua React).
+
+---
+
+## 1. State Pattern — Máy trạng thái đơn hàng 🏠 ⭐⭐⭐
 
 ### Pattern là gì?
-Mỗi **trạng thái** (`pending`, `confirmed`, `shipping`...) có **quy tắc chuyển đổi riêng**. Behavior thay đổi theo state — không dùng if/else khổng lồ rải khắp code.
+Mỗi **trạng thái** (`pending`, `confirmed`, `shipping`…) có **quy tắc chuyển đổi riêng**. Mọi đổi `order.status` qua một cổng duy nhất.
 
 ### Code ở đâu?
 ```
-server/src/constants/orderStatus.js          → rank & shouldTransitionOrderStatus()
-server/src/patterns/state/orderTransitionRegistry.js → metadata từng state
-server/src/services/orderStateMachine.js     → validateSystemTransition, validateAdminStatusChange
-server/src/services/orderTimeline.js         → buildOrderTimeline → buildTrackingSteps
-```
-
-### Luồng thực tế (trả lời giảng viên)
-
-```
-[Khách đặt COD]     → confirmed (auto)
-[Khách đặt VNPAY]   → pending → (IPN thành công) → confirmed
-[Admin xác nhận]    → confirmed → await_pickup (tạo vận đơn GHN)
-[GHN webhook/poll]  → picked → shipping → completed
-[Khách hủy]         → cancelled (nếu còn trong window cho phép)
-[Admin override]    → bất kỳ terminal state (cần lý do ≥ 10 ký tự)
-```
-
-**Bước 1 — Checkout tạo đơn:** `orders.js` gọi `paymentStrategy.getInitialOrderStatus()` → COD = `confirmed`, VNPAY/trả góp = `pending`.
-
-**Bước 2 — GHN cập nhật:** `ghnShipment.js` nhận status GHN → `mapGhnStatusToOrderStatus()` (Adapter) → `shouldTransitionOrderStatus()` (State) → lưu DB + `OrderEvent`.
-
-**Bước 3 — Khách xem:** Frontend gọi `GET /api/orders/:id/timeline` → `buildOrderTimeline()` → trả `steps[]` cho stepper UI.
-
-### Hiển thị trên website
-| Vị trí | File frontend | Hiển thị gì |
-|--------|---------------|-------------|
-| Chi tiết đơn | `src/pages/OrderDetail.jsx` | Stepper 6 bước (Đặt hàng → Hoàn tất) |
-| Danh sách đơn | `src/pages/AccountOrders.jsx` | Badge trạng thái |
-| Admin | `src/pages/AdminOrders.jsx` | Dropdown đổi status + override |
-
-### Câu trả lời mẫu cho giảng viên
-> "Em dùng **State Pattern** cho vòng đời đơn hàng. Mọi chuyển trạng thái đều qua `orderStateMachine.js` — hệ thống GHN/VNPAY chỉ được tiến forward, admin override cần lý do. UI stepper ở trang Order Detail đọc `buildTrackingSteps()` từ backend, không hard-code logic ở React."
-
----
-
-## 2. Strategy Pattern — Thanh toán ⭐⭐⭐
-
-### Pattern là gì?
-Mỗi phương thức thanh toán là **strategy độc lộn** implement cùng interface. Client (`orders.js`) gọi `resolvePaymentStrategy()` — **Open/Closed**: thêm MoMo chỉ cần class mới, không sửa checkout core.
-
-### Code ở đâu?
-```
-server/src/patterns/payment/PaymentStrategy.js       → interface (class cơ sở)
-server/src/patterns/payment/CodPaymentStrategy.js
-server/src/patterns/payment/VnpayPaymentStrategy.js
-server/src/patterns/payment/InstallmentPaymentStrategy.js
-server/src/patterns/payment/paymentStrategyRegistry.js → resolvePaymentStrategy()
-server/src/routes/orders.js                          → client dùng strategy
-src/patterns/paymentUiStrategies.js                  → map UI → backend method
-src/pages/Checkout.jsx                               → chọn phương thức
+server/src/constants/orderStatus.js
+server/src/patterns/state/orderTransitionRegistry.js   → metadata label
+server/src/patterns/state/orderTransitionService.js    → applySystemOrderTransition (điểm vào)
+server/src/services/orderStateMachine.js               → validate + buildTrackingSteps
 ```
 
 ### Luồng thực tế
-
 ```
-Checkout.jsx chọn "VNPAY"
-    ↓
-POST /api/orders { paymentMethod: 'vnpay' }
-    ↓
-resolvePaymentStrategy('vnpay') → VnpayPaymentStrategy
-    ↓
-validateCheckout() → kiểm tra VNPAY_TMN_CODE đã config
-getInitialOrderStatus() → 'pending'
-buildPostCreatePayload() → { paymentUrl, paymentProvider: 'vnpay' }
-    ↓
-Frontend redirect sang VNPAY
-    ↓
-VNPAY IPN → payments.vnpay.js → pending → confirmed
+[COD checkout]     → confirmed
+[VNPAY checkout]   → pending → (IPN OK) → confirmed
+[Admin đóng gói]  → await_pickup → GHN sync → picked → shipping → completed
+[Khách hủy]        → cancelled (nếu còn trong window)
 ```
 
-**COD Strategy:** `getInitialOrderStatus()` = `confirmed` — không cần chờ thanh toán online.
+**GHN cập nhật:** Adapter chuyển mã GHN → `order.status` → `applySystemOrderTransition()` (State) → lưu DB + `OrderEvent`.
 
-**Installment Strategy:** `buildInstallmentPayload()` tạo subdocument trả góp; `requiresProvinceDistrict()` = false.
+### Demo cho giảng viên
+1. Đặt đơn COD → vào Order Detail → stepper nhảy qua "Xác nhận".
+2. Đặt VNPAY → thấy `pending` → thanh toán xong → `confirmed`.
+3. Admin đổi status → chỉ route admin, qua `applyAdminOrderTransition`.
 
-### Hiển thị trên website
-| Trang | Hành vi |
-|-------|---------|
-| `/checkout` | Radio chọn COD / VNPAY / Trả góp |
-| `/checkout/vnpay-result` | Kết quả thanh toán VNPAY |
-| `/installment` | Form trả góp (modal từ checkout) |
+### Hiển thị website
+| Vị trí | File | Hiển thị |
+|--------|------|----------|
+| Chi tiết đơn | `OrderDetail.jsx` | Stepper 6 bước |
+| Admin | `AdminOrders.jsx` | Dropdown status |
 
 ### Câu trả lời mẫu
-> "Em tách 3 strategy: COD, VNPAY, Installment. Route checkout chỉ gọi interface chung — validate, initial status, post-create URL. Frontend có registry riêng map 7 option UI xuống 3 method backend. Muốn thêm ZaloPay em chỉ thêm `ZaloPayPaymentStrategy` và đăng ký vào registry."
+> "State Pattern em gom về `orderTransitionService.js`. GHN, VNPAY, admin đều gọi `applySystemOrderTransition` — không set `order.status` trực tiếp."
 
 ---
 
-## 3. Strategy Pattern — Giảm giá coupon ⭐⭐⭐
+## 2. State Pattern — Flash Sale 🏠 ⭐⭐⭐
+
+### Code
+`server/src/patterns/state/flashSaleStateRegistry.js` → `resolveFlashSaleState()` (inactive / upcoming / active / sold_out / ended)
+
+### Demo
+- Mở trang flash sale khi campaign active → badge/countdown.
+
+---
+
+## 3. Strategy Pattern — Thanh toán 🏠 ⭐⭐⭐
 
 ### Code
 ```
-server/src/patterns/discount/PercentageDiscountStrategy.js  → giảm %
-server/src/patterns/discount/FixedDiscountStrategy.js      → giảm cố định VND
-server/src/patterns/discount/discountStrategyRegistry.js   → getDiscountStrategy(type)
-server/src/services/pricing.js                             → calculatePricing()
+server/src/patterns/payment/PaymentStrategy.js + Cod/Vnpay/Installment
+server/src/patterns/payment/paymentStrategyRegistry.js
+src/patterns/paymentUiStrategies.js + Checkout.jsx
 ```
 
 ### Luồng
 ```
-Checkout gửi coupon codes
-    ↓
-calculatePricing() load coupon từ DB
-    ↓
-coupon.discountType === 'percentage' → PercentageDiscountStrategy.calculate()
-coupon.discountType === 'fixed'      → FixedDiscountStrategy.calculate()
-    ↓
-Trả subtotal, shippingFee, total
+Checkout chọn VNPAY → resolvePaymentStrategy('vnpay')
+→ getInitialOrderStatus() = 'pending'
+→ buildPostCreatePayload() = { paymentUrl }
+→ redirect VNPAY → IPN → confirmed
 ```
 
-### Hiển thị website
-- `/checkout` — dòng giảm giá voucher
-- `/coupon` — chọn mã trước checkout
+### Demo
+- `/checkout`: đổi COD ↔ VNPAY ↔ trả góp, chỉ ra initial status khác nhau.
 
 ### Câu trả lời mẫu
-> "Mỗi loại coupon là một discount strategy. Pricing service không biết công thức cụ thể — chỉ delegate qua registry theo `discountType`."
+> "3 ConcreteStrategy: COD, VNPAY, Installment. Client `orders.js` chỉ gọi interface — Open/Closed."
 
 ---
 
-## 4. Adapter Pattern — GHN vận chuyển ⭐⭐⭐
+## 4. Strategy Pattern — Giảm giá coupon 🏠 ⭐⭐⭐
+
+### Code
+`patterns/discount/` + `pricing.js` → `getDiscountStrategy(discountType)`
+
+### Demo
+- Checkout + mã coupon `%` hoặc `fixed` → dòng giảm giá đổi theo strategy.
+
+---
+
+## 5. Adapter Pattern — GHN 🏠 ⭐⭐⭐
 
 ### Pattern là gì?
-GHN API dùng mã riêng (`ready_to_pick`, `transporting`...). TechPhone dùng mã nội bộ (`await_pickup`, `shipping`...). **Adapter** chuyển đổi giữa hai hệ thống.
+**Chuyển đổi interface** giữa hai hệ thống: mã trạng thái GHN → mã `order.status` nội bộ TechPhone. **Không** tự giao hàng — chỉ **dịch** status.
 
 ### Code
 ```
-server/src/patterns/adapters/CarrierStatusAdapter.js  → interface
-server/src/patterns/adapters/GhnStatusAdapter.js      → implementation
-server/src/services/ghn.js                              → re-export mapGhnStatusToOrderStatus()
-server/src/services/ghnShipment.js                      → applyGhnStatusUpdate()
+server/src/patterns/adapters/CarrierStatusAdapter.js  → Target (interface)
+server/src/patterns/adapters/GhnStatusAdapter.js      → Adapter
+server/src/services/ghnShipment.js                    → Client
 ```
 
 ### Luồng
 ```
-GHN API trả status "transporting"
-    ↓
-GhnStatusAdapter.toOrderStatus("transporting") → "shipping"
-    ↓
-shouldTransitionOrderStatus("picked", "shipping") → true
-    ↓
-Order.status = "shipping" + OrderEvent + ShipmentEvent
-    ↓
-Khách thấy stepper nhảy sang "Đang giao"
+GHN trả "transporting"
+  → GhnStatusAdapter.toOrderStatus("transporting") = "shipping"
+  → applySystemOrderTransition(order, "shipping")   ← State (bước sau Adapter)
+  → UI stepper: "Đang giao"
 ```
 
-### Hiển thị website
-- Order Detail stepper cập nhật theo poll/webhook GHN
-- Admin Orders: cột carrier status, nút retry GHN
+### Demo
+- Có đơn GHN: xem Admin Orders carrier status vs stepper khách.
+- Hoặc mô tả mapping trong `GhnStatusAdapter.js` (mở file chỉ dòng map).
 
 ### Câu trả lời mẫu
-> "Em wrap GHN qua `GhnStatusAdapter` implement `CarrierStatusAdapter`. Sau này tích hợp GHTK chỉ cần `GhtkStatusAdapter` mới — core order logic không đổi."
+> "Adapter **chuyển mã GHN sang status web**. State Pattern **quản lý** việc được phép đổi status hay không. Hai pattern phối hợp, không thay nhau."
 
 ---
 
-## 5. Proxy Pattern — Ẩn dữ liệu vận chuyển ⭐⭐⭐
+## 6. Singleton Pattern — Kết nối MongoDB 🏠 ⭐⭐⭐
 
 ### Pattern là gì?
-**Protection Proxy** — client nhận view an toàn của Order, không thấy `shipment.labelId`, token GHN nội bộ.
+**Singleton** đảm bảo class chỉ có **một instance** — toàn server dùng chung một connection pool MongoDB, không tạo connection mới mỗi request.
+
+| Thuật ngữ GoF | Trong TechPhone |
+|---------------|-----------------|
+| **Singleton** | Class `DatabaseConnection` |
+| **getInstance()** | `DatabaseConnection.getInstance()` |
+| **Private constructor** | `constructor()` throw nếu gọi `new` trực tiếp lần 2 |
+| **Client** | `index.js` → `connectDatabase()` lúc start server |
 
 ### Code
 ```
-server/src/patterns/proxy/OrderCustomerProxy.js → createCustomerOrderView()
-server/src/utils/orderSanitize.js               → re-export (backward compat)
-server/src/routes/orders.js                     → GET /api/orders dùng sanitize
+server/src/patterns/singleton/DatabaseConnection.js  → class Singleton
+server/src/config/db.js                              → Facade: connectDatabase()
+server/src/index.js                                  → await connectDatabase() (một lần)
 ```
 
 ### Luồng
 ```
-GET /api/orders (khách hàng)
-    ↓
-Order.find() → raw document có shipment.labelId
-    ↓
-sanitizeOrdersForCustomer() → shipment = undefined
-    ↓
-Thêm fulfillmentPending: true nếu confirmed nhưng chưa có vận đơn
-    ↓
-React AccountOrders hiển thị trạng thái, không lộ mã GHN
+node index.js
+  → connectDatabase()
+  → DatabaseConnection.getInstance().connect()
+  → mongoose.connect() một lần
+  → mọi Model (Order, Product…) dùng chung mongoose.connection
 ```
 
-Admin route **không** qua proxy — thấy đầy đủ shipment.
+### Demo cho giảng viên
+1. Mở `DatabaseConnection.js` — chỉ ra `static getInstance()` và guard constructor.
+2. Start server → log "TechPhone API listening" — chỉ **một** lần connect DB (không connect lại mỗi API).
+3. (Tuỳ chọn) So sánh C#: `DatabaseConnection.Instance` tương đương `getInstance()`.
+
+**Singleton phụ (ngầm):** `socket.js` — biến `let io = null`, `initSocket()` gán một instance Socket.io.
 
 ### Câu trả lời mẫu
-> "Proxy che thông tin carrier khỏi API khách hàng. Admin vẫn thấy full object. Đây là Protection Proxy — kiểm soát quyền truy cập dữ liệu."
+> "Em dùng Singleton cho kết nối MongoDB: class `DatabaseConnection` có `getInstance()`, server start gọi `connect()` một lần. Mọi route/model dùng chung connection pool — tránh mở nhiều connection tốn tài nguyên."
 
 ---
 
-## 6. Command Pattern — AI Chat Tools ⭐⭐⭐
+## 7. Command Pattern — AI Chat Tools 🏠 ⭐⭐⭐
 
-### Code
-```
-server/src/patterns/commands/AiToolCommandRegistry.js  → AiToolCommand class + registry
-server/src/patterns/commands/aiChatToolHandlers.js     → logic thực thi
-server/src/services/gemini.js                          → gọi executeTool()
-src/components/AiChatPanel.jsx                         → UI chat
-```
+### Pattern là gì?
+Mỗi **lệnh** AI có thể gọi (tìm SP, xem đơn…) là object Command — tách **ai gọi** (Gemini) khỏi **làm gì** (handler).
+
+### 5 commands
+`searchProducts`, `getTopProducts`, `getProductDetail`, `getMyOrders`, `getOrderTimeline`
 
 ### Luồng
 ```
-Khách hỏi "iPhone rẻ nhất?"
-    ↓
-Gemini model quyết định gọi tool getTopProducts
-    ↓
-executeToolCommand('getTopProducts', args, { userId })
-    ↓
-AiToolCommand.execute() → query MongoDB → trả JSON
-    ↓
-Gemini tóm tắt → hiển thị trong chat widget
+Khách: "iPhone rẻ nhất?"
+  → Gemini chọn tool getTopProducts
+  → executeToolCommand('getTopProducts', args)
+  → AiToolCommand.execute() → MongoDB
+  → JSON trả Gemini → câu trả lời chat
 ```
 
-### Hiển thị website
-- Góc phải màn hình: **ChatWidget** → tab AI
-- `/support` — trang hỗ trợ
+### Demo
+- Mở ChatWidget tab AI → hỏi sản phẩm / đơn hàng → chỉ `AiToolCommandRegistry.js` khi giảng viên hỏi sâu.
 
 ### Câu trả lời mẫu
-> "Mỗi AI tool là một Command object có `execute()` và `declaration`. Registry map tên → command — thay switch/case rải rác, dễ thêm tool mới."
+> "Command Pattern đóng gói từng tool AI thành object có `execute()`. Thêm tool mới = thêm ConcreteCommand vào registry, không sửa Gemini core."
 
 ---
 
-## 7. Chain of Responsibility — Middleware xác thực ⭐⭐⭐
+## 8. Template Method 🏠 ⭐⭐
+
+### Pattern là gì?
+Khung thuật toán **cố định** (`buildTrackingSteps`: 6 bước), các bước con điền theo **primitive** (`STATUS_TO_STEP`, labels).
 
 ### Code
-```
-server/src/middleware/auth.js
-  optionalAuth → requireAuth → requireAdmin
-server/src/index.js → app.use(optionalAuth) trước cart/orders
-```
+`orderStateMachine.js` → `buildTrackingSteps(currentStatus)`
 
-### Luồng
-```
-Request GET /api/admin/orders
-    ↓
-requireAuth: verify JWT → gắn req.auth
-    ↓
-requireAdmin: kiểm tra role === 'admin'
-    ↓
-Route handler xử lý
-```
+### Demo
+- Order Detail: pending vs shipping vs cancelled — cùng 6 bước khung, trạng thái done/active/error khác nhau.
 
-Frontend tương ứng: `ProtectedRoute.jsx` — redirect `/login` nếu chưa auth.
-
-### Hiển thị website
-- `/admin/*` — chỉ admin vào được
-- `/account/*` — cần login
+### Thuật ngữ (giống đề thi Câu 2)
+- **Template Method:** `buildTrackingSteps()`
+- **Primitive Operation:** map status → index, label từ registry
 
 ---
 
-## 8. Observer Pattern — Real-time chat ⭐⭐⭐
+## 9. Facade Pattern 🏠 ⭐⭐
+
+### Pattern là gì?
+Che **nhiều bước phức tạp** sau một API đơn giản.
+
+| Facade | Che giấu |
+|--------|----------|
+| `src/config/api.js` | fetch, header JWT, session, error |
+| `server/src/services/vnpay.js` | HMAC, build URL VNPAY |
+| `server/src/services/orderTimeline.js` | events + steps + sanitize khách |
+| `server/src/services/aiChatTools.js` | re-export command layer |
+
+### Demo
+- Mở `api.js` — mọi page gọi `authFetch('/orders')` thay vì tự ghép header.
+
+---
+
+## 10. Chain of Responsibility 📦 Express ⭐⭐⭐
+
+### Pattern là gì?
+Request đi qua **chuỗi middleware** — mỗi handler xử lý hoặc chuyển tiếp.
 
 ### Code
 ```
-server/src/socket.js                    → emit('message:new'), on('message:send')
-src/context/SupportChatContext.jsx      → socket.on → setState
-src/components/ChatWidget.jsx           → UI
+server/src/middleware/auth.js → optionalAuth → requireAuth → requireAdmin
+server/src/index.js
+src/components/ProtectedRoute.jsx  (frontend tương ứng)
 ```
 
-### Luồng
+### Demo
+- Vào `/admin/orders` chưa login → redirect login (chuỗi auth chặn).
+
+### Câu trả lời mẫu
+> "Chain of Responsibility từ **thư viện Express** — em cấu hình pipeline auth, không tự viết lại framework."
+
+---
+
+## 11. Observer Pattern 📦 Socket.io + React ⭐⭐⭐
+
+### Hai lớp Observer trong project
+
+**A. Real-time chat (Socket.io) — demo chính**
+
 ```
-Khách gửi tin nhắn
-    ↓
-socket.emit('message:send', { conversationId, body })
-    ↓
-Server lưu DB → io.to(room).emit('message:new', { message })
-    ↓
-Admin SupportChatContext nhận event → cập nhật inbox (không cần refresh)
+Subject:  server socket.js → io.to(room).emit('message:new', payload)
+Observer: SupportChatContext → socket.on('message:new', handler)
 ```
 
-### Hiển thị website
-- Chat widget góc phải (khách)
-- `/admin/support` (admin)
+Luồng:
+```
+Khách gửi tin (tab 1)
+  → socket.emit('message:send')
+  → server lưu DB
+  → emit tới room conversation:{id} VÀ admin:support
+  → Admin tab 2: socket.on nhận → cập nhật inbox (không refresh)
+```
+
+**B. React re-render (📦 React Context)**
+```
+Subject:  state trong SupportChatProvider
+Observer: component dùng useContext(SupportChatContext)
+Notify:   setState → React re-render subscribers
+```
+
+### Demo (quan trọng nhất)
+1. Mở 2 trình duyệt: khách + admin `/admin/support`.
+2. Khách gửi tin → admin thấy ngay.
+3. Giải thích: **Subject = server emit**, **Observer = socket.on** — không phải user cha-con.
+
+### Câu trả lời mẫu
+> "Observer em demo qua chat real-time: server là Subject phát event, client đăng ký `socket.on` là Observer. Pattern từ **Socket.io** (Pub-Sub)."
+
+---
+
+## 12. Composite Pattern 📦 React ⭐⭐
+
+### Pattern là gì?
+Cây component: **Composite** (layout chứa con) và **Leaf** (nút lá) cùng interface render.
+
+### Ví dụ
+```
+App.jsx
+  └─ StoreLayout (Composite)
+       ├─ Header (Leaf)
+       ├─ Outlet → ProductPage (Composite)
+       └─ Footer (Leaf)
+```
+
+### Demo
+- React DevTools → Components tree.
+
+---
+
+## 13. Repository 📦 Mongoose ⭐⭐
+
+### Pattern là gì?
+Model Mongoose (`Order`, `Product`) đóng vai **Repository** — abstract truy cập DB.
+
+### Demo gián tiếp
+- Checkout: `Product.findById`, `Order.create` trong transaction.
+
+---
+
+## 14. Front Controller 📦 React Router ⭐⭐
+
+### Code
+`src/App.jsx` — mọi URL map về một route table.
+
+### Demo
+- Đổi `/checkout` ↔ `/account/orders` — một entry point điều phối.
+
+---
+
+## 15. Unit of Work 📦 MongoDB session ⭐⭐
+
+### Code
+Checkout trong `orders.js` — `mongoose.startSession()` + transaction: trừ stock + tạo order + coupon usage — rollback nếu lỗi.
 
 ---
 
@@ -306,58 +404,53 @@ Admin SupportChatContext nhận event → cập nhật inbox (không cần refre
 ```
 [Trang Checkout]
        │
-       ├─ Strategy Payment: chọn COD/VNPAY/Installment
-       ├─ Strategy Discount: áp coupon
-       │
+       ├─ Strategy Payment (🏠)
+       ├─ Strategy Discount (🏠)
        ▼
 POST /api/orders
        │
-       ├─ Chain of Responsibility: optionalAuth (guest có sessionId)
-       ├─ Strategy Payment: resolvePaymentStrategy()
-       ├─ pricing.calculatePricing() → Discount Strategy
-       ├─ MongoDB Transaction: trừ stock, tạo Order
-       ├─ State: initial status theo payment strategy
-       │
+       ├─ Chain of Responsibility (📦 Express)
+       ├─ Strategy Payment + Discount
+       ├─ Unit of Work (📦 MongoDB transaction)
+       ├─ State: initial status (🏠)
        ▼
-[VNPAY?] → redirect paymentUrl
-[COD?]   → confirmed ngay → GHN tạo vận đơn
-       │
+[VNPAY?] redirect | [COD?] confirmed → GHN
        ▼
 GHN webhook/poll
        │
-       ├─ Adapter: GHN status → order status
-       ├─ State: validate transition
-       │
+       ├─ Adapter: GHN → order.status (🏠)
+       ├─ State: applySystemOrderTransition (🏠)
        ▼
 GET /api/orders/:id/timeline
        │
-       ├─ Proxy: sanitize cho khách
-       └─ State: buildTrackingSteps → UI stepper
+       └─ Template Method: buildTrackingSteps (🏠)
 ```
 
 ---
 
-## Checklist trước khi bảo vệ / trả lời giảng viên
+## Checklist trước khi bảo vệ
 
-1. **Mở file pattern** trong IDE và chỉ đúng class/interface (`PaymentStrategy`, `GhnStatusAdapter`...).
-2. **Demo live:** đặt đơn COD → xem stepper; đặt VNPAY → xem pending → confirmed.
-3. **Giải thích SOLID:** Strategy = Open/Closed; Proxy = Single Responsibility; State = tách behavior theo trạng thái.
-4. **So sánh C#:** "Interface `IPaymentStrategy` trong C# tương đương class `PaymentStrategy` + các subclass trong JS."
-5. **Pattern từ thư viện:** Express middleware (Chain), React Context (Observer), Mongoose Model (Repository), Socket.io (Observer/Pub-Sub).
+1. **Phân biệt 🏠 vs 📦** — 7 pattern tự viết trong `patterns/` + 8 pattern thư viện/gián tiếp.
+2. **Demo ưu tiên:** Start server (Singleton) → Checkout (Strategy) → Order stepper (State) → Chat 2 tab (Observer).
+3. **Ba câu không nhầm:** Adapter = dịch mã GHN; Command = lệnh AI; Observer = emit/on, không phải user abstract.
+4. **SOLID:** Strategy = Open/Closed; Singleton = một connection DB; State = tách theo trạng thái.
+5. **So C#:** `interface IPaymentStrategy` ≈ class `PaymentStrategy` + subclass JS.
 
 ---
 
-## Cấu trúc thư mục pattern (tham chiếu nhanh)
+## Cấu trúc thư mục pattern (🏠 tự viết)
 
 ```
 server/src/patterns/
 ├── payment/          Strategy — thanh toán
 ├── discount/         Strategy — giảm giá
-├── adapters/         Adapter — GHN/carrier
-├── state/            State — registry trạng thái đơn
+├── adapters/         Adapter — GHN → order.status
+├── state/            State — đơn + flash sale + transition service
 ├── commands/         Command — AI tools
-└── proxy/            Proxy — order view khách hàng
+├── singleton/        Singleton — DatabaseConnection
 
 src/patterns/
-└── paymentUiStrategies.js   Strategy UI checkout
+└── paymentUiStrategies.js
 ```
+
+Pattern 📦 thư viện **không** nằm trong folder này — xem bảng tổng hợp mục đầu tài liệu.

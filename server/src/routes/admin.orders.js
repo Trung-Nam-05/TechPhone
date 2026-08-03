@@ -12,7 +12,12 @@ import {
   cancelGhnShipmentForOrder,
 } from '../services/ghnShipment.js';
 import ShipmentEvent from '../models/ShipmentEvent.js';
-import { validateAdminStatusChange } from '../services/orderStateMachine.js';
+import {
+  applyAdminOrderTransition,
+  applyOrderCancellation,
+  applySystemOrderTransition,
+  recordOrderEvent,
+} from '../patterns/state/orderTransitionService.js';
 
 const router = express.Router();
 
@@ -182,16 +187,16 @@ router.post('/:id/confirm-fulfillment', async (req, res, next) => {
     }
 
     // Luôn đẩy tiến trình phía khách trước (kể cả khi GHN lỗi SĐT/địa chỉ).
-    const previousStatus = order.status;
-    order.status = 'await_pickup';
-    await order.save();
-    await OrderEvent.create({
-      order: order._id,
-      fromStatus: previousStatus,
-      toStatus: 'await_pickup',
+    const transition = await applySystemOrderTransition(order, 'await_pickup', {
       note: 'Admin xác nhận: đã kiểm kho và đóng gói.',
       actor: req.auth.userId,
     });
+    if (!transition.ok) {
+      return res.status(400).json({
+        message: 'Invalid status transition.',
+        code: transition.reason,
+      });
+    }
 
     const result = await createGhnShipmentForOrder(id, { force: true });
     const freshOrder = result.order || (await Order.findById(id));
@@ -279,8 +284,14 @@ router.patch('/:id/status', async (req, res, next) => {
     let statusValidation = null;
 
     if (status && status !== previousOrderStatus) {
-      statusValidation = validateAdminStatusChange(previousOrderStatus, status, { override, reason });
-      if (!statusValidation.ok) {
+      const transition = await applyAdminOrderTransition(order, status, {
+        override,
+        reason,
+        note,
+        actor: req.auth.userId,
+      });
+      statusValidation = transition.validation;
+      if (!transition.ok) {
         const messages = {
           OVERRIDE_REASON_REQUIRED: 'Override requires a reason (min 10 characters).',
           INVALID_OVERRIDE_TARGET: 'Invalid override target status.',
@@ -288,27 +299,13 @@ router.patch('/:id/status', async (req, res, next) => {
           INVALID_ADMIN_TRANSITION: 'Invalid status transition. Use override with reason for exceptions.',
         };
         return res.status(400).json({
-          message: messages[statusValidation.reason] || 'Invalid status change.',
-          code: statusValidation.reason,
+          message: messages[transition.reason] || 'Invalid status change.',
+          code: transition.reason,
         });
       }
-      order.status = status;
     }
     if (supportStatus) order.supportStatus = supportStatus;
-    await order.save();
-
-    if (status && status !== previousOrderStatus) {
-      const eventNote = statusValidation?.override
-        ? `[ADMIN OVERRIDE] ${reason}${note ? ` — ${note}` : ''}`
-        : note || 'Order status updated by admin.';
-      await OrderEvent.create({
-        order: order._id,
-        fromStatus: previousOrderStatus,
-        toStatus: status,
-        note: eventNote,
-        actor: req.auth.userId,
-      });
-    }
+    if (supportStatus) await order.save();
 
     await writeAdminAuditLog({
       actor: req.auth.userId,
@@ -409,18 +406,14 @@ router.patch('/:id/cancellation', async (req, res, next) => {
         order.cancelRequestStatus = 'rejected';
         order.cancelResolvedAt = new Date();
         await order.save({ session });
-        await OrderEvent.create(
-          [
-            {
-              order: order._id,
-              fromStatus: order.status,
-              toStatus: order.status,
-              note: 'Admin tu choi yeu cau huy don.',
-              actor: req.auth.userId,
-            },
-          ],
-          { session },
-        );
+        await recordOrderEvent({
+          orderId: order._id,
+          fromStatus: order.status,
+          toStatus: order.status,
+          note: 'Admin tu choi yeu cau huy don.',
+          actor: req.auth.userId,
+          session,
+        });
         await writeAdminAuditLog({
           actor: req.auth.userId,
           action: 'order.cancellation_reject',
@@ -432,28 +425,23 @@ router.patch('/:id/cancellation', async (req, res, next) => {
         return;
       }
 
-      const previous = order.status;
       await restoreInventoryForCancelledOrder(order, {
         session,
         actorUserId: req.auth.userId,
         note: 'Hoan kho sau khi admin dong y huy don.',
       });
-      order.status = 'cancelled';
-      order.cancelRequestStatus = 'approved';
-      order.cancelResolvedAt = new Date();
-      await order.save({ session });
-      await OrderEvent.create(
-        [
-          {
-            order: order._id,
-            fromStatus: previous,
-            toStatus: 'cancelled',
-            note: 'Admin dong y huy don.',
-            actor: req.auth.userId,
-          },
-        ],
-        { session },
-      );
+      const transition = await applyOrderCancellation(order, {
+        note: 'Admin dong y huy don.',
+        actor: req.auth.userId,
+        session,
+        beforeSave: (doc) => {
+          doc.cancelRequestStatus = 'approved';
+          doc.cancelResolvedAt = new Date();
+        },
+      });
+      if (!transition.ok) {
+        throw new Error(transition.reason || 'INVALID_TRANSITION');
+      }
       await writeAdminAuditLog({
         actor: req.auth.userId,
         action: 'order.cancellation_approve',

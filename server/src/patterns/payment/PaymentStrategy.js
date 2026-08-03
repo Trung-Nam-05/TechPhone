@@ -1,9 +1,6 @@
 /**
  * Strategy Pattern — Payment (Creational/Behavioral hybrid)
- *
- * Mỗi phương thức thanh toán (COD, VNPAY, trả góp) là một strategy độc lập.
- * Checkout route chỉ gọi interface chung → dễ mở rộng (MoMo, ZaloPay) mà không sửa core.
- *
+ 
  * @see docs/design-patterns/HUONG-DAN-TRINH-BAY.md — mục 2 (Strategy — Thanh toán)
  */
 export class PaymentStrategy {

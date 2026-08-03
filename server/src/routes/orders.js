@@ -21,6 +21,7 @@ import {
   canCustomerCancelImmediate,
 } from '../services/orderStateMachine.js';
 import { resolvePaymentStrategy, getPaymentStrategy } from '../patterns/payment/paymentStrategyRegistry.js';
+import { applyOrderCancellation, recordOrderEvent } from '../patterns/state/orderTransitionService.js';
 import { MAX_LINE_QUANTITY } from '../constants/cartLimits.js';
 
 const router = express.Router();
@@ -459,8 +460,8 @@ router.post('/:id/request-cancellation', async (req, res, next) => {
     order.cancelRequestNote = note;
     order.cancelRequestedAt = new Date();
     await order.save();
-    await OrderEvent.create({
-      order: order._id,
+    await recordOrderEvent({
+      orderId: order._id,
       fromStatus: previous,
       toStatus: previous,
       note: `Yeu cau huy don.${note ? ` Ghi chu: ${note}` : ''}`,
@@ -499,28 +500,23 @@ router.post('/:id/cancel-immediate', async (req, res, next) => {
       if (order.paymentMethod === 'installment') {
         throw new Error('ORDER_INSTALLMENT');
       }
-      const previous = order.status;
       await restoreInventoryForCancelledOrder(order, {
         session,
         actorUserId: req.auth?.userId || null,
         note: 'Hoan kho sau khi khach huy don (pending).',
       });
-      order.status = 'cancelled';
-      order.cancelRequestStatus = 'none';
-      order.cancelResolvedAt = new Date();
-      await order.save({ session });
-      await OrderEvent.create(
-        [
-          {
-            order: order._id,
-            fromStatus: previous,
-            toStatus: 'cancelled',
-            note: 'Khach huy ngay khi don dang cho xu ly.',
-            actor: req.auth?.userId || null,
-          },
-        ],
-        { session },
-      );
+      const transition = await applyOrderCancellation(order, {
+        note: 'Khach huy ngay khi don dang cho xu ly.',
+        actor: req.auth?.userId || null,
+        session,
+        beforeSave: (doc) => {
+          doc.cancelRequestStatus = 'none';
+          doc.cancelResolvedAt = new Date();
+        },
+      });
+      if (!transition.ok) {
+        throw new Error(transition.reason || 'INVALID_TRANSITION');
+      }
       resultOrder = order.toObject();
     });
 

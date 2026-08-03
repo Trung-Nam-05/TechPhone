@@ -32,6 +32,16 @@ export const TERMINAL_ORDER_STATUSES = new Set([
   'cancelled',
 ]);
 
+/** Đơn chưa kết thúc — dùng chung cho productGuards, inventory rules. */
+export const ACTIVE_FULFILLMENT_ORDER_STATUSES = [
+  'pending',
+  'confirmed',
+  'await_pickup',
+  'picked',
+  'shipping',
+  'delivery_failed',
+];
+
 export function shouldTransitionOrderStatus(fromStatus, toStatus) {
   if (!toStatus || fromStatus === toStatus) return false;
   if (TERMINAL_ORDER_STATUSES.has(toStatus)) return true;

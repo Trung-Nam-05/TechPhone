@@ -1,7 +1,7 @@
 import express from 'express';
 import Order from '../models/Order.js';
-import OrderEvent from '../models/OrderEvent.js';
 import { verifyVnpayCallback, isVnpayConfigured } from '../services/vnpay.js';
+import { getPaymentStrategy } from '../patterns/payment/paymentStrategyRegistry.js';
 
 const router = express.Router();
 
@@ -37,42 +37,18 @@ async function processVnpayQuery(query) {
     return { ok: false, reason: 'amount_mismatch' };
   }
 
+  const vnpayStrategy = getPaymentStrategy('vnpay');
+
   if (responseCode === '00') {
-    const alreadyPaid = order.paymentStatus === 'paid';
-    const previousStatus = order.status;
-    order.paymentStatus = 'paid';
-    if (order.status === 'pending') {
-      order.status = 'confirmed';
+    const result = await vnpayStrategy.applyPaymentSuccess(order);
+    if (!result.ok && result.reason === 'INVALID_SYSTEM_TRANSITION') {
+      return { ok: false, reason: 'invalid_transition' };
     }
-    await order.save();
-
-    if (!alreadyPaid) {
-      await OrderEvent.create({
-        order: order._id,
-        fromStatus: previousStatus,
-        toStatus: order.status,
-        note: 'VNPAY: payment successful (auto-confirmed).',
-        actor: null,
-      });
-    }
-
     const fresh = await Order.findById(orderId);
     return { ok: true, order: fresh || order, paid: true };
   }
 
-  if (order.paymentStatus === 'pending') {
-    const previousStatus = order.status;
-    order.paymentStatus = 'failed';
-    await order.save();
-    await OrderEvent.create({
-      order: order._id,
-      fromStatus: previousStatus,
-      toStatus: previousStatus,
-      note: `VNPAY: payment failed (responseCode=${responseCode || 'unknown'}).`,
-      actor: null,
-    });
-  }
-
+  await vnpayStrategy.applyPaymentFailure(order, responseCode);
   return { ok: true, order, paid: false, code: responseCode };
 }
 

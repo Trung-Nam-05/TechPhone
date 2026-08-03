@@ -128,3 +128,13 @@ export function buildTrackingSteps(currentStatus) {
 export const ACTIVE_SHIPMENT_STATUSES = new Set(['await_pickup', 'picked', 'shipping']);
 
 export { describeOrderStateFlow, ORDER_STATE_REGISTRY } from '../patterns/state/orderTransitionRegistry.js';
+
+export {
+  ORDER_TRANSITION_SOURCES,
+  applyAdminOrderTransition,
+  applyOrderCancellation,
+  applySystemOrderTransition,
+  applyVnpayPaymentFailure,
+  applyVnpayPaymentSuccess,
+  recordOrderEvent,
+} from '../patterns/state/orderTransitionService.js';

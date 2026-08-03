@@ -1,13 +1,8 @@
 import FlashSale from '../models/FlashSale.js';
+import { resolveFlashSaleState } from '../patterns/state/flashSaleStateRegistry.js';
 
 export function getFlashSaleStatus(saleDoc, now = new Date()) {
-  if (!saleDoc || saleDoc.isDeleted || !saleDoc.isEnabled) {
-    return 'inactive';
-  }
-  if (saleDoc.startsAt > now) return 'upcoming';
-  if (saleDoc.endsAt <= now) return 'ended';
-  if (saleDoc.soldCount >= saleDoc.quota) return 'sold_out';
-  return 'active';
+  return resolveFlashSaleState(saleDoc, now);
 }
 
 function toSalePayload(saleDoc, now = new Date()) {

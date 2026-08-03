@@ -1,27 +1,11 @@
 import Order from '../models/Order.js';
-import OrderEvent from '../models/OrderEvent.js';
+import { applySystemOrderTransition } from '../patterns/state/orderTransitionService.js';
 
 const DEMO_PAYMENT_METHODS = ['cod', 'vnpay'];
 
 function readMs(name, fallback) {
   const value = Number(process.env[name]);
   return Number.isFinite(value) && value > 0 ? value : fallback;
-}
-
-async function transitionOrder(order, nextStatus, note) {
-  const previousStatus = order.status;
-  if (previousStatus === nextStatus) return false;
-
-  order.status = nextStatus;
-  await order.save();
-  await OrderEvent.create({
-    order: order._id,
-    fromStatus: previousStatus,
-    toStatus: nextStatus,
-    note,
-    actor: null,
-  });
-  return true;
 }
 
 export async function runFulfillmentDemoTick() {
@@ -38,12 +22,10 @@ export async function runFulfillmentDemoTick() {
   for (const order of confirmedOrders) {
     const elapsed = now - new Date(order.updatedAt).getTime();
     if (elapsed >= confirmToShippingMs) {
-      const changed = await transitionOrder(
-        order,
-        'shipping',
-        'Demo fulfillment: auto chuyen sang dang giao hang.',
-      );
-      if (changed) {
+      const transition = await applySystemOrderTransition(order, 'shipping', {
+        note: 'Demo fulfillment: auto chuyen sang dang giao hang.',
+      });
+      if (transition.changed) {
         console.log(`[fulfillment-demo] Order ${order._id} -> shipping`);
       }
     }
@@ -58,12 +40,10 @@ export async function runFulfillmentDemoTick() {
   for (const order of shippingOrders) {
     const elapsed = now - new Date(order.updatedAt).getTime();
     if (elapsed >= shippingToCompleteMs) {
-      const changed = await transitionOrder(
-        order,
-        'completed',
-        'Demo fulfillment: auto hoan tat don hang.',
-      );
-      if (changed) {
+      const transition = await applySystemOrderTransition(order, 'completed', {
+        note: 'Demo fulfillment: auto hoan tat don hang.',
+      });
+      if (transition.changed) {
         console.log(`[fulfillment-demo] Order ${order._id} -> completed`);
       }
     }

@@ -1,8 +1,6 @@
 import Order from '../models/Order.js';
 import OrderEvent from '../models/OrderEvent.js';
 import ShipmentEvent from '../models/ShipmentEvent.js';
-import { shouldTransitionOrderStatus } from '../constants/orderStatus.js';
-import { resolveGhnAddress } from './ghnAddress.js';
 import {
   isGhnConfigured,
   submitOrder,
@@ -11,6 +9,13 @@ import {
   ghnStatusLabel,
   getOrderDetail,
 } from './ghn.js';
+import { resolveGhnAddress } from './ghnAddress.js';
+import {
+  applyCodPaymentOnDelivery,
+  applyOrderCancellation,
+  applySystemOrderTransition,
+} from '../patterns/state/orderTransitionService.js';
+import { validateSystemTransition } from './orderStateMachine.js';
 
 export function enqueueGhnShipment(orderId) {
   if (!isGhnConfigured()) return;
@@ -66,33 +71,31 @@ export async function createGhnShipmentForOrder(orderId, { force = false } = {})
   try {
     const addressIds = await resolveGhnAddress(order.shippingInfo);
     const result = await submitOrder(order, addressIds);
-    const previousStatus = order.status;
 
-    order.shippingInfo = order.shippingInfo || {};
-    order.shippingInfo.districtId = addressIds.districtId;
-    order.shippingInfo.wardCode = addressIds.wardCode;
-
-    order.shipment = {
-      provider: 'ghn',
-      labelId: result.orderCode,
-      partnerId: String(order._id),
-      carrierStatus: 'ready_to_pick',
-      fee: result.totalFee,
-      submittedAt: new Date(),
-      lastWebhookAt: new Date(),
-      submitError: '',
-      retryCount: order.shipment?.retryCount || 0,
-    };
-    order.status = 'await_pickup';
-    await order.save();
-
-    await OrderEvent.create({
-      order: order._id,
-      fromStatus: previousStatus,
-      toStatus: 'await_pickup',
+    const transition = await applySystemOrderTransition(order, 'await_pickup', {
       note: `GHN: tao van don thanh cong (${result.orderCode || 'no code'}).`,
-      actor: null,
+      beforeSave: (doc) => {
+        doc.shippingInfo = doc.shippingInfo || {};
+        doc.shippingInfo.districtId = addressIds.districtId;
+        doc.shippingInfo.wardCode = addressIds.wardCode;
+        doc.shipment = {
+          provider: 'ghn',
+          labelId: result.orderCode,
+          partnerId: String(doc._id),
+          carrierStatus: 'ready_to_pick',
+          fee: result.totalFee,
+          submittedAt: new Date(),
+          lastWebhookAt: new Date(),
+          submitError: '',
+          retryCount: doc.shipment?.retryCount || 0,
+        };
+      },
     });
+
+    if (!transition.ok) {
+      return { ok: false, reason: transition.reason || 'invalid_transition' };
+    }
+
     await ShipmentEvent.create({
       order: order._id,
       provider: 'ghn',
@@ -143,7 +146,7 @@ export async function applyGhnStatusUpdate(payload) {
   const previousCarrierStatus = order.shipment?.carrierStatus ?? '';
   const statusChanged = ghnStatus && ghnStatus !== previousCarrierStatus;
   const willChangeOrderStatus =
-    Boolean(nextStatus) && shouldTransitionOrderStatus(previousStatus, nextStatus);
+    Boolean(nextStatus) && validateSystemTransition(previousStatus, nextStatus).ok;
 
   if (!statusChanged && !willChangeOrderStatus) {
     return { ok: true, order, statusChanged: false, skipped: true };
@@ -156,20 +159,50 @@ export async function applyGhnStatusUpdate(payload) {
   if (payload.total_fee != null) order.shipment.fee = Number(payload.total_fee);
   order.shipment.lastWebhookAt = new Date();
 
+  const statusNote = ghnStatusLabel(ghnStatus);
   let orderStatusChanged = false;
-  if (willChangeOrderStatus) {
-    order.status = nextStatus;
-    orderStatusChanged = true;
-  }
 
-  if (nextStatus === 'completed' && order.paymentMethod === 'cod' && order.paymentStatus === 'pending') {
-    order.paymentStatus = 'paid';
+  if (willChangeOrderStatus) {
+    const eventNote =
+      payload.source === 'demo_progress'
+        ? `Demo giao hang: ${statusNote}.`
+        : payload.source === 'poll'
+          ? `GHN poll: ${statusNote}.`
+          : `GHN: ${statusNote}.`;
+
+    const transition = await applySystemOrderTransition(order, nextStatus, {
+      note: eventNote,
+      afterStatusChange: applyCodPaymentOnDelivery,
+    });
+
+    if (!transition.ok) {
+      await order.save();
+      return { ok: true, order, statusChanged: false, skipped: true };
+    }
+
+    orderStatusChanged = transition.changed;
+
+    if (statusChanged || orderStatusChanged) {
+      await ShipmentEvent.create({
+        order: order._id,
+        provider: 'ghn',
+        carrierStatus: ghnStatus,
+        labelId: orderCode || order.shipment.labelId || '',
+        note: statusNote,
+        payload,
+      });
+    }
+
+    if (orderStatusChanged) {
+      console.log(`[ghn] Order ${order._id} ${previousStatus} -> ${order.status} (${ghnStatus})`);
+    }
+
+    return { ok: true, order, statusChanged: orderStatusChanged };
   }
 
   await order.save();
 
-  const statusNote = ghnStatusLabel(ghnStatus);
-  if (statusChanged || orderStatusChanged) {
+  if (statusChanged) {
     await ShipmentEvent.create({
       order: order._id,
       provider: 'ghn',
@@ -180,24 +213,7 @@ export async function applyGhnStatusUpdate(payload) {
     });
   }
 
-  if (orderStatusChanged) {
-    const eventNote =
-      payload.source === 'demo_progress'
-        ? `Demo giao hang: ${statusNote}.`
-        : payload.source === 'poll'
-          ? `GHN poll: ${statusNote}.`
-          : `GHN: ${statusNote}.`;
-    await OrderEvent.create({
-      order: order._id,
-      fromStatus: previousStatus,
-      toStatus: order.status,
-      note: eventNote,
-      actor: null,
-    });
-    console.log(`[ghn] Order ${order._id} ${previousStatus} -> ${order.status} (${ghnStatus})`);
-  }
-
-  return { ok: true, order, statusChanged: orderStatusChanged };
+  return { ok: true, order, statusChanged: false };
 }
 
 export async function syncGhnOrderFromApi(order) {
@@ -237,18 +253,19 @@ export async function cancelGhnShipmentForOrder(orderId) {
 
   try {
     await cancelShipment(order);
-    const previousStatus = order.status;
-    order.status = 'cancelled';
-    order.shipment.carrierStatus = 'cancel';
-    order.shipment.submitError = '';
-    await order.save();
-    await OrderEvent.create({
-      order: order._id,
-      fromStatus: previousStatus,
-      toStatus: 'cancelled',
+    const transition = await applyOrderCancellation(order, {
       note: 'GHN: huy van don thanh cong.',
-      actor: null,
+      beforeSave: (doc) => {
+        doc.shipment = doc.shipment || {};
+        doc.shipment.carrierStatus = 'cancel';
+        doc.shipment.submitError = '';
+      },
     });
+
+    if (!transition.ok) {
+      return { ok: false, reason: transition.reason || 'invalid_transition' };
+    }
+
     await ShipmentEvent.create({
       order: order._id,
       provider: 'ghn',

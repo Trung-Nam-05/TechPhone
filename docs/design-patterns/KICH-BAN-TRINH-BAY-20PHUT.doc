@@ -1,0 +1,319 @@
+﻿<!DOCTYPE html>
+<html xmlns:v="urn:schemas-microsoft-com:vml"
+  xmlns:o="urn:schemas-microsoft-com:office:office"
+  xmlns:w="urn:schemas-microsoft-com:office:word"
+  xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="ProgId" content="Word.Document">
+<meta name="Generator" content="Microsoft Word">
+<meta name="Originator" content="TechPhone">
+<title>Kich ban trinh bay 20 phut - TechPhone Design Pattern</title>
+<!--[if gte mso 9]><xml>
+<w:WordDocument>
+  <w:View>Print</w:View>
+  <w:Zoom>100</w:Zoom>
+  <w:DoNotOptimizeForBrowser/>
+</w:WordDocument>
+</xml><![endif]-->
+<style>
+@page { size: A4; margin: 2cm; }
+body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; line-height: 1.35; color: #000; }
+h1 { font-size: 18pt; color: #1F4E79; margin-top: 18pt; margin-bottom: 8pt; page-break-after: avoid; }
+h2 { font-size: 13pt; color: #2E74B5; margin-top: 12pt; margin-bottom: 6pt; page-break-after: avoid; }
+p { margin: 0 0 6pt 0; }
+p.screen { color: #0070C0; margin-left: 0; }
+p.say { color: #375623; }
+p.codeTag { color: #C65911; }
+p.indent { margin-left: 24pt; }
+p.check { margin-left: 12pt; }
+p.map code { font-family: Consolas, Courier New, monospace; font-size: 10pt; background: #F2F2F2; }
+</style>
+</head>
+<body>
+<h1>KỊCH BẢN TRÌNH BÀY ~20 PHÚT — TECHPHONE &amp; DESIGN PATTERN</h1>
+<p>&nbsp;</p>
+<p>Sinh viên: ___________________    Lớp: ___________________</p>
+<p>Môn: Mẫu Thiết Kế Phần Mềm</p>
+<p>Thời lượng mục tiêu: 18–20 phút (+ 1–2 phút dự phòng)</p>
+<p>&nbsp;</p>
+<p>Cách dùng file này khi quay clip:</p>
+<p>• Mỗi mục có [THỜI GIAN] — bám sát để đủ ~20 phút.</p>
+<p>• [MÀN HÌNH] — mở đúng file/ trang web khi nói.</p>
+<p>• [LỜI NÓI] — gợi ý, có thể nói tự nhiên, không cần đọc nguyên văn.</p>
+<p>• [CODE CHỈ] — dòng code cần zoom/chỉ chuột khi quay.</p>
+<p>&nbsp;</p>
+<h1>BẢNG THỜI GIAN TỔNG (20 PHÚT)</h1>
+<p>&nbsp;</p>
+<p>0:00 – 3:30   Phần 1: Giới thiệu đồ án TechPhone</p>
+<p>3:30 – 4:30   Phần 2: Tổng quan pattern trong project</p>
+<p>4:30 – 5:30   Singleton — kết nối database</p>
+<p>5:30 – 8:00   Strategy — thanh toán &amp; giảm giá</p>
+<p>8:00 – 10:30  State — vòng đời đơn hàng</p>
+<p>10:30 – 12:00 Adapter — GHN vận chuyển</p>
+<p>12:00 – 13:30 Command — AI chat tools</p>
+<p>13:30 – 15:30 Chain of Responsibility — middleware auth</p>
+<p>15:30 – 17:30 Observer — chat real-time</p>
+<p>17:30 – 18:30 Template Method + Facade (ngắn)</p>
+<p>18:30 – 20:00 Pattern thư viện khác + Kết luận</p>
+<p>&nbsp;</p>
+<h1>PHẦN 1 — GIỚI THIỆU ĐỒ ÁN (3–4 PHÚT)</h1>
+<p>&nbsp;</p>
+<h2>[0:00 – 1:00] Mở đầu</h2>
+<p>&nbsp;</p>
+<p class="screen"><b>[MÀN HÌNH] Trang chủ TechPhone đang chạy (localhost:5173) — scroll qua sản phẩm.</b></p>
+<p class="say">[LỜI NÓI] Xin chào thầy/cô. Em trình bày đồ án TechPhone — website thương mại điện tử bán điện thoại, laptop, phụ kiện. Đây là sản phẩm em xây dựng cho môn [tên môn đồ án], hôm nay em tập trung vào phần áp dụng Design Pattern trong source code.</p>
+<p>&nbsp;</p>
+<h2>[1:00 – 2:00] Kiến trúc &amp; công nghệ</h2>
+<p>&nbsp;</p>
+<p class="screen"><b>[MÀN HÌNH] Mở VS Code — cấu trúc thư mục project (TechPhone-main/).</b></p>
+<p class="say">[LỜI NÓI] Project chia 2 phần: Frontend React + Vite trong thư mục src/, Backend Node.js Express + MongoDB trong server/. Giao tiếp qua REST API /api/... và Socket.io cho chat real-time.</p>
+<p class="codeTag"><b>[CODE CHỈ] package.json (root) và server/package.json — liệt kê react, express, mongoose, socket.io.</b></p>
+<p>&nbsp;</p>
+<h2>[2:00 – 3:00] Chức năng chính</h2>
+<p>&nbsp;</p>
+<p class="screen"><b>[MÀN HÌNH] Demo nhanh trên web (không cần chi tiết):</b></p>
+<p class="map"><code>1. Xem sản phẩm → thêm giỏ → Checkout</code></p>
+<p>2. (Tuỳ chọn) Flash sale / coupon</p>
+<p>3. Admin /admin — quản lý đơn, sản phẩm</p>
+<p>4. Chat hỗ trợ góc phải</p>
+<p class="say">[LỜI NÓI] Luồng nghiệp vụ chính: khách duyệt SP, đặt hàng COD hoặc VNPAY, theo dõi trạng thái đơn qua stepper; admin quản lý kho, giá, đơn hàng; chat hỗ trợ real-time. Các pattern em áp dụng nằm rải trong luồng này.</p>
+<p>&nbsp;</p>
+<h2>[3:00 – 3:30] Chuyển sang Pattern</h2>
+<p>&nbsp;</p>
+<p class="screen"><b>[MÀN HÌNH] Mở docs/design-patterns/PATTERN-MAP.md hoặc folder server/src/patterns/</b></p>
+<p class="say">[LỜI NÓI] Em có 7 pattern tự viết trong folder patterns/ và thêm pattern từ thư viện Express, React, Socket.io. Phần tiếp theo em trình bày từng pattern — nói vấn đề gì, code ở đâu, demo thế nào.</p>
+<p>&nbsp;</p>
+<h1>PHẦN 2 — TỔNG QUAN PATTERN (1 PHÚT)</h1>
+<p>&nbsp;</p>
+<h2>[3:30 – 4:30]</h2>
+<p>&nbsp;</p>
+<p class="screen"><b>[MÀN HÌNH] PATTERN-MAP.md — bảng master 15 pattern.</b></p>
+<p class="say">[LỜI NÓI] Em phân 2 nhóm: 🏠 Tự viết — class/interface rõ trong patterns/; 📦 Thư viện — Express middleware, React, Mongoose đã implement sẵn, em cấu hình và sử dụng.</p>
+<p class="screen"><b>[MÀN HÌNH] server/src/patterns/ — liệt kê: payment, discount, adapters, state, commands, singleton.</b></p>
+<p class="say">[LỜI NÓI] Không phải pattern nào cũng cần folder riêng. Chỉ gom pattern có nhiều class cần trình bày rõ với giảng viên.</p>
+<p>&nbsp;</p>
+<h1>PATTERN 1 — SINGLETON (🏠) ~1 PHÚT</h1>
+<p>&nbsp;</p>
+<h2>[4:30 – 5:30]</h2>
+<p>&nbsp;</p>
+<p><b>Vấn đề: Mỗi request API không được tạo connection MongoDB mới — tốn tài nguyên, dễ lỗi.</b></p>
+<p><b>Pattern: Singleton — chỉ một instance DatabaseConnection cho cả server.</b></p>
+<p>&nbsp;</p>
+<p class="screen"><b>[MÀN HÌNH] server/src/patterns/singleton/DatabaseConnection.js</b></p>
+<p class="codeTag"><b>[CODE CHỈ]</b></p>
+<p>• static getInstance() — dòng getInstance</p>
+<p>• constructor throw nếu gọi new lần 2</p>
+<p>• async connect() — mongoose.connect một lần</p>
+<p>&nbsp;</p>
+<p class="screen"><b>[MÀN HÌNH] server/src/config/db.js → connectDatabase()</b></p>
+<p class="screen"><b>[MÀN HÌNH] server/src/index.js → await connectDatabase() khi start</b></p>
+<p>&nbsp;</p>
+<p class="say">[LỜI NÓI] Khi server khởi động, connectDatabase gọi getInstance().connect() một lần. Mọi Model Order, Product dùng chung connection pool Mongoose.</p>
+<p class="codeTag"><b>[DEMO] Chạy npm run dev server — log listening; mở DatabaseConnection.js chỉ getInstance.</b></p>
+<p>&nbsp;</p>
+<p><b>Thuật ngữ GoF: Singleton, getInstance(), Client = index.js</b></p>
+<p>&nbsp;</p>
+<h1>PATTERN 2 &amp; 3 — STRATEGY (🏠) ~2.5 PHÚT</h1>
+<p>&nbsp;</p>
+<h2>[5:30 – 6:45] Strategy — Thanh toán</h2>
+<p>&nbsp;</p>
+<p><b>Vấn đề: COD, VNPAY, trả góp có logic khác nhau (initial status, validate, URL thanh toán). if/else dài khó mở rộng.</b></p>
+<p><b>Pattern: Strategy — mỗi phương thức là class implement cùng interface.</b></p>
+<p>&nbsp;</p>
+<p class="screen"><b>[MÀN HÌNH] server/src/patterns/payment/PaymentStrategy.js — class cơ sở</b></p>
+<p class="codeTag"><b>[CODE CHỈ] getInitialOrderStatus(), validateCheckout(), buildPostCreatePayload()</b></p>
+<p>&nbsp;</p>
+<p class="screen"><b>[MÀN HÌNH] CodPaymentStrategy.js — getInitialOrderStatus return confirmed</b></p>
+<p class="screen"><b>[MÀN HÌNH] VnpayPaymentStrategy.js — return pending + applyPaymentSuccess</b></p>
+<p class="screen"><b>[MÀN HÌNH] paymentStrategyRegistry.js — resolvePaymentStrategy(method)</b></p>
+<p>&nbsp;</p>
+<p class="screen"><b>[MÀN HÌNH] server/src/routes/orders.js</b></p>
+<p class="codeTag"><b>[CODE CHỈ] resolvePaymentStrategy(rawPaymentMethod) — dòng checkout</b></p>
+<p>&nbsp;</p>
+<p>[MÀN HÌNH WEB] /checkout — đổi COD ↔ VNPAY</p>
+<p class="say">[LỜI NÓI] Client checkout chỉ gọi interface. Thêm MoMo chỉ cần class mới + đăng ký registry — Open/Closed Principle.</p>
+<p>&nbsp;</p>
+<p><b>Thuật ngữ: Strategy (interface), ConcreteStrategy, Context = orders.js, Registry</b></p>
+<p>&nbsp;</p>
+<h2>[6:45 – 8:00] Strategy — Giảm giá coupon</h2>
+<p>&nbsp;</p>
+<p><b>Vấn đề: Coupon giảm % và giảm cố định VND — công thức khác nhau.</b></p>
+<p>&nbsp;</p>
+<p class="screen"><b>[MÀN HÌNH] patterns/discount/DiscountStrategy.js</b></p>
+<p class="screen"><b>[MÀN HÌNH] PercentageDiscountStrategy.js + FixedDiscountStrategy.js</b></p>
+<p class="screen"><b>[MÀN HÌNH] discountStrategyRegistry.js — getDiscountStrategy(type)</b></p>
+<p class="screen"><b>[MÀN HÌNH] server/src/services/pricing.js — calculatePricing()</b></p>
+<p>&nbsp;</p>
+<p>[MÀN HÌNH WEB] /checkout — nhập mã coupon, thấy dòng giảm giá</p>
+<p class="say">[LỜI NÓI] Pricing service không biết công thức cụ thể — delegate theo discountType.</p>
+<p>&nbsp;</p>
+<h1>PATTERN 4 — STATE ĐƠN HÀNG (🏠) ~2.5 PHÚT</h1>
+<p>&nbsp;</p>
+<h2>[8:00 – 10:30]</h2>
+<p>&nbsp;</p>
+<p><b>Vấn đề: Đơn hàng có nhiều trạng thái (pending, confirmed, shipping…). GHN, VNPAY, admin đều có thể đổi status — cần một cổng validate thống nhất.</b></p>
+<p><b>Pattern: State — mọi chuyển trạng thái qua service trung tâm.</b></p>
+<p>&nbsp;</p>
+<p class="screen"><b>[MÀN HÌNH] server/src/patterns/state/orderTransitionService.js</b></p>
+<p class="codeTag"><b>[CODE CHỈ]</b></p>
+<p>• applySystemOrderTransition() — GHN, VNPAY, demo</p>
+<p>• applyAdminOrderTransition() — admin override</p>
+<p>• applyOrderCancellation() — hủy đơn</p>
+<p>&nbsp;</p>
+<p class="screen"><b>[MÀN HÌNH] server/src/services/orderStateMachine.js</b></p>
+<p class="codeTag"><b>[CODE CHỈ] validateSystemTransition() — kiểm tra from → to hợp lệ</b></p>
+<p>&nbsp;</p>
+<p class="screen"><b>[MÀN HÌNH] constants/orderStatus.js — shouldTransitionOrderStatus()</b></p>
+<p>&nbsp;</p>
+<p><b>Luồng nói nhanh:</b></p>
+<p class="map"><code>COD checkout → confirmed (PaymentStrategy)</code></p>
+<p class="map"><code>VNPAY → pending → IPN → confirmed (VnpayPaymentStrategy + transition service)</code></p>
+<p class="map"><code>GHN → Adapter đổi status → applySystemOrderTransition</code></p>
+<p>&nbsp;</p>
+<p>[MÀN HÌNH WEB] /account/orders/:id — stepper 6 bước</p>
+<p class="codeTag"><b>[DEMO] Đặt đơn COD → mở Order Detail → chỉ stepper</b></p>
+<p>&nbsp;</p>
+<p><b>Thuật ngữ: Context = orderTransitionService, State transitions, validate trước khi save</b></p>
+<p>&nbsp;</p>
+<h1>PATTERN 5 — ADAPTER GHN (🏠) ~1.5 PHÚT</h1>
+<p>&nbsp;</p>
+<h2>[10:30 – 12:00]</h2>
+<p>&nbsp;</p>
+<p><b>Vấn đề: GHN API dùng mã status riêng (transporting, ready_to_pick). Web TechPhone dùng mã nội bộ (shipping, await_pickup).</b></p>
+<p><b>Pattern: Adapter — chuyển đổi interface hai hệ thống.</b></p>
+<p>&nbsp;</p>
+<p class="screen"><b>[MÀN HÌNH] patterns/adapters/CarrierStatusAdapter.js — Target interface</b></p>
+<p class="screen"><b>[MÀN HÌNH] patterns/adapters/GhnStatusAdapter.js</b></p>
+<p class="codeTag"><b>[CODE CHỈ] toOrderStatus(ghnStatus) — ví dụ transporting → shipping</b></p>
+<p>&nbsp;</p>
+<p class="screen"><b>[MÀN HÌNH] server/src/services/ghnShipment.js — gọi adapter rồi State</b></p>
+<p>&nbsp;</p>
+<p class="say">[LỜI NÓI] Adapter chỉ DỊCH mã. State Pattern mới quyết định được phép lưu status hay không. Sau này tích hợp GHTK chỉ thêm GhtkStatusAdapter.</p>
+<p>&nbsp;</p>
+<p><b>Thuật ngữ: Adaptee = GHN API, Target = CarrierStatusAdapter, Adapter = GhnStatusAdapter, Client = ghnShipment.js</b></p>
+<p class="codeTag"><b>[DEMO] Mở file map status; hoặc đơn có GHN trên Admin Orders</b></p>
+<p>&nbsp;</p>
+<h1>PATTERN 6 — COMMAND AI (🏠) ~1.5 PHÚT</h1>
+<p>&nbsp;</p>
+<h2>[12:00 – 13:30]</h2>
+<p>&nbsp;</p>
+<p><b>Vấn đề: Chatbox AI cần nhiều tool (tìm SP, xem đơn…). Switch/case rải rác khó thêm tool.</b></p>
+<p><b>Pattern: Command — mỗi tool là object có execute() + declaration cho Gemini.</b></p>
+<p>&nbsp;</p>
+<p class="screen"><b>[MÀN HÌNH] patterns/commands/AiToolCommandRegistry.js</b></p>
+<p class="codeTag"><b>[CODE CHỈ]</b></p>
+<p>• class AiToolCommand — execute(), declaration</p>
+<p>• COMMANDS array — 5 tools: searchProducts, getTopProducts, getMyOrders…</p>
+<p>&nbsp;</p>
+<p class="screen"><b>[MÀN HÌNH] aiChatToolHandlers.js — logic MongoDB</b></p>
+<p class="screen"><b>[MÀN HÌNH] server/src/services/gemini.js — gọi executeToolCommand()</b></p>
+<p>&nbsp;</p>
+<p>[MÀN HÌNH WEB] Chat widget → tab AI</p>
+<p class="codeTag"><b>[DEMO] Hỏi: &quot;iPhone rẻ nhất?&quot; hoặc &quot;đơn hàng của tôi&quot;</b></p>
+<p>&nbsp;</p>
+<p><b>Thuật ngữ: Command, ConcreteCommand, Invoker = gemini.js, Receiver = handlers</b></p>
+<p>&nbsp;</p>
+<h1>PATTERN 7 — CHAIN OF RESPONSIBILITY (📦 Express) ~2 PHÚT</h1>
+<p>&nbsp;</p>
+<h2>[13:30 – 15:30]</h2>
+<p>&nbsp;</p>
+<p><b>Vấn đề: Request API cần kiểm tra auth theo tầng — guest, user, admin.</b></p>
+<p><b>Pattern: Chain of Responsibility — Express middleware, mỗi handler xử lý hoặc chuyển next().</b></p>
+<p>&nbsp;</p>
+<p class="screen"><b>[MÀN HÌNH] server/src/middleware/auth.js</b></p>
+<p class="codeTag"><b>[CODE CHỈ]</b></p>
+<p>• optionalAuth — không token vẫn next() (guest checkout)</p>
+<p class="map"><code>• requireAuth — thiếu token → 401 STOP</code></p>
+<p class="map"><code>• requireAdmin — không phải admin → 403 STOP</code></p>
+<p>&nbsp;</p>
+<p class="screen"><b>[MÀN HÌNH] server/src/index.js — app.use(optionalAuth) trước cart/orders</b></p>
+<p class="screen"><b>[MÀN HÌNH] admin.orders.js — router.use(requireAuth, requireAdmin)</b></p>
+<p>&nbsp;</p>
+<p class="screen"><b>[MÀN HÌNH] src/components/ProtectedRoute.jsx — frontend tương tự</b></p>
+<p>&nbsp;</p>
+<p class="codeTag"><b>[DEMO]</b></p>
+<p class="map"><code>1. Gọi /api/admin/orders không token → 401 (Network tab)</code></p>
+<p class="map"><code>2. Vào /admin chưa login → redirect login</code></p>
+<p>&nbsp;</p>
+<p><b>Thuật ngữ: Handler, next(), Client = Express app</b></p>
+<p class="say">[LỜI NÓI] Đây là pattern từ thư viện Express — em cấu hình pipeline, không tự viết framework.</p>
+<p>&nbsp;</p>
+<h1>PATTERN 8 — OBSERVER (📦 Socket.io + React) ~2 PHÚT</h1>
+<p>&nbsp;</p>
+<h2>[15:30 – 17:30]</h2>
+<p>&nbsp;</p>
+<p><b>Vấn đề: Chat hỗ trợ cần cập nhật tin nhắn real-time không refresh trang.</b></p>
+<p><b>Pattern: Observer / Pub-Sub — Subject emit event, Observer đăng ký socket.on.</b></p>
+<p>&nbsp;</p>
+<p class="screen"><b>[MÀN HÌNH] server/src/socket.js</b></p>
+<p class="codeTag"><b>[CODE CHỈ] io.to(room).emit(&quot;message:new&quot;, payload) — sau sendMessage</b></p>
+<p>&nbsp;</p>
+<p class="screen"><b>[MÀN HÌNH] src/context/SupportChatContext.jsx</b></p>
+<p class="codeTag"><b>[CODE CHỈ] socket.on(&quot;message:new&quot;, handler) — cập nhật setState</b></p>
+<p>&nbsp;</p>
+<p class="say">[LỜI NÓI] KHÔNG phải user abstract báo user con. Server là Subject phát event; client subscribe qua socket.on. Room conversation:id và admin:support là nhóm observer.</p>
+<p>&nbsp;</p>
+<p class="codeTag"><b>[DEMO QUAN TRỌNG — quay 2 tab]</b></p>
+<p>Tab 1: khách — gửi tin chat</p>
+<p>Tab 2: admin /admin/support — thấy tin ngay</p>
+<p>&nbsp;</p>
+<p><b>Thuật ngữ: Subject, Observer, Attach = socket.on, Notify = emit, Update = setState</b></p>
+<p>&nbsp;</p>
+<h1>PATTERN 9 &amp; 10 — TEMPLATE METHOD + FACADE (🏠) ~1 PHÚT</h1>
+<p>&nbsp;</p>
+<h2>[17:30 – 18:30]</h2>
+<p>&nbsp;</p>
+<p>Template Method — khung stepper cố định:</p>
+<p class="screen"><b>[MÀN HÌNH] orderStateMachine.js — buildTrackingSteps() dòng 105–126</b></p>
+<p class="codeTag"><b>[CODE CHỈ] TRACKING_STEP_KEYS.map — 6 bước, điền done/active/error theo status</b></p>
+<p>[MÀN HÌNH WEB] Order Detail stepper</p>
+<p>&nbsp;</p>
+<p>Facade — che API phức tạp:</p>
+<p class="screen"><b>[MÀN HÌNH] src/config/api.js — authFetch()</b></p>
+<p class="screen"><b>[MÀN HÌNH] server/src/services/vnpay.js — HMAC + URL</b></p>
+<p class="say">[LỜI NÓI] Frontend gọi authFetch thay vì tự ghép header JWT. VNPAY facade che chi tiết HMAC.</p>
+<p>&nbsp;</p>
+<p><b>Thuật ngữ Template: Template Method = buildTrackingSteps, Primitive Operation = STATUS_TO_STEP</b></p>
+<p>&nbsp;</p>
+<h1>PHẦN 3 — PATTERN THƯ VIỆN &amp; KẾT LUẬN (1.5–2 PHÚT)</h1>
+<p>&nbsp;</p>
+<h2>[18:30 – 19:15] Pattern từ thư viện (nhắc nhanh)</h2>
+<p>&nbsp;</p>
+<p class="map"><code>Composite (📦 React): App.jsx → Layout → Page — cây component. Demo: React DevTools.</code></p>
+<p>Repository (📦 Mongoose): models/Order.js, Product.js — truy cập DB.</p>
+<p>Front Controller (📦 React Router): App.jsx route map.</p>
+<p>Unit of Work (📦 MongoDB): orders.js checkout transaction — rollback nếu lỗi.</p>
+<p>State flash sale (🏠): flashSaleStateRegistry.js — resolveFlashSaleState()</p>
+<p>&nbsp;</p>
+<h2>[19:15 – 20:00] Kết luận</h2>
+<p>&nbsp;</p>
+<p class="say">[LỜI NÓI] Tóm lại em áp dụng 7 pattern tự viết trong patterns/ và nhiều pattern từ Express, React, Socket.io. Pattern giúp tách nghiệp vụ, dễ mở rộng — Strategy thêm payment, Adapter thêm carrier, State gom đổi status đơn hàng.</p>
+<p class="screen"><b>[MÀN HÌNH] Quay lại folder patterns/ — panorama cuối clip.</b></p>
+<p>Em xin cảm ơn thầy/cô. Em sẵn sàng trả lời câu hỏi.</p>
+<p>&nbsp;</p>
+<h1>PHỤ LỤC — CHECKLIST TRƯỚC KHI QUAY</h1>
+<p>&nbsp;</p>
+<p class="check">☐ Server + MongoDB + Frontend đang chạy</p>
+<p class="check">☐ Có tài khoản admin + customer để demo</p>
+<p class="check">☐ VS Code zoom font 14–16, theme dễ đọc khi quay</p>
+<p class="check">☐ Thu nhỏ tab thừa — chỉ IDE + Browser</p>
+<p class="check">☐ Thử mic + thời gian 1 lần (hẹn giờ 20 phút)</p>
+<p class="check">☐ Clip demo Observer: mở sẵn 2 tab trước khi quay</p>
+<p class="check">☐ File tham chiếu: PATTERN-MAP.md, HUONG-DAN-TRINH-BAY.md</p>
+<p>&nbsp;</p>
+<h1>PHỤ LỤC — MAP FILE NHANH KHI GIẢNG VIÊN HỎI</h1>
+<p>&nbsp;</p>
+<p class="map"><code>Singleton     → patterns/singleton/DatabaseConnection.js</code></p>
+<p class="map"><code>Strategy pay  → patterns/payment/ + orders.js checkout</code></p>
+<p class="map"><code>Strategy disc → patterns/discount/ + pricing.js</code></p>
+<p class="map"><code>State order   → patterns/state/orderTransitionService.js</code></p>
+<p class="map"><code>Adapter       → patterns/adapters/GhnStatusAdapter.js</code></p>
+<p class="map"><code>Command       → patterns/commands/AiToolCommandRegistry.js</code></p>
+<p class="map"><code>Chain         → middleware/auth.js + index.js</code></p>
+<p class="map"><code>Observer      → socket.js + SupportChatContext.jsx</code></p>
+<p class="map"><code>Template      → orderStateMachine.buildTrackingSteps()</code></p>
+<p class="map"><code>Facade        → src/config/api.js</code></p>
+<p>&nbsp;</p>
+</body>
+</html>
