@@ -12,6 +12,9 @@
     "ghn:test": "node server/scripts/testGhnConnection.js",
     "ghn:shops": "node server/scripts/listGhnShops.js",
     "dev:full": "concurrently \"npm run server:dev\" \"npm run dev\"",
+    "docker:build": "docker compose build",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"

@@ -1,5 +1,7 @@
 import 'dotenv/config';
 import http from 'node:http';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import cors from 'cors';
 import express from 'express';
 import { connectDatabase } from './config/db.js';
@@ -115,6 +117,25 @@ app.use('/api/shipping/ghn', ghnShippingRoutes);
 app.use('/api/support', supportChatRoutes);
 app.use('/api/admin/support', adminSupportRoutes);
 app.use('/api/ai-chat', aiChatHttpLimiter, aiChatRoutes);
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const distPath = path.join(__dirname, '../../dist');
+
+function shouldServeStatic() {
+  return process.env.SERVE_STATIC === 'true' || process.env.NODE_ENV === 'production';
+}
+
+if (shouldServeStatic()) {
+  app.use(express.static(distPath, { index: false }));
+  app.get(/^(?!\/api).*/, (req, res, next) => {
+    if (req.path === '/sitemap.xml') {
+      return next();
+    }
+    res.sendFile(path.join(distPath, 'index.html'), (err) => {
+      if (err) next(err);
+    });
+  });
+}
 
 app.use((err, _req, res, _next) => {
   console.error(err);

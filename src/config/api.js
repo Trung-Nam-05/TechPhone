@@ -1,4 +1,15 @@
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
+function resolveApiBaseUrl() {
+  const configured = import.meta.env.VITE_API_BASE_URL;
+  if (configured !== undefined && String(configured).trim() !== '') {
+    return String(configured).replace(/\/$/, '');
+  }
+  if (import.meta.env.PROD) {
+    return '';
+  }
+  return 'http://localhost:4000';
+}
+
+export const API_BASE_URL = resolveApiBaseUrl();
 
 export const SESSION_STORAGE_KEY = 'techphone-session-id';
 const AUTH_STORAGE_KEY = 'techphone-auth';
