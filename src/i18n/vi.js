@@ -145,6 +145,7 @@ export default {
     total: 'Tổng tiền',
     checkout: 'Tiến hành thanh toán',
     viewedTitle: 'Sản phẩm đã xem',
+    viewMore: 'Xem thêm',
   },
   productCard: {
     flashSale: 'Flash Sale',

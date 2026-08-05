@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <title>11-repository-mongoose — Code trước</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs2015.min.css" />
+  <style>
+    body { margin: 0; background: #1e1e1e; color: #ddd; font-family: Segoe UI, sans-serif; }
+    header { padding: 16px 20px; border-bottom: 1px solid #333; }
+    h1 { margin: 0 0 8px; font-size: 18px; color: #fff; }
+    .hint { color: #9cdcfe; font-size: 14px; }
+    pre { margin: 0; padding: 20px; font-size: 13px; line-height: 1.5; }
+    code.hljs { background: #1e1e1e !important; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>11-repository-mongoose — Code trước</h1>
+    <p class="hint">Bôi đen code bên dưới → Ctrl+C → dán vào Word → chọn <b>Keep Source Formatting</b> để giữ màu.</p>
+  </header>
+  <pre><code class="language-javascript">/**
+ * =====================================================================
+ * CODE TRƯỚC KHI ÁP DỤNG — Repository (Mongoose Model)
+ * =====================================================================
+ * Vấn đề: route/service đụng collection thô, lẫn HTTP với chi tiết DB
+ * =====================================================================
+ */
+
+export async function registerUserBeforePattern(db, payload) {
+  const email = String(payload.email || '').trim().toLowerCase();
+  const existing = await db.collection('users').findOne({ email });
+  if (existing) {
+    const err = new Error('Email is already in use.');
+    err.status = 409;
+    throw err;
+  }
+
+  const doc = {
+    name: String(payload.name || '').trim(),
+    email,
+    passwordHash: payload.passwordHash,
+    role: 'customer',
+    isActive: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  const result = await db.collection('users').insertOne(doc);
+  return { _id: result.insertedId, ...doc };
+}
+
+export async function listOrdersBeforePattern(db, userId) {
+  const cursor = db
+    .collection('orders')
+    .find({ user: userId })
+    .sort({ createdAt: -1 })
+    .project({
+      // tự select field thủ công khắp nơi
+      status: 1,
+      total: 1,
+      paymentMethod: 1,
+      createdAt: 1,
+      items: 1,
+      shipment: 1,
+    });
+
+  return cursor.toArray();
+}
+
+export async function createOrderBeforePattern(db, orderDraft) {
+  // Trừ kho bằng update thô — dễ sai nếu quên transaction
+  for (const line of orderDraft.items) {
+    const product = await db.collection('products').findOne({ _id: line.product });
+    if (!product || product.stock &lt; line.quantity) {
+      throw new Error('Không đủ tồn kho');
+    }
+    await db.collection('products').updateOne(
+      { _id: line.product },
+      { $inc: { stock: -line.quantity }, $set: { updatedAt: new Date() } },
+    );
+  }
+
+  const result = await db.collection('orders').insertOne({
+    ...orderDraft,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+
+  return { _id: result.insertedId, ...orderDraft };
+}
+
+export async function findProductBySlugBeforePattern(db, slug) {
+  return db.collection('products').findOne({ slug, isActive: true, deletedAt: null });
+}
+</code></pre>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</body>
+</html>

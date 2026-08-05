@@ -8,6 +8,7 @@
     "server": "node server/src/index.js",
     "server:dev": "nodemon server/src/index.js",
     "seed": "node server/scripts/seedProducts.js",
+    "update-descriptions": "node server/scripts/updateDescriptions.js",
     "ghn:test": "node server/scripts/testGhnConnection.js",
     "ghn:shops": "node server/scripts/listGhnShops.js",
     "dev:full": "concurrently \"npm run server:dev\" \"npm run dev\"",

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <title>06-command-ai — Code trước</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs2015.min.css" />
+  <style>
+    body { margin: 0; background: #1e1e1e; color: #ddd; font-family: Segoe UI, sans-serif; }
+    header { padding: 16px 20px; border-bottom: 1px solid #333; }
+    h1 { margin: 0 0 8px; font-size: 18px; color: #fff; }
+    .hint { color: #9cdcfe; font-size: 14px; }
+    pre { margin: 0; padding: 20px; font-size: 13px; line-height: 1.5; }
+    code.hljs { background: #1e1e1e !important; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>06-command-ai — Code trước</h1>
+    <p class="hint">Bôi đen code bên dưới → Ctrl+C → dán vào Word → chọn <b>Keep Source Formatting</b> để giữ màu.</p>
+  </header>
+  <pre><code class="language-javascript">/**
+ * =====================================================================
+ * CODE TRƯỚC KHI ÁP DỤNG — Command (AI Tools)
+ * =====================================================================
+ * Vấn đề: switch/if theo tên tool + declaration Gemini tách rời, dễ lệch
+ * =====================================================================
+ */
+
+async function searchProducts(args) {
+  return { items: [], query: args };
+}
+async function getTopProducts(args) {
+  return { items: [], sort: args?.sort || 'price_desc' };
+}
+async function getProductDetail(args) {
+  return { item: null, slugOrId: args?.slugOrId };
+}
+async function getMyOrders(args, context) {
+  return { items: [], userId: context?.userId || null };
+}
+async function getOrderTimeline(args, context) {
+  return { steps: [], orderId: args?.orderId, userId: context?.userId || null };
+}
+
+/** Declaration gửi Gemini — dễ lệch với switch bên dưới */
+export const TOOL_DECLARATIONS_BEFORE = [
+  {
+    name: 'searchProducts',
+    description: 'Tìm sản phẩm theo từ khóa',
+    parameters: { type: 'object', properties: { search: { type: 'string' } } },
+  },
+  {
+    name: 'getTopProducts',
+    description: 'Lấy sản phẩm đắt/rẻ nhất',
+    parameters: { type: 'object', properties: { sort: { type: 'string' } } },
+  },
+  {
+    name: 'getProductDetail',
+    description: 'Chi tiết sản phẩm',
+    parameters: { type: 'object', properties: { slugOrId: { type: 'string' } }, required: ['slugOrId'] },
+  },
+  {
+    name: 'getMyOrders',
+    description: 'Đơn hàng của tôi',
+    parameters: { type: 'object', properties: {} },
+  },
+  {
+    name: 'getOrderTimeline',
+    description: 'Timeline đơn hàng',
+    parameters: { type: 'object', properties: { orderId: { type: 'string' } }, required: ['orderId'] },
+  },
+];
+
+/**
+ * Thực thi tool — phiên bản chưa dùng Command Pattern
+ */
+export async function executeToolBeforePattern(toolName, args = {}, context = {}) {
+  // ========== SWITCH DÀI — CỨ THÊM TOOL LÀ SỬA TIẾP ==========
+  if (toolName === 'searchProducts') {
+    return searchProducts(args);
+  } else if (toolName === 'getTopProducts') {
+    return getTopProducts(args);
+  } else if (toolName === 'getProductDetail') {
+    return getProductDetail(args);
+  } else if (toolName === 'getMyOrders') {
+    return getMyOrders(args, context);
+  } else if (toolName === 'getOrderTimeline') {
+    return getOrderTimeline(args, context);
+  } else if (toolName === 'compareProducts') {
+    // Tool mới nhưng có thể quên thêm vào TOOL_DECLARATIONS_BEFORE
+    return { items: [], note: 'compare demo' };
+  } else {
+    throw new Error(`Unknown tool: ${toolName}`);
+  }
+  // ===========================================================
+}
+
+export async function handleGeminiToolCallBeforePattern(toolCall, context) {
+  const name = toolCall?.name;
+  const args = toolCall?.args || {};
+  const declared = TOOL_DECLARATIONS_BEFORE.some((d) =&gt; d.name === name);
+  if (!declared) {
+    // Trường hợp lệch declaration / handler
+    console.warn('Tool không có trong declaration:', name);
+  }
+  return executeToolBeforePattern(name, args, context);
+}
+</code></pre>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</body>
+</html>

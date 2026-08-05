@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <title>12-pubsub-socket — Code trước</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs2015.min.css" />
+  <style>
+    body { margin: 0; background: #1e1e1e; color: #ddd; font-family: Segoe UI, sans-serif; }
+    header { padding: 16px 20px; border-bottom: 1px solid #333; }
+    h1 { margin: 0 0 8px; font-size: 18px; color: #fff; }
+    .hint { color: #9cdcfe; font-size: 14px; }
+    pre { margin: 0; padding: 20px; font-size: 13px; line-height: 1.5; }
+    code.hljs { background: #1e1e1e !important; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>12-pubsub-socket — Code trước</h1>
+    <p class="hint">Bôi đen code bên dưới → Ctrl+C → dán vào Word → chọn <b>Keep Source Formatting</b> để giữ màu.</p>
+  </header>
+  <pre><code class="language-javascript">/**
+ * =====================================================================
+ * CODE TRƯỚC KHI ÁP DỤNG — Pub-Sub (Socket.io)
+ * =====================================================================
+ * Vấn đề: sender gọi thẳng UI receiver — không scale nhiều client/browser
+ * =====================================================================
+ */
+
+let adminInboxUi = null;
+let customerChatUi = null;
+
+export function registerAdminUiBeforePattern(ui) {
+  adminInboxUi = ui;
+}
+
+export function registerCustomerUiBeforePattern(ui) {
+  customerChatUi = ui;
+}
+
+export function customerSendMessageBeforePattern(message) {
+  // Gắn cứng: chỉ cập nhật được nếu cùng process
+  if (adminInboxUi &amp;&amp; typeof adminInboxUi.appendMessage === 'function') {
+    adminInboxUi.appendMessage({
+      ...message,
+      senderRole: 'customer',
+      createdAt: new Date(),
+    });
+  } else {
+    console.warn('Admin UI chưa register — tin nhắn "mất"');
+  }
+
+  // Không có room, không có nhiều tab admin cùng nhận
+  return { deliveredToAdminUi: Boolean(adminInboxUi) };
+}
+
+export function adminSendMessageBeforePattern(message) {
+  if (customerChatUi &amp;&amp; typeof customerChatUi.appendMessage === 'function') {
+    customerChatUi.appendMessage({
+      ...message,
+      senderRole: 'admin',
+      createdAt: new Date(),
+    });
+  } else {
+    console.warn('Customer UI chưa register — tin nhắn "mất"');
+  }
+  return { deliveredToCustomerUi: Boolean(customerChatUi) };
+}
+
+/** Thử “broadcast” kiểu cũ — vẫn không phải Pub-Sub thật */
+export function notifyAllBeforePattern(message) {
+  const targets = [adminInboxUi, customerChatUi].filter(Boolean);
+  targets.forEach((ui) =&gt; ui.appendMessage?.(message));
+  return { count: targets.length };
+}
+</code></pre>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</body>
+</html>

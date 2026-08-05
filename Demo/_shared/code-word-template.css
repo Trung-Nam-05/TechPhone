@@ -1,0 +1,31 @@
+/* Dùng chung cho các file code-truoc.html */
+body {
+  font-family: Consolas, "Courier New", monospace;
+  background: #1e1e1e;
+  color: #d4d4d4;
+  padding: 16px;
+}
+h1 {
+  font-family: Segoe UI, sans-serif;
+  color: #fff;
+  font-size: 18px;
+}
+.hint {
+  font-family: Segoe UI, sans-serif;
+  color: #9cdcfe;
+  margin-bottom: 12px;
+}
+pre {
+  background: #1e1e1e;
+  border: 1px solid #333;
+  padding: 16px;
+  overflow: auto;
+  line-height: 1.45;
+  font-size: 13px;
+}
+.keyword { color: #569cd6; }
+.string { color: #ce9178; }
+.comment { color: #6a9955; }
+.number { color: #b5cea8; }
+.fn { color: #dcdcaa; }
+.title { color: #4ec9b0; }

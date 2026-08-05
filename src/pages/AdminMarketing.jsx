@@ -1,0 +1,259 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Eye, Mail, Send, Users } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import AdminPageHeader from '../components/admin/AdminPageHeader';
+import './AdminMarketing.css';
+
+const DEFAULT_VARIABLES = {
+  customerName: 'bạn',
+  discountPercent: '10',
+  promoCode: 'SALE10',
+  expiresAt: '',
+  preheaderText: 'Flash Sale TechPhone — giảm đến 10%, trả góp 0%, giao nhanh toàn quốc',
+};
+
+function defaultExpiresAt() {
+  const date = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  return date.toLocaleDateString('vi-VN');
+}
+
+export default function AdminMarketing() {
+  const { authFetch, user } = useAuth();
+  const [mailConfigured, setMailConfigured] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState(true);
+  const [variables, setVariables] = useState({ ...DEFAULT_VARIABLES, expiresAt: defaultExpiresAt() });
+  const [testEmail, setTestEmail] = useState(user?.email || '');
+  const [previewHtml, setPreviewHtml] = useState('');
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [sendingTest, setSendingTest] = useState(false);
+  const [sendingCampaign, setSendingCampaign] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+
+  const payloadVariables = useMemo(
+    () => ({
+      customerName: variables.customerName.trim() || 'bạn',
+      discountPercent: String(variables.discountPercent || '10').trim(),
+      promoCode: variables.promoCode.trim().toUpperCase() || 'SALE10',
+      expiresAt: variables.expiresAt.trim() || defaultExpiresAt(),
+      preheaderText: variables.preheaderText.trim(),
+    }),
+    [variables],
+  );
+
+  const loadStatus = useCallback(async () => {
+    setLoadingStatus(true);
+    try {
+      const payload = await authFetch('/api/admin/marketing/status');
+      setMailConfigured(Boolean(payload.mailConfigured));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoadingStatus(false);
+    }
+  }, [authFetch]);
+
+  useEffect(() => {
+    loadStatus();
+  }, [loadStatus]);
+
+  const handlePreview = async () => {
+    setPreviewLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const payload = await authFetch('/api/admin/marketing/preview', {
+        method: 'POST',
+        body: JSON.stringify({ variables: payloadVariables }),
+      });
+      setPreviewHtml(payload.html || '');
+      setSuccess('Đã tải preview email.');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  const handleSendTest = async () => {
+    const to = testEmail.trim();
+    if (!to || !to.includes('@')) {
+      setError('Email nhận thử không hợp lệ.');
+      return;
+    }
+    setSendingTest(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const payload = await authFetch('/api/admin/marketing/send-test', {
+        method: 'POST',
+        body: JSON.stringify({ to, variables: payloadVariables }),
+      });
+      setSuccess(payload.message || `Đã gửi email thử tới ${to}.`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSendingTest(false);
+    }
+  };
+
+  const handleSendCampaign = async () => {
+    const confirmed = window.confirm(
+      'Gửi email Flash Sale tới TẤT CẢ khách hàng có email hợp lệ? Hãy chắc chắn đã xem preview trước.',
+    );
+    if (!confirmed) return;
+
+    setSendingCampaign(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const payload = await authFetch('/api/admin/marketing/send-campaign', {
+        method: 'POST',
+        body: JSON.stringify({ role: 'customer', variables: payloadVariables }),
+      });
+      const failedNote = payload.failed?.length ? ` (${payload.failed.length} lỗi)` : '';
+      setSuccess(`${payload.message || 'Đã gửi campaign.'}${failedNote}`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSendingCampaign(false);
+    }
+  };
+
+  return (
+    <div className="admin-page admin-marketing-page">
+      <AdminPageHeader
+        title="Email marketing"
+        subtitle="Preview và gửi email Flash Sale tới khách hàng qua SMTP Gmail."
+        actions={(
+          <span className={`admin-marketing-status ${mailConfigured ? 'is-ready' : 'is-pending'}`}>
+            {loadingStatus ? 'Đang kiểm tra SMTP...' : mailConfigured ? 'SMTP sẵn sàng' : 'SMTP chưa cấu hình'}
+          </span>
+        )}
+      />
+
+      {error && <div className="admin-alert admin-alert-error">{error}</div>}
+      {success && <div className="admin-alert admin-alert-success">{success}</div>}
+
+      {!loadingStatus && !mailConfigured && (
+        <div className="admin-alert admin-alert-error">
+          SMTP chưa cấu hình. Điền `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS` trong `.env` rồi restart server.
+        </div>
+      )}
+
+      <div className="admin-marketing-layout">
+        <div className="admin-panel admin-marketing-form">
+          <h2 className="admin-panel-title">Nội dung email</h2>
+          <p className="admin-marketing-note">Template: Flash Sale (`server/templates/email/flash-sale.html`)</p>
+
+          <div className="admin-form-group">
+            <label>Tên khách (mẫu)</label>
+            <input
+              className="input"
+              value={variables.customerName}
+              onChange={(e) => setVariables((prev) => ({ ...prev, customerName: e.target.value }))}
+              placeholder="VD: Nam"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">% giảm giá</label>
+              <input
+                className="input"
+                value={variables.discountPercent}
+                onChange={(e) => setVariables((prev) => ({ ...prev, discountPercent: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Mã coupon</label>
+              <input
+                className="input"
+                value={variables.promoCode}
+                onChange={(e) => setVariables((prev) => ({ ...prev, promoCode: e.target.value.toUpperCase() }))}
+              />
+            </div>
+          </div>
+
+          <div className="admin-form-group">
+            <label>Hạn mã ưu đãi</label>
+            <input
+              className="input"
+              value={variables.expiresAt}
+              onChange={(e) => setVariables((prev) => ({ ...prev, expiresAt: e.target.value }))}
+              placeholder="VD: 10/08/2026"
+            />
+          </div>
+
+          <div className="admin-form-group">
+            <label>Preheader (dòng xem trước trong inbox)</label>
+            <input
+              className="input"
+              value={variables.preheaderText}
+              onChange={(e) => setVariables((prev) => ({ ...prev, preheaderText: e.target.value }))}
+            />
+          </div>
+
+          <div className="admin-marketing-actions">
+            <button type="button" className="btn btn-outline" onClick={handlePreview} disabled={previewLoading}>
+              <Eye size={16} />
+              {previewLoading ? 'Đang tải...' : 'Xem preview'}
+            </button>
+          </div>
+
+          <hr className="admin-marketing-divider" />
+
+          <h3 className="admin-marketing-subtitle">Gửi thử</h3>
+          <div className="admin-form-group">
+            <label>Email nhận thử</label>
+            <input
+              className="input"
+              type="email"
+              value={testEmail}
+              onChange={(e) => setTestEmail(e.target.value)}
+              placeholder="ban@gmail.com"
+            />
+          </div>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={handleSendTest}
+            disabled={!mailConfigured || sendingTest}
+          >
+            <Send size={16} />
+            {sendingTest ? 'Đang gửi...' : 'Gửi email thử'}
+          </button>
+
+          <hr className="admin-marketing-divider" />
+
+          <h3 className="admin-marketing-subtitle">Gửi campaign</h3>
+          <p className="admin-marketing-note">
+            Gửi tới tất cả khách hàng đang hoạt động (ưu tiên email liên kết đã xác minh).
+          </p>
+          <button
+            type="button"
+            className="btn btn-outline admin-marketing-campaign-btn"
+            onClick={handleSendCampaign}
+            disabled={!mailConfigured || sendingCampaign}
+          >
+            <Users size={16} />
+            {sendingCampaign ? 'Đang gửi campaign...' : 'Gửi tới tất cả khách hàng'}
+          </button>
+        </div>
+
+        <div className="admin-panel admin-marketing-preview">
+          <h2 className="admin-panel-title">Preview</h2>
+          {!previewHtml && <p className="text-muted">Bấm &quot;Xem preview&quot; để hiển thị email.</p>}
+          {previewHtml && (
+            <iframe
+              title="Email preview"
+              className="admin-marketing-preview-frame"
+              srcDoc={previewHtml}
+              sandbox=""
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

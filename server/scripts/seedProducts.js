@@ -1,9 +1,15 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { connectDatabase } from '../src/config/db.js';
 import Product from '../src/models/Product.js';
 import User from '../src/models/User.js';
 import { hashPassword } from '../src/utils/auth.js';
 import { PRODUCTS } from '../../src/data/products.js';
+import { buildProductDescription } from '../src/data/productDescriptionBuilder.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const CATEGORY_LABEL_BY_KEY = {
   'dien-thoai': 'Điện thoại',
@@ -671,7 +677,11 @@ function mapToSeedDocument(product) {
     stock: 100,
     image: product.image || '',
     images: product.image ? [product.image] : [],
-    description: product.description || 'Thông tin sản phẩm đang được cập nhật.',
+    description: buildProductDescription({
+      ...product,
+      legacyId: product.id,
+      category: { key: categoryKey, label: categoryLabel },
+    }),
     isActive: true,
   };
 }

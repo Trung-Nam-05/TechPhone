@@ -23,6 +23,7 @@ import AdminFlashSales from './pages/AdminFlashSales';
 import AdminReviews from './pages/AdminReviews';
 import AdminCategories from './pages/AdminCategories';
 import AdminCoupons from './pages/AdminCoupons';
+import AdminMarketing from './pages/AdminMarketing';
 import Installment from './pages/Installment';
 import Coupon from './pages/Coupon';
 import AccountLayout from './layouts/AccountLayout';
@@ -59,6 +60,7 @@ function App() {
         <Route path="flash-sales" element={<AdminFlashSales />} />
         <Route path="categories" element={<AdminCategories />} />
         <Route path="coupons" element={<AdminCoupons />} />
+        <Route path="marketing" element={<AdminMarketing />} />
         <Route path="reviews" element={<AdminReviews />} />
         <Route path="users" element={<AdminUsers />} />
       </Route>

@@ -21,6 +21,7 @@ import adminReviewRoutes from './routes/admin.reviews.js';
 import adminCategoryRoutes from './routes/admin.categories.js';
 import adminCouponRoutes from './routes/admin.coupons.js';
 import adminSearchRoutes from './routes/admin.search.js';
+import adminMarketingRoutes from './routes/admin.marketing.js';
 import categoryRoutes from './routes/categories.js';
 import vnpayPaymentRoutes from './routes/payments.vnpay.js';
 import ghnShippingRoutes from './routes/shipping.ghn.js';
@@ -36,6 +37,7 @@ import { isGhnConfigured, isGhnDevApi, isGhnProductionApi } from './services/ghn
 import { ensureDefaultCategories } from './services/ensureCategories.js';
 import { ensureDefaultCoupons } from './services/ensureCoupons.js';
 import { buildSitemapXml } from './services/sitemap.js';
+import { isMailConfigured } from './services/mail.js';
 import { csrfGuard } from './middleware/csrfGuard.js';
 import {
   aiChatHttpLimiter,
@@ -72,6 +74,7 @@ app.get('/api/health', (_req, res) => {
     ok: true,
     service: 'techphone-api',
     shipping: isGhnConfigured() ? 'ghn-dev' : 'none',
+    mail: isMailConfigured() ? 'smtp' : 'none',
   });
 });
 
@@ -104,6 +107,7 @@ app.use('/api/admin/coupons', adminCouponRoutes);
 app.use('/api/admin/reviews', adminReviewRoutes);
 app.use('/api/admin/users', adminUserRoutes);
 app.use('/api/admin/search', adminSearchRoutes);
+app.use('/api/admin/marketing', adminMarketingRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/webhooks/installment', installmentWebhookRoutes);
 app.use('/api/payments/vnpay', vnpayPaymentRoutes);

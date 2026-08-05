@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <title>07-chain-auth — Code trước</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs2015.min.css" />
+  <style>
+    body { margin: 0; background: #1e1e1e; color: #ddd; font-family: Segoe UI, sans-serif; }
+    header { padding: 16px 20px; border-bottom: 1px solid #333; }
+    h1 { margin: 0 0 8px; font-size: 18px; color: #fff; }
+    .hint { color: #9cdcfe; font-size: 14px; }
+    pre { margin: 0; padding: 20px; font-size: 13px; line-height: 1.5; }
+    code.hljs { background: #1e1e1e !important; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>07-chain-auth — Code trước</h1>
+    <p class="hint">Bôi đen code bên dưới → Ctrl+C → dán vào Word → chọn <b>Keep Source Formatting</b> để giữ màu.</p>
+  </header>
+  <pre><code class="language-javascript">/**
+ * =====================================================================
+ * CODE TRƯỚC KHI ÁP DỤNG — Chain of Responsibility (Auth)
+ * =====================================================================
+ * Vấn đề: mỗi handler tự copy verify JWT + check role
+ * =====================================================================
+ */
+
+function extractBearerToken(req) {
+  const authHeader = req.headers?.authorization || req.header?.('authorization') || '';
+  if (!authHeader.startsWith('Bearer ')) return null;
+  return authHeader.slice('Bearer '.length).trim();
+}
+
+function verifyTokenFake(token) {
+  if (!token || token === 'invalid') throw new Error('INVALID_TOKEN');
+  if (token === 'customer-token') return { id: 'u1', role: 'customer', isActive: true };
+  if (token === 'admin-token') return { id: 'a1', role: 'admin', isActive: true };
+  if (token === 'disabled-token') return { id: 'u2', role: 'customer', isActive: false };
+  return { id: 'u0', role: 'customer', isActive: true };
+}
+
+/** Handler admin orders — tự check auth trong hàm */
+export async function adminListOrdersBeforePattern(req, res) {
+  const token = extractBearerToken(req);
+  if (!token) return res.status(401).json({ message: 'Unauthorized. Missing access token.' });
+
+  let user;
+  try {
+    user = verifyTokenFake(token);
+  } catch {
+    return res.status(401).json({ message: 'Unauthorized. Invalid or expired token.' });
+  }
+
+  if (user.isActive === false) {
+    return res.status(403).json({ message: 'Account is disabled.' });
+  }
+  if (user.role !== 'admin') {
+    return res.status(403).json({ message: 'Forbidden. Admin access required.' });
+  }
+
+  // ... business
+  return res.json({ items: [], actor: user.id });
+}
+
+/** Handler cập nhật user — COPY LẠI gần như y nguyên */
+export async function adminPatchUserBeforePattern(req, res) {
+  const token = extractBearerToken(req);
+  if (!token) return res.status(401).json({ message: 'Unauthorized. Missing access token.' });
+
+  let user;
+  try {
+    user = verifyTokenFake(token);
+  } catch {
+    return res.status(401).json({ message: 'Unauthorized. Invalid or expired token.' });
+  }
+
+  if (user.isActive === false) {
+    return res.status(403).json({ message: 'Account is disabled.' });
+  }
+  if (user.role !== 'admin') {
+    return res.status(403).json({ message: 'Forbidden. Admin access required.' });
+  }
+
+  return res.json({ updated: true, actor: user.id, target: req.params?.id });
+}
+
+/** Handler /me — lại copy một phần */
+export async function getMeBeforePattern(req, res) {
+  const token = extractBearerToken(req);
+  if (!token) return res.status(401).json({ message: 'Unauthorized. Missing access token.' });
+  try {
+    const user = verifyTokenFake(token);
+    if (user.isActive === false) return res.status(403).json({ message: 'Account is disabled.' });
+    return res.json({ user });
+  } catch {
+    return res.status(401).json({ message: 'Unauthorized. Invalid or expired token.' });
+  }
+}
+</code></pre>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</body>
+</html>

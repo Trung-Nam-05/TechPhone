@@ -785,13 +785,6 @@ export default function Products() {
             ))}
           </section>
 
-          <section className="tp-phone-trend-banner">
-            <img
-              src="https://cdn2.fptshop.com.vn/unsafe/1920x0/filters:format(webp):quality(75)/H9_1240x132_2x_2f0ab811b2.png"
-              alt="Trend banner"
-            />
-          </section>
-
           <section className="tp-phone-featured">
             <h3>Đặc quyền chỉ có tại TechPhone</h3>
             <div className="tp-phone-featured-grid">

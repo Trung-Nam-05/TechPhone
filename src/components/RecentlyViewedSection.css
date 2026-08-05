@@ -1,0 +1,113 @@
+.tp-recently-viewed {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 18px 16px 20px;
+}
+
+.tp-recently-viewed-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.tp-recently-viewed-head h2 {
+  margin: 0;
+  font-size: 32px;
+  color: #111827;
+}
+
+.tp-recently-viewed-head a {
+  font-size: 14px;
+  color: #cb1c22;
+  white-space: nowrap;
+}
+
+.tp-recently-viewed-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.tp-recently-viewed-card {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid #edf2f7;
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #111827;
+  transition: border-color 180ms ease, background-color 180ms ease;
+}
+
+.tp-recently-viewed-card:hover {
+  border-color: #f8d7da;
+  background: #fff7f7;
+  color: #cb1c22;
+}
+
+.tp-recently-viewed-thumb {
+  width: 72px;
+  height: 72px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tp-recently-viewed-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.tp-recently-viewed-body h4 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.tp-recently-viewed-body p {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: baseline;
+}
+
+.tp-recently-viewed-body strong {
+  font-size: 15px;
+  color: #cb1c22;
+}
+
+.tp-recently-viewed-body span {
+  font-size: 12px;
+  color: #6b7280;
+  text-decoration: line-through;
+}
+
+@media (max-width: 1024px) {
+  .tp-recently-viewed-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .tp-recently-viewed-head h2 {
+    font-size: 28px;
+  }
+
+  .tp-recently-viewed-list {
+    grid-template-columns: 1fr;
+  }
+}

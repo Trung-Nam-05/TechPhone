@@ -1,4 +1,8 @@
 import nodemailer from 'nodemailer';
+import {
+  getDefaultFlashSaleVariables,
+  renderNamedEmailTemplate,
+} from './emailTemplates.js';
 
 function getMailConfig() {
   return {
@@ -52,5 +56,26 @@ export async function sendPasswordResetEmail({ to, resetUrl, username }) {
   const subject = 'Khôi phục mật khẩu — TechPhone';
   const text = `Xin chào ${username || 'bạn'},\n\nNhấn liên kết sau để đặt lại mật khẩu TechPhone:\n${resetUrl}\n\nLiên kết hết hạn sau 1 giờ. Nếu bạn không yêu cầu, hãy bỏ qua email này.`;
   const html = `<p>Xin chào <strong>${username || 'bạn'}</strong>,</p><p><a href="${resetUrl}">Đặt lại mật khẩu</a></p><p>Liên kết hết hạn sau 1 giờ.</p>`;
+  await sendMail({ to, subject, text, html });
+}
+
+export async function renderFlashSaleEmail(variables = {}) {
+  const vars = getDefaultFlashSaleVariables(variables);
+  return renderNamedEmailTemplate('flash-sale', vars);
+}
+
+export async function sendFlashSaleMarketingEmail({ to, variables = {} }) {
+  const vars = getDefaultFlashSaleVariables(variables);
+  const html = await renderNamedEmailTemplate('flash-sale', vars);
+  const subject = `Flash Sale TechPhone — Giảm ${vars.discountPercent}% với mã ${vars.promoCode}`;
+  const text = [
+    `Xin chao ${vars.customerName},`,
+    '',
+    `Flash Sale tai TechPhone — giam den ${vars.discountPercent}%.`,
+    `Ma uu dai: ${vars.promoCode} (het han ${vars.expiresAt}).`,
+    `Mua ngay: ${vars.shopUrl}`,
+    '',
+    'TechPhone — Dien thoai & cong nghe chinh hang.',
+  ].join('\n');
   await sendMail({ to, subject, text, html });
 }

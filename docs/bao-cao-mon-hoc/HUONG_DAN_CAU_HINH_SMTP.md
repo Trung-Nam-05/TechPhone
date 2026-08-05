@@ -8,6 +8,7 @@ TechPhone dùng **nodemailer** (`server/src/services/mail.js`) để gửi:
 
 - Email **xác minh liên kết** (`/account/security`)
 - Email **quên mật khẩu** (`/forgot-password`)
+- Email **marketing Flash Sale** (`POST /api/admin/marketing/send-test`)
 
 ---
 
@@ -93,4 +94,22 @@ SMTP_PASS=mat_khau_outlook
 
 ## Marketing email
 
-Hiện tại app **chưa** gửi email khuyến mãi tự động. Liên kết + xác minh email là **nền tảng** để sau này gửi newsletter / xác nhận đơn qua cùng `mail.js`. Trong báo cáo GV mục 3.3.4, giải thích: *đã có SMTP + email liên kết xác minh; marketing campaign mở rộng sau*.
+Template HTML: `server/templates/email/flash-sale.html`
+
+API admin (cần đăng nhập admin):
+
+| Endpoint | Mô tả |
+|----------|-------|
+| `GET /api/admin/marketing/status` | Kiểm tra SMTP đã cấu hình chưa |
+| `POST /api/admin/marketing/preview` | Xem HTML template (body: `{ "variables": { "customerName": "Nam" } }`) |
+| `POST /api/admin/marketing/send-test` | Gửi thử 1 email (body: `{ "to": "ban@gmail.com" }`) |
+| `POST /api/admin/marketing/send-campaign` | Gửi tới tất cả khách hàng có email hợp lệ |
+
+Ví dụ gửi thử bằng curl (thay `TOKEN` bằng JWT admin):
+
+```bash
+curl -X POST http://localhost:4000/api/admin/marketing/send-test \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"to\":\"ban@gmail.com\",\"variables\":{\"promoCode\":\"SALE10\",\"discountPercent\":\"10\"}}"
+```

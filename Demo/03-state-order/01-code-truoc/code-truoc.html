@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <title>03-state-order — Code trước</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs2015.min.css" />
+  <style>
+    body { margin: 0; background: #1e1e1e; color: #ddd; font-family: Segoe UI, sans-serif; }
+    header { padding: 16px 20px; border-bottom: 1px solid #333; }
+    h1 { margin: 0 0 8px; font-size: 18px; color: #fff; }
+    .hint { color: #9cdcfe; font-size: 14px; }
+    pre { margin: 0; padding: 20px; font-size: 13px; line-height: 1.5; }
+    code.hljs { background: #1e1e1e !important; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>03-state-order — Code trước</h1>
+    <p class="hint">Bôi đen code bên dưới → Ctrl+C → dán vào Word → chọn <b>Keep Source Formatting</b> để giữ màu.</p>
+  </header>
+  <pre><code class="language-javascript">/**
+ * =====================================================================
+ * CODE TRƯỚC KHI ÁP DỤNG — State (Order lifecycle)
+ * =====================================================================
+ * Vấn đề: luật chuyển trạng thái rải if/else, admin gần như muốn gì cũng được
+ * =====================================================================
+ */
+
+export function canCustomerCancelBeforePattern(order) {
+  if (order.status === 'pending') return { ok: true, mode: 'immediate' };
+  if (order.status === 'confirmed') return { ok: true, mode: 'request' };
+  if (order.status === 'shipping') return { ok: true, mode: 'request' };
+  if (order.status === 'completed' || order.status === 'cancelled') {
+    return { ok: false, reason: 'ORDER_NOT_CANCELLABLE' };
+  }
+  return { ok: false, reason: 'ORDER_NOT_CANCELLABLE' };
+}
+
+/**
+ * Đổi status — phiên bản chưa có State Machine
+ */
+export function changeOrderStatusBeforePattern(order, toStatus, actor, reason = '') {
+  const fromStatus = order.status;
+
+  if (!toStatus || fromStatus === toStatus) {
+    return { ok: false, message: 'Không có thay đổi trạng thái' };
+  }
+
+  // ========== LUẬT RỜI RẠC — KHÓ BẢO TRÌ ==========
+  let allowed = false;
+
+  if (fromStatus === 'pending' &amp;&amp; (toStatus === 'confirmed' || toStatus === 'cancelled')) {
+    allowed = true;
+  } else if (fromStatus === 'confirmed' &amp;&amp; (toStatus === 'await_pickup' || toStatus === 'cancelled' || toStatus === 'shipping')) {
+    allowed = true;
+  } else if (fromStatus === 'await_pickup' &amp;&amp; (toStatus === 'picked' || toStatus === 'cancelled')) {
+    allowed = true;
+  } else if (fromStatus === 'picked' &amp;&amp; toStatus === 'shipping') {
+    allowed = true;
+  } else if (fromStatus === 'shipping' &amp;&amp; (toStatus === 'completed' || toStatus === 'delivery_failed' || toStatus === 'returned')) {
+    allowed = true;
+  }
+
+  // Admin "mở hết" — nguy hiểm, không bắt buộc lý do rõ ràng
+  if (!allowed &amp;&amp; actor === 'admin') {
+    allowed = true;
+  }
+
+  // Khách tự ý nhảy status nếu biết API
+  if (!allowed &amp;&amp; actor === 'customer' &amp;&amp; toStatus === 'completed') {
+    // bug tiềm ẩn: thiếu chặn
+    allowed = false;
+  }
+  // ===============================================
+
+  if (!allowed) {
+    return { ok: false, message: `Không thể chuyển ${fromStatus} → ${toStatus}` };
+  }
+
+  order.status = toStatus;
+  order.events = order.events || [];
+  order.events.push({
+    fromStatus,
+    toStatus,
+    actor,
+    reason,
+    at: new Date(),
+  });
+
+  return { ok: true, order };
+}
+
+export function applyGhnUpdateBeforePattern(order, ghnStatus) {
+  // Map GHN trộn luôn vào đổi status — chưa tách Adapter + State
+  let next = order.status;
+  if (ghnStatus === 'delivering') next = 'shipping';
+  if (ghnStatus === 'delivered') next = 'completed';
+  return changeOrderStatusBeforePattern(order, next, 'system');
+}
+</code></pre>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</body>
+</html>

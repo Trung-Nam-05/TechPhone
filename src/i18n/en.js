@@ -145,6 +145,7 @@ export default {
     total: 'Total',
     checkout: 'Checkout',
     viewedTitle: 'Recently viewed',
+    viewMore: 'View more',
   },
   productCard: {
     flashSale: 'Flash Sale',

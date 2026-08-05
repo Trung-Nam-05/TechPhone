@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <title>09-registry-factory — Code trước</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs2015.min.css" />
+  <style>
+    body { margin: 0; background: #1e1e1e; color: #ddd; font-family: Segoe UI, sans-serif; }
+    header { padding: 16px 20px; border-bottom: 1px solid #333; }
+    h1 { margin: 0 0 8px; font-size: 18px; color: #fff; }
+    .hint { color: #9cdcfe; font-size: 14px; }
+    pre { margin: 0; padding: 20px; font-size: 13px; line-height: 1.5; }
+    code.hljs { background: #1e1e1e !important; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>09-registry-factory — Code trước</h1>
+    <p class="hint">Bôi đen code bên dưới → Ctrl+C → dán vào Word → chọn <b>Keep Source Formatting</b> để giữ màu.</p>
+  </header>
+  <pre><code class="language-javascript">/**
+ * =====================================================================
+ * CODE TRƯỚC KHI ÁP DỤNG — Registry / Factory
+ * =====================================================================
+ * Vấn đề: vẫn if/else để new strategy ở nhiều nơi gọi
+ * =====================================================================
+ */
+
+export class CodPaymentStrategy {
+  key = 'cod';
+  normalize(raw) { return String(raw) === 'cod' ? 'cod' : null; }
+  getInitialOrderStatus() { return 'confirmed'; }
+}
+
+export class VnpayPaymentStrategy {
+  key = 'vnpay';
+  normalize(raw) { return String(raw) === 'vnpay' ? 'vnpay' : null; }
+  getInitialOrderStatus() { return 'pending'; }
+}
+
+export class InstallmentPaymentStrategy {
+  key = 'installment';
+  normalize(raw) { return String(raw) === 'installment' ? 'installment' : null; }
+  getInitialOrderStatus() { return 'pending'; }
+}
+
+/** Factory thủ công — mỗi chỗ gọi một kiểu if */
+export function getPaymentStrategyBeforePattern(method) {
+  if (method === 'cod') return new CodPaymentStrategy();
+  if (method === 'vnpay') return new VnpayPaymentStrategy();
+  if (method === 'installment') return new InstallmentPaymentStrategy();
+  return null;
+}
+
+/** Chỗ gọi 1: checkout */
+export function checkoutUseFactory(method) {
+  const strategy = getPaymentStrategyBeforePattern(method);
+  if (!strategy) throw new Error('Invalid payment');
+  return { status: strategy.getInitialOrderStatus(), key: strategy.key };
+}
+
+/** Chỗ gọi 2: idempotent retry — COPY if/else tương tự */
+export function retryPaymentUseFactory(method) {
+  let strategy = null;
+  if (method === 'cod') strategy = new CodPaymentStrategy();
+  else if (method === 'vnpay') strategy = new VnpayPaymentStrategy();
+  else if (method === 'installment') strategy = new InstallmentPaymentStrategy();
+  if (!strategy) throw new Error('Invalid payment');
+  return strategy;
+}
+
+/** Chỗ gọi 3: admin tool — lại if/else nữa */
+export function describePaymentBeforePattern(method) {
+  if (method === 'cod') return 'Thanh toán khi nhận hàng';
+  if (method === 'vnpay') return 'Thanh toán VNPAY';
+  if (method === 'installment') return 'Trả góp';
+  return 'Không xác định';
+}
+</code></pre>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</body>
+</html>

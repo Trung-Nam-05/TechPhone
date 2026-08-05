@@ -10,6 +10,7 @@ import {
   ShoppingBag,
   TicketPercent,
   Users,
+  Mail,
   Warehouse,
   Zap,
 } from 'lucide-react';
@@ -100,6 +101,10 @@ export default function AdminLayout() {
           <NavLink to="/admin/coupons" className={navClass}>
             <TicketPercent size={20} />
             <span className="admin-nav-label">Mã giảm giá</span>
+          </NavLink>
+          <NavLink to="/admin/marketing" className={navClass}>
+            <Mail size={20} />
+            <span className="admin-nav-label">Email marketing</span>
           </NavLink>
         </nav>
 

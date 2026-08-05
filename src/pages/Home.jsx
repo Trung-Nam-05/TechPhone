@@ -111,19 +111,27 @@ const DEAL_GROUPS = [
     items: [
       {
         name: 'Laptop',
-        image: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&w=120&h=120&q=80',
+        href: '/products?category=laptop',
+        image:
+          'https://cdn2.fptshop.com.vn/unsafe/360x0/filters:format(webp):quality(75)/laptop_ic_cate_47e7264bc7.png',
       },
       {
         name: 'Máy tính bảng',
-        image: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=120&h=120&q=80',
+        href: '/products?category=may-tinh-bang',
+        image:
+          'https://cdn2.fptshop.com.vn/unsafe/360x0/filters:format(webp):quality(75)/may_tinh_bang_ic_cate_dccb57ff5c.png',
       },
       {
         name: 'Màn hình',
-        image: 'https://images.unsplash.com/photo-1527443224154-c4f0617d6eb1?auto=format&fit=crop&w=120&h=120&q=80',
+        href: '/products?category=phu-kien&search=man%20hinh',
+        image:
+          'https://cdn2.fptshop.com.vn/unsafe/360x0/filters:format(webp):quality(75)/man_hinh_ic_cate_7663908793.png',
       },
       {
         name: 'Điện thoại',
-        image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=120&h=120&q=80',
+        href: '/products?category=dien-thoai',
+        image:
+          'https://cdn2.fptshop.com.vn/unsafe/360x0/filters:format(webp):quality(75)/icon_cate_dienthoai_1a4a34c043.png',
       },
     ],
   },
@@ -131,20 +139,28 @@ const DEAL_GROUPS = [
     title: 'Phụ kiện',
     items: [
       {
-        name: 'Máy chiếu',
-        image: 'https://images.unsplash.com/photo-1623410439349-0f8d0be4f7d6?auto=format&fit=crop&w=120&h=120&q=80',
+        name: 'Tai nghe',
+        href: '/products?category=phu-kien&search=tai%20nghe',
+        image:
+          'https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&w=120&h=120&q=80',
       },
       {
         name: 'Đồng hồ',
-        image: 'https://images.unsplash.com/photo-1523170335258-f5ed11844a49?auto=format&fit=crop&w=120&h=120&q=80',
+        href: '/products?category=phu-kien&search=dong%20ho',
+        image:
+          'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=120&h=120&q=80',
       },
       {
         name: 'Loa',
-        image: 'https://images.unsplash.com/photo-1545454675-3531b543be5d?auto=format&fit=crop&w=120&h=120&q=80',
+        href: '/products?category=phu-kien&search=loa',
+        image:
+          'https://images.unsplash.com/photo-1545454675-3531b543be5d?auto=format&fit=crop&w=120&h=120&q=80',
       },
       {
-        name: 'Tai nghe',
-        image: 'https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&w=120&h=120&q=80',
+        name: 'Phụ kiện',
+        href: '/products?category=phu-kien',
+        image:
+          'https://images.unsplash.com/photo-1622979135225-d2ba269cf1ac?auto=format&fit=crop&w=120&h=120&q=80',
       },
     ],
   },
@@ -153,19 +169,26 @@ const DEAL_GROUPS = [
     items: [
       {
         name: 'Máy lạnh',
-        image: 'https://images.unsplash.com/photo-1581275234979-6ef7b2f05cd5?auto=format&fit=crop&w=120&h=120&q=80',
+        href: '/products?category=may-lanh',
+        image: 'https://cdn2.fptshop.com.vn/thumb/thumb/may_lanh_dieu_hoa_42f5e11390.gif',
+        badge: true,
       },
       {
         name: 'Máy giặt',
-        image: 'https://images.unsplash.com/photo-1626806819282-2c1dc01a5e0c?auto=format&fit=crop&w=120&h=120&q=80',
+        href: '/products?category=dien-may&search=may%20giat',
+        image:
+          'https://images.unsplash.com/photo-1626806819282-2c1dc01a5e0c?auto=format&fit=crop&w=120&h=120&q=80',
       },
       {
-        name: 'Máy sấy',
-        image: 'https://images.unsplash.com/photo-1604335399105-a0c585fd81a1?auto=format&fit=crop&w=120&h=120&q=80',
+        name: 'Tivi',
+        href: '/products?category=dien-may&search=tivi',
+        image: 'https://cdn2.fptshop.com.vn/thumb/thumb/tivi_ad77c6b2eb.gif',
+        badge: true,
       },
       {
         name: 'Máy lọc không khí',
-        image: 'https://images.unsplash.com/photo-1585771724684-38269d6639fd?auto=format&fit=crop&w=120&h=120&q=80',
+        href: '/products?category=dien-may&search=loc%20khong%20khi',
+        image: 'https://cdn2.fptshop.com.vn/thumb/thumb/may_loc_nuoc_f5c5f2d359.gif',
       },
     ],
   },
@@ -278,10 +301,13 @@ export default function Home() {
           {DEAL_GROUPS.map((group) => (
             <article key={group.title} className="tp-deal-column">
               <h4>{group.title}</h4>
-              <div>
+              <div className="tp-deal-column-grid">
                 {group.items.map((item) => (
-                  <Link to={`/products?search=${encodeURIComponent(item.name)}`} key={item.name} className="tp-deal-item">
-                    <img src={item.image} alt={`${item.name}.png`} loading="lazy" />
+                  <Link to={item.href} key={item.name} className="tp-deal-item">
+                    <div className="tp-deal-item-thumb">
+                      <img src={item.image} alt={item.name} loading="lazy" />
+                      {item.badge ? <em>1 đổi 1</em> : null}
+                    </div>
                     <span>{item.name}</span>
                   </Link>
                 ))}

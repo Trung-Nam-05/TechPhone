@@ -1,0 +1,79 @@
+.admin-marketing-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.admin-marketing-form {
+  height: fit-content;
+}
+
+.admin-marketing-note {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: var(--admin-muted);
+}
+
+.admin-marketing-subtitle {
+  margin: 0 0 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--admin-text);
+}
+
+.admin-marketing-divider {
+  margin: 20px 0;
+  border: 0;
+  border-top: 1px solid var(--admin-border-light);
+}
+
+.admin-marketing-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.admin-marketing-actions .btn,
+.admin-marketing-form .btn-primary,
+.admin-marketing-campaign-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.admin-marketing-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.admin-marketing-status.is-ready {
+  background: var(--admin-success-light);
+  color: var(--admin-success);
+}
+
+.admin-marketing-status.is-pending {
+  background: var(--admin-warning-light);
+  color: var(--admin-warning);
+}
+
+.admin-marketing-preview {
+  min-height: 640px;
+}
+
+.admin-marketing-preview-frame {
+  width: 100%;
+  min-height: 600px;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius-sm);
+  background: #f6f6f6;
+}
+
+@media (max-width: 1024px) {
+  .admin-marketing-layout {
+    grid-template-columns: 1fr;
+  }
+}

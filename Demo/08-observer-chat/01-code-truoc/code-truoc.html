@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <title>08-observer-chat — Code trước</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs2015.min.css" />
+  <style>
+    body { margin: 0; background: #1e1e1e; color: #ddd; font-family: Segoe UI, sans-serif; }
+    header { padding: 16px 20px; border-bottom: 1px solid #333; }
+    h1 { margin: 0 0 8px; font-size: 18px; color: #fff; }
+    .hint { color: #9cdcfe; font-size: 14px; }
+    pre { margin: 0; padding: 20px; font-size: 13px; line-height: 1.5; }
+    code.hljs { background: #1e1e1e !important; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>08-observer-chat — Code trước</h1>
+    <p class="hint">Bôi đen code bên dưới → Ctrl+C → dán vào Word → chọn <b>Keep Source Formatting</b> để giữ màu.</p>
+  </header>
+  <pre><code class="language-javascript">/**
+ * =====================================================================
+ * CODE TRƯỚC KHI ÁP DỤNG — Observer (Chat realtime)
+ * =====================================================================
+ * Vấn đề: client poll API liên tục, chậm và tốn request
+ * =====================================================================
+ */
+
+export function createChatStoreBeforePattern() {
+  let messages = [];
+  let listeners = [];
+
+  return {
+    getMessages() {
+      return messages;
+    },
+    setMessages(next) {
+      messages = next;
+      listeners.forEach((fn) =&gt; fn(messages));
+    },
+    subscribe(fn) {
+      listeners.push(fn);
+      return () =&gt; {
+        listeners = listeners.filter((x) =&gt; x !== fn);
+      };
+    },
+  };
+}
+
+/**
+ * Polling mỗi 2 giây — chưa dùng Socket Observer
+ */
+export function startPollingMessagesBeforePattern({
+  conversationId,
+  authFetch,
+  onUpdate,
+  intervalMs = 2000,
+}) {
+  let stopped = false;
+  let timer = null;
+  let inFlight = false;
+
+  async function tick() {
+    if (stopped || inFlight) return;
+    inFlight = true;
+    try {
+      const data = await authFetch(`/api/support/conversations/${conversationId}/messages`);
+      onUpdate(data?.items || []);
+    } catch (error) {
+      console.error('Poll messages failed', error);
+    } finally {
+      inFlight = false;
+    }
+  }
+
+  tick();
+  timer = setInterval(tick, intervalMs);
+
+  return function stopPolling() {
+    stopped = true;
+    if (timer) clearInterval(timer);
+  };
+}
+
+/** Gửi tin xong vẫn phải chờ poll mới thấy tin phía bên kia */
+export async function sendMessageBeforePattern({ conversationId, body, authFetch }) {
+  await authFetch(`/api/support/conversations/${conversationId}/messages`, {
+    method: 'POST',
+    body: JSON.stringify({ body }),
+  });
+  // Không có push realtime → admin/customer phải đợi lần poll kế tiếp
+  return { ok: true, realtime: false };
+}
+</code></pre>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</body>
+</html>
