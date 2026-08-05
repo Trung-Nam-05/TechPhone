@@ -1,4 +1,5 @@
 import { Server } from 'socket.io';
+import { createCorsOriginCallback } from './utils/allowedOrigins.js';
 import {
   sendMessage,
   markConversationRead,
@@ -45,19 +46,9 @@ export function emitAdminSupportMessage(message) {
 }
 
 export function initSocket(httpServer) {
-  const clientOrigin = process.env.SOCKET_CORS_ORIGIN || process.env.CLIENT_ORIGIN || 'http://localhost:5173';
-  const allowLocalhostOrigins = process.env.ALLOW_LOCALHOST_ORIGINS !== 'false';
-
   io = new Server(httpServer, {
     cors: {
-      origin: (origin, callback) => {
-        if (!origin) return callback(null, true);
-        if (origin === clientOrigin) return callback(null, true);
-        if (allowLocalhostOrigins && /^http:\/\/localhost:\d+$/.test(origin)) {
-          return callback(null, true);
-        }
-        return callback(new Error(`Origin not allowed by CORS: ${origin}`));
-      },
+      origin: createCorsOriginCallback(),
       credentials: false,
     },
   });

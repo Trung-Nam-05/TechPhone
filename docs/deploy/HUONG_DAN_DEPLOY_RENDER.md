@@ -43,13 +43,16 @@ Thay `https://YOUR-APP.onrender.com` bằng URL thật (vd `https://techphone-ab
 
 ### Bắt buộc
 
+Thay `https://YOUR-APP.onrender.com` bằng **URL thật** trên Render Dashboard (vd `https://techphone-c4ue.onrender.com`).  
+Render tự inject `RENDER_EXTERNAL_URL` — app dùng làm fallback CORS nếu bạn nhập sai URL.
+
 | Key | Value |
 |-----|-------|
 | `MONGODB_URI` | *(copy từ .env local)* |
 | `JWT_SECRET` | Chuỗi random dài, **khác** local dev |
-| `CLIENT_ORIGIN` | `https://YOUR-APP.onrender.com` |
-| `API_PUBLIC_URL` | `https://YOUR-APP.onrender.com` |
-| `SOCKET_CORS_ORIGIN` | `https://YOUR-APP.onrender.com` |
+| `CLIENT_ORIGIN` | URL thật từ Dashboard (copy chính xác, **không** slash cuối) |
+| `API_PUBLIC_URL` | Cùng URL (VNPAY return, email verify) |
+| `SOCKET_CORS_ORIGIN` | Cùng URL (chat realtime) |
 | `ALLOW_LOCALHOST_ORIGINS` | `false` |
 | `SERVE_STATIC` | `true` |
 | `NODE_ENV` | `production` |
@@ -148,7 +151,7 @@ Dev hàng ngày vẫn dùng: `npm run dev:full`
 | Triệu chứng | Nguyên nhân | Cách sửa |
 |-------------|-------------|----------|
 | Build fail OOM | Free tier RAM thấp | Deploy lại; hoặc upgrade plan tạm |
-| 403 khi POST API | `CLIENT_ORIGIN` sai | Trùng URL trình duyệt (https, không slash cuối) |
+| 403 khi POST API | `CLIENT_ORIGIN` sai | Trùng URL Dashboard; hoặc chờ deploy mới (dùng `RENDER_EXTERNAL_URL`) |
 | VNPAY lỗi callback | `API_PUBLIC_URL` sai | = URL Render, HTTPS |
 | MongoDB timeout | Atlas chặn IP | Network Access `0.0.0.0/0` |
 | Trang trắng | Build FE fail | Xem Logs build stage |

@@ -1,3 +1,5 @@
+import { isAllowedOrigin } from '../utils/allowedOrigins.js';
+
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 const CSRF_EXEMPT_PREFIXES = [
@@ -8,25 +10,6 @@ const CSRF_EXEMPT_PREFIXES = [
 
 function isExempt(pathname) {
   return CSRF_EXEMPT_PREFIXES.some((prefix) => pathname.startsWith(prefix));
-}
-
-function normalizeOrigin(value) {
-  if (!value) return null;
-  try {
-    return new URL(value).origin;
-  } catch {
-    return null;
-  }
-}
-
-function isAllowedClientOrigin(originOrReferer) {
-  const clientOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
-  const allowLocalhost = process.env.ALLOW_LOCALHOST_ORIGINS !== 'false';
-  const origin = normalizeOrigin(originOrReferer);
-  if (!origin) return false;
-  if (origin === normalizeOrigin(clientOrigin)) return true;
-  if (allowLocalhost && /^http:\/\/localhost:\d+$/.test(origin)) return true;
-  return false;
 }
 
 /**
@@ -50,7 +33,7 @@ export function csrfGuard(req, res, next) {
 
   const origin = req.get('origin');
   const referer = req.get('referer');
-  const originOk = isAllowedClientOrigin(origin) || isAllowedClientOrigin(referer);
+  const originOk = isAllowedOrigin(origin) || isAllowedOrigin(referer);
 
   if (!originOk) {
     return res.status(403).json({ message: 'Origin not allowed.' });

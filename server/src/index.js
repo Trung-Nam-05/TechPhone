@@ -42,6 +42,10 @@ import { buildSitemapXml } from './services/sitemap.js';
 import { isMailConfigured } from './services/mail.js';
 import { csrfGuard } from './middleware/csrfGuard.js';
 import {
+  createCorsOriginCallback,
+  getPrimaryClientOrigin,
+} from './utils/allowedOrigins.js';
+import {
   aiChatHttpLimiter,
   authRouteLimiter,
   globalApiLimiter,
@@ -51,19 +55,11 @@ import {
 const app = express();
 app.set('trust proxy', 1);
 const port = Number(process.env.PORT || 4000);
-const clientOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
-const allowLocalhostOrigins = process.env.ALLOW_LOCALHOST_ORIGINS !== 'false';
+const clientOrigin = getPrimaryClientOrigin();
 
 app.use(
   cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-      if (origin === clientOrigin) return callback(null, true);
-      if (allowLocalhostOrigins && /^http:\/\/localhost:\d+$/.test(origin)) {
-        return callback(null, true);
-      }
-      return callback(new Error(`Origin not allowed by CORS: ${origin}`));
-    },
+    origin: createCorsOriginCallback(),
     credentials: false,
   }),
 );
@@ -82,7 +78,7 @@ app.get('/api/health', (_req, res) => {
 
 app.get('/sitemap.xml', async (_req, res, next) => {
   try {
-    const siteUrl = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
+    const siteUrl = clientOrigin;
     const xml = await buildSitemapXml(siteUrl);
     res.type('application/xml').send(xml);
   } catch (error) {
