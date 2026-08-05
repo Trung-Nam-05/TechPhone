@@ -40,6 +40,7 @@ export function AuthProvider({ children }) {
         headers.set('Content-Type', 'application/json');
       }
       headers.set('x-session-id', getSessionId());
+      headers.set('X-Requested-With', 'TechPhone');
       if (token) {
         headers.set('Authorization', `Bearer ${token}`);
       }
@@ -61,7 +62,7 @@ export function AuthProvider({ children }) {
     [token],
   );
 
-  const login = async ({ email, password }) => {
+  const login = async ({ login: loginId, email, password }) => {
     setLoading(true);
     setError(null);
     try {
@@ -70,8 +71,9 @@ export function AuthProvider({ children }) {
         headers: {
           'Content-Type': 'application/json',
           'x-session-id': getSessionId(),
+          'X-Requested-With': 'TechPhone',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ login: loginId || email, password }),
       });
       if (!response.ok) {
         throw new Error(await parseError(response));
@@ -88,7 +90,7 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const register = async ({ name, email, password }) => {
+  const register = async ({ name, username, email, password }) => {
     setLoading(true);
     setError(null);
     try {
@@ -97,8 +99,9 @@ export function AuthProvider({ children }) {
         headers: {
           'Content-Type': 'application/json',
           'x-session-id': getSessionId(),
+          'X-Requested-With': 'TechPhone',
         },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, username: username || email, password }),
       });
       if (!response.ok) {
         throw new Error(await parseError(response));

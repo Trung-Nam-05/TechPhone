@@ -132,7 +132,10 @@ export function toSafeUser(user) {
   return {
     id: user._id,
     name: user.name,
+    username: user.username || '',
     email: user.email,
+    contactEmail: user.contactEmail || '',
+    contactEmailVerified: user.contactEmailVerified === true,
     phone: user.phone || '',
     avatar: user.avatar || '',
     role: user.role,

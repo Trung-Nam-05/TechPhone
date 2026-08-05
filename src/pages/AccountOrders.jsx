@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/I18nContext';
 import { OrderStatusBadge, PaymentStatusBadge } from '../components/OrderStatusBadge';
+import PendingVnpayBanner from '../components/PendingVnpayBanner';
 
 function shortOrderId(id) {
   if (!id) return '';
@@ -63,6 +64,7 @@ export default function AccountOrders() {
     <div>
       <h1 className="account-page-title">{t('account.ordersTitle')}</h1>
       <p className="account-page-sub">Theo dõi trạng thái và chi tiết các đơn hàng của bạn.</p>
+      <PendingVnpayBanner orders={items} />
       {error && <p style={{ color: '#dc2626', marginBottom: 12 }}>{error}</p>}
       {loading ? (
         <p className="text-muted">{t('account.loadingOrders')}</p>

@@ -198,6 +198,34 @@ export function CartProvider({ children }) {
     });
   };
 
+  const reloadCartFromServer = useCallback(async () => {
+    setIsSyncing(true);
+    setSyncError(null);
+    try {
+      const payload = await apiFetch('/api/cart');
+      const normalizedItems = (payload.items || [])
+        .filter((item) => item.product)
+        .map((item) => ({
+          id: item.product.legacyId || item.product._id,
+          _id: item.product._id,
+          legacyId: item.product.legacyId,
+          name: item.product.name,
+          price: item.product.price,
+          oldPrice: item.product.oldPrice,
+          image: item.product.image,
+          category: item.product.category?.key || 'phu-kien',
+          quantity: item.quantity,
+        }));
+      setCartItems(normalizedItems);
+      return normalizedItems;
+    } catch (error) {
+      setSyncError(error.message);
+      throw error;
+    } finally {
+      setIsSyncing(false);
+    }
+  }, []);
+
   const cartCount = useMemo(
     () => cartItems.reduce((total, item) => total + item.quantity, 0),
     [cartItems],
@@ -218,6 +246,7 @@ export function CartProvider({ children }) {
         removeFromCart,
         updateQuantity,
         clearCart,
+        reloadCartFromServer,
         syncCartNow,
         toastMessage,
         isSyncing,

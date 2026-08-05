@@ -9,6 +9,7 @@ import { PRODUCT_CATEGORIES, PRODUCTS, getCategoryLabel } from '../data/products
 import { API_BASE_URL } from '../config/api';
 import { formatCountdown, getFlashSaleState } from '../utils/flashSale';
 import { getProductPath } from '../utils/productUrl';
+import PageMeta from '../components/PageMeta';
 import './Products.css';
 import './ApplianceCategory.css';
 
@@ -710,6 +711,11 @@ export default function Products() {
 
   return (
     <div className="container tp-products-page">
+      <PageMeta
+        title={filter === 'all' ? 'Sản phẩm' : getCategoryLabel(filter)}
+        description={`Mua ${filter === 'all' ? 'sản phẩm công nghệ' : getCategoryLabel(filter).toLowerCase()} tại TechPhone — giá tốt, chính hãng, giao hàng nhanh.`}
+        canonicalPath={filter === 'all' && !searchTerm ? '/products' : `/products?${new URLSearchParams({ ...(filter !== 'all' ? { category: filter } : {}), ...(searchTerm ? { search: searchTerm } : {}) }).toString()}`}
+      />
       {filter === 'dien-thoai' ? (
         <div className="tp-phone-page">
           <div className="tp-phone-head">

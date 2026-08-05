@@ -34,6 +34,9 @@ import OrderDetail from './pages/OrderDetail';
 import AdminUsers from './pages/AdminUsers';
 import AdminSupport from './pages/AdminSupport';
 import VnpayResult from './pages/VnpayResult';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import EmailVerified from './pages/EmailVerified';
 
 function App() {
   return (
@@ -89,6 +92,9 @@ function App() {
         <Route path="coupon" element={<Coupon />} />
         <Route path="login" element={<Login />} />
         <Route path="register" element={<Register />} />
+        <Route path="forgot-password" element={<ForgotPassword />} />
+        <Route path="reset-password" element={<ResetPassword />} />
+        <Route path="email-verified" element={<EmailVerified />} />
         <Route path="segments" element={<CustomerSegments />} />
         <Route path="program" element={<ExecutionProgram />} />
         <Route path="policies/:slug" element={<PolicyPage />} />

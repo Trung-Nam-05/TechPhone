@@ -11,7 +11,9 @@ function extractBearerToken(req) {
 
 async function attachAuthContext(req, token) {
   const payload = verifyAccessToken(token);
-  const user = await User.findById(payload.sub).select('_id name email role isActive');
+  const user = await User.findById(payload.sub).select(
+    '_id name username email contactEmail contactEmailVerified phone avatar role isActive createdAt updatedAt',
+  );
   if (!user) {
     throw new Error('USER_NOT_FOUND');
   }

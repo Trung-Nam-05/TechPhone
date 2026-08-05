@@ -35,6 +35,14 @@ import { startGhnDemoProgressJob } from './services/ghnDemoProgress.js';
 import { isGhnConfigured, isGhnDevApi, isGhnProductionApi } from './services/ghn.js';
 import { ensureDefaultCategories } from './services/ensureCategories.js';
 import { ensureDefaultCoupons } from './services/ensureCoupons.js';
+import { buildSitemapXml } from './services/sitemap.js';
+import { csrfGuard } from './middleware/csrfGuard.js';
+import {
+  aiChatHttpLimiter,
+  authRouteLimiter,
+  globalApiLimiter,
+  orderCreateLimiter,
+} from './middleware/rateLimit.js';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -56,6 +64,8 @@ app.use(
   }),
 );
 app.use(express.json({ limit: '512kb' }));
+app.use('/api', globalApiLimiter);
+app.use(csrfGuard);
 
 app.get('/api/health', (_req, res) => {
   res.json({
@@ -65,13 +75,25 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
+app.get('/sitemap.xml', async (_req, res, next) => {
+  try {
+    const siteUrl = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
+    const xml = await buildSitemapXml(siteUrl);
+    res.type('application/xml').send(xml);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.use('/api/auth/login', authRouteLimiter);
+app.use('/api/auth/register', authRouteLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use(optionalAuth);
 app.use('/api/cart', cartRoutes);
 app.use('/api/coupons', couponRoutes);
-app.use('/api/orders', orderRoutes);
+app.use('/api/orders', orderCreateLimiter, orderRoutes);
 app.use('/api/admin/products', adminProductRoutes);
 app.use('/api/admin/orders', adminOrderRoutes);
 app.use('/api/admin/inventory', adminInventoryRoutes);
@@ -88,7 +110,7 @@ app.use('/api/payments/vnpay', vnpayPaymentRoutes);
 app.use('/api/shipping/ghn', ghnShippingRoutes);
 app.use('/api/support', supportChatRoutes);
 app.use('/api/admin/support', adminSupportRoutes);
-app.use('/api/ai-chat', aiChatRoutes);
+app.use('/api/ai-chat', aiChatHttpLimiter, aiChatRoutes);
 
 app.use((err, _req, res, _next) => {
   console.error(err);

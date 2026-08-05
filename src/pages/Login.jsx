@@ -9,7 +9,7 @@ export default function Login() {
   const { login, loading, error } = useAuth();
   const { t } = useI18n();
 
-  const [email, setEmail] = useState('');
+  const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
 
   const redirectPath = location.state?.from || '/';
@@ -17,7 +17,7 @@ export default function Login() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     try {
-      await login({ email, password });
+      await login({ login: loginId, password });
       navigate(redirectPath, { replace: true });
     } catch {
       // Error state is exposed by auth context.
@@ -30,14 +30,14 @@ export default function Login() {
         <h1 style={{ fontSize: 28, marginBottom: 16 }}>{t('login.title')}</h1>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label className="block text-sm font-medium mb-1">{t('login.email')}</label>
+            <label className="block text-sm font-medium mb-1">Tên đăng nhập hoặc email</label>
             <input
-              type="email"
+              type="text"
               className="input"
               data-testid="login-email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder={t('login.emailPlaceholder')}
+              value={loginId}
+              onChange={(event) => setLoginId(event.target.value)}
+              placeholder="username hoặc email@example.com"
               required
             />
           </div>
@@ -53,6 +53,9 @@ export default function Login() {
               required
             />
           </div>
+          <p className="text-sm" style={{ marginBottom: 12 }}>
+            <Link to="/forgot-password">Quên mật khẩu?</Link>
+          </p>
           {error && (
             <p className="text-sm mb-4" style={{ color: '#dc2626' }} data-testid="login-error">
               {error}

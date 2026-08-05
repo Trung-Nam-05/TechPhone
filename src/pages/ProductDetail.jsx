@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../context/I18nContext';
 import { API_BASE_URL } from '../config/api';
 import { getProductPath } from '../utils/productUrl';
+import PageMeta from '../components/PageMeta';
 import './ProductDetail.css';
 
 function toCartShape(p) {
@@ -171,6 +172,14 @@ export default function ProductDetail() {
 
   return (
     <div className="container tp-detail-page">
+      <PageMeta
+        title={product.name}
+        description={
+          product.description?.slice(0, 155) ||
+          `Mua ${product.name} chính hãng tại TechPhone. Giá ${Number(product.price || 0).toLocaleString('vi-VN')}đ.`
+        }
+        canonicalPath={getProductPath(product)}
+      />
       <p className="tp-detail-breadcrumb">
         <Link to="/">{t('productDetail.breadcrumbHome')}</Link> /{' '}
         <Link to={`/products?category=${product.category?.key || 'all'}`}>{categoryLabel}</Link> / <span>{product.name}</span>

@@ -1,6 +1,7 @@
 import { ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import HeroCarousel from '../components/HeroCarousel';
+import PageMeta from '../components/PageMeta';
 import './Home.css';
 
 const HIGHLIGHT_CATEGORIES = [
@@ -201,6 +202,11 @@ const MOBILE_NEWS = [
 export default function Home() {
   return (
     <div className="tp-home-page">
+      <PageMeta
+        title="Trang chủ"
+        description="TechPhone — Điện thoại, laptop, phụ kiện công nghệ chính hãng. Ưu đãi hấp dẫn, giao hàng nhanh toàn quốc."
+        canonicalPath="/"
+      />
       <section className="tp-home-hero">
         <div className="container tp-home-hero-container">
           <div className="tp-home-hero-grid tp-home-hero-grid-main">

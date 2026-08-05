@@ -21,6 +21,7 @@ export async function apiFetch(path, options = {}) {
   }
 
   headers.set('x-session-id', getSessionId());
+  headers.set('X-Requested-With', 'TechPhone');
   try {
     const authState = JSON.parse(localStorage.getItem(AUTH_STORAGE_KEY) || '{}');
     if (authState?.token) {

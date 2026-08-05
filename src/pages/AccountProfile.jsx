@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { getDisplayLoginEmail } from '../utils/accountEmail';
 
 function readFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {
@@ -61,6 +62,8 @@ export default function AccountProfile() {
     }
   };
 
+  const displayLoginEmail = getDisplayLoginEmail(user);
+
   return (
     <div>
       <h1 className="account-page-title">Thông tin cá nhân</h1>
@@ -88,15 +91,41 @@ export default function AccountProfile() {
           </div>
         </div>
 
+        {user?.username && (
+          <div>
+            <label className="block text-sm font-medium mb-1">Tên đăng nhập</label>
+            <input className="input" value={user.username} disabled />
+            <p className="text-sm text-muted" style={{ marginTop: 4 }}>Tên đăng nhập không thể đổi sau khi tạo.</p>
+          </div>
+        )}
+
         <div>
           <label className="block text-sm font-medium mb-1">Họ và tên</label>
           <input className="input" value={name} onChange={(e) => setName(e.target.value)} required />
         </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Email</label>
-          <input className="input" value={user?.email || ''} disabled />
-          <p className="text-sm text-muted" style={{ marginTop: 4 }}>Email đăng nhập không thể đổi tại đây.</p>
-        </div>
+        {displayLoginEmail ? (
+          <div>
+            <label className="block text-sm font-medium mb-1">Email đăng nhập</label>
+            <input className="input" value={displayLoginEmail} disabled />
+            <p className="text-sm text-muted" style={{ marginTop: 4 }}>Tài khoản cũ đăng nhập bằng email.</p>
+          </div>
+        ) : null}
+        {user?.contactEmail ? (
+          <div>
+            <label className="block text-sm font-medium mb-1">Email liên kết</label>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <input className="input" value={user.contactEmail} disabled style={{ flex: 1, minWidth: 220 }} />
+              {user.contactEmailVerified ? (
+                <span style={{ color: '#16a34a', fontSize: 13, fontWeight: 600 }}>Đã xác minh</span>
+              ) : (
+                <span style={{ color: '#ca8a04', fontSize: 13, fontWeight: 600 }}>Chờ xác minh</span>
+              )}
+            </div>
+            <p className="text-sm text-muted" style={{ marginTop: 4 }}>
+              Email liên kết dùng để nhận khuyến mãi và khôi phục mật khẩu.
+            </p>
+          </div>
+        ) : null}
         <div>
           <label className="block text-sm font-medium mb-1">Số điện thoại</label>
           <input

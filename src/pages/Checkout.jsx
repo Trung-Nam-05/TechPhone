@@ -1,23 +1,22 @@
 import { useMemo, useState, useEffect } from 'react';
-import { ChevronDown, ChevronLeft, ChevronRight, CircleHelp, Ticket, X } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { ChevronDown, ChevronLeft, CircleHelp, FileText, Ticket, Wallet } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { apiFetch, getOrderIdempotencyKey, rotateOrderIdempotencyKey } from '../config/api';
 import { useAnalytics } from '../context/AnalyticsContext';
 import { useAuth } from '../context/AuthContext';
 import { calculateCouponPricing, getStoredSelectedCouponIds } from '../data/coupons';
 import OrderSuccessResult from '../components/OrderSuccessResult';
-import { PAYMENT_UI_STRATEGIES, resolvePaymentUiStrategy } from '../patterns/paymentUiStrategies';
+import PendingVnpayBanner from '../components/PendingVnpayBanner';
+import {
+  getPrimaryPaymentOptions,
+  getSecondaryPaymentOptions,
+  resolvePaymentUiStrategy,
+} from '../patterns/paymentUiStrategies';
 import './Checkout.css';
 
-const PAYMENT_OPTIONS = PAYMENT_UI_STRATEGIES;
-
-const INSTALLMENT_METHODS = [
-  { key: 'kredivo', label: 'Trả góp qua Kredivo', icon: '🟧' },
-  { key: 'home-paylater', label: 'Trả góp qua Home Paylater', icon: '🟥' },
-  { key: 'finance-company', label: 'Trả góp qua công ty tài chính', icon: '🏛️' },
-  { key: 'credit-installment', label: 'Trả góp qua thẻ tín dụng', icon: '💳' },
-];
+const PRIMARY_PAYMENTS = getPrimaryPaymentOptions();
+const SECONDARY_PAYMENTS = getSecondaryPaymentOptions();
 
 const EMPTY_SHIPPING_FORM = {
   fullName: '',
@@ -30,7 +29,6 @@ const EMPTY_SHIPPING_FORM = {
 };
 
 export default function Checkout() {
-  const navigate = useNavigate();
   const { authFetch, isAuthenticated, user, updateProfile } = useAuth();
   const { cartItems, cartCount, cartTotal, clearCart, syncCartNow } = useCart();
   const { track } = useAnalytics();
@@ -45,8 +43,9 @@ export default function Checkout() {
     supportInstall: false,
     customNote: false,
   });
-  const [showInstallmentModal, setShowInstallmentModal] = useState(false);
   const [selectedCouponIds] = useState(() => getStoredSelectedCouponIds());
+  const [showMorePayments, setShowMorePayments] = useState(false);
+  const [pendingVnpayOrders, setPendingVnpayOrders] = useState([]);
   const [orderLoadError, setOrderLoadError] = useState(null);
   const [shippingForm, setShippingForm] = useState(() => ({
     ...EMPTY_SHIPPING_FORM,
@@ -96,6 +95,24 @@ export default function Checkout() {
     };
   }, [isAuthenticated, user?.id, user?.name, user?.phone, user?.email, authFetch]);
 
+  useEffect(() => {
+    let cancelled = false;
+    const loadPendingVnpay = async () => {
+      try {
+        const payload = isAuthenticated
+          ? await authFetch('/api/orders')
+          : await apiFetch('/api/orders');
+        if (!cancelled) setPendingVnpayOrders(payload?.items || []);
+      } catch {
+        if (!cancelled) setPendingVnpayOrders([]);
+      }
+    };
+    loadPendingVnpay();
+    return () => {
+      cancelled = true;
+    };
+  }, [authFetch, isAuthenticated]);
+
   const shippingFee = 0;
   const { selectedCoupons, totalDiscount } = useMemo(
     () => calculateCouponPricing(cartItems, cartTotal, selectedCouponIds),
@@ -106,7 +123,7 @@ export default function Checkout() {
   const totalPromotion = productDiscount + voucherDiscount;
   const totalAmount = Math.max(cartTotal + shippingFee - totalPromotion, 0);
   const selectedPayment = resolvePaymentUiStrategy(selectedPaymentKey);
-  const isInstallmentSelected = selectedPayment.orderPaymentMethod === 'installment';
+  const isDemoPaymentBlocked = selectedPayment.comingSoon === true;
 
   const handleSpecialRequest = (key) => {
     setSpecialRequests((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -169,7 +186,6 @@ export default function Checkout() {
         : await apiFetch('/api/orders', orderRequest);
 
       if (payload?.paymentUrl) {
-        clearCart();
         rotateOrderIdempotencyKey();
         if (isAuthenticated && shippingInfo.phone && !user?.phone) {
           updateProfile({ phone: shippingInfo.phone }).catch(() => {});
@@ -244,6 +260,7 @@ export default function Checkout() {
   return (
     <div className="tp-checkout-page">
       <div className="container">
+        <PendingVnpayBanner orders={pendingVnpayOrders} />
         <form id="checkout-form" onSubmit={handleSubmit} className="tp-checkout-layout">
           <section className="tp-checkout-left">
             <Link to="/cart" className="tp-checkout-back">
@@ -420,11 +437,21 @@ export default function Checkout() {
 
             <div className="tp-checkout-card">
               <div className="tp-checkout-switch-row">
-                <h3>Xuất hóa đơn điện tử</h3>
+                <div className="tp-invoice-switch-label">
+                  <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {invoiceEnabled && <FileText size={18} color="#2563eb" aria-hidden />}
+                    Xuất hóa đơn điện tử
+                  </h3>
+                  <small className={invoiceEnabled ? 'is-on' : ''}>
+                    {invoiceEnabled ? 'Đã bật — hóa đơn sẽ kèm theo đơn hàng' : 'Tắt — bật nếu bạn cần hóa đơn VAT'}
+                  </small>
+                </div>
                 <button
                   type="button"
                   className={invoiceEnabled ? 'tp-switch tp-switch-on' : 'tp-switch'}
                   onClick={() => setInvoiceEnabled((prev) => !prev)}
+                  aria-pressed={invoiceEnabled}
+                  aria-label={invoiceEnabled ? 'Tắt xuất hóa đơn điện tử' : 'Bật xuất hóa đơn điện tử'}
                 >
                   <span />
                 </button>
@@ -434,7 +461,7 @@ export default function Checkout() {
             <div className="tp-checkout-card">
               <h3>Phương thức thanh toán</h3>
               <div className="tp-checkout-payment-list">
-                {PAYMENT_OPTIONS.map((option) => (
+                {PRIMARY_PAYMENTS.map((option) => (
                   <label key={option.key} className={selectedPaymentKey === option.key ? 'tp-payment-active' : ''}>
                     <input
                       type="radio"
@@ -444,17 +471,35 @@ export default function Checkout() {
                       onChange={() => setSelectedPaymentKey(option.key)}
                     />
                     <span className="tp-payment-icon">{option.icon}</span>
-                    <span>
-                      {option.label}
-                      {option.demoNote && (
-                        <small style={{ display: 'block', color: '#64748b', fontWeight: 400, fontSize: 12 }}>
-                          {option.demoNote}
-                        </small>
-                      )}
-                    </span>
+                    <span>{option.label}</span>
                   </label>
                 ))}
               </div>
+              <button
+                type="button"
+                className="tp-checkout-more-payments"
+                onClick={() => setShowMorePayments((prev) => !prev)}
+                aria-expanded={showMorePayments}
+              >
+                <Wallet size={16} />
+                {showMorePayments
+                  ? 'Thu gọn phương thức khác'
+                  : `Xem thêm ${SECONDARY_PAYMENTS.length} phương thức thanh toán`}
+                <ChevronDown size={16} className={showMorePayments ? 'tp-rotate-180' : ''} />
+              </button>
+              {showMorePayments && (
+                <div className="tp-checkout-payment-list tp-checkout-payment-list-secondary">
+                  {SECONDARY_PAYMENTS.map((option) => (
+                    <div key={option.key} className="tp-payment-coming-soon" aria-disabled="true">
+                      <span className="tp-payment-icon">{option.icon}</span>
+                      <span>
+                        {option.label}
+                        <small>Sắp ra mắt</small>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {orderError && <p className="tp-checkout-error">{orderError}</p>}
@@ -502,22 +547,17 @@ export default function Checkout() {
               </p>
             </div>
 
-            {isInstallmentSelected ? (
-              <button
-                type="button"
-                className="tp-checkout-submit"
-                onClick={() => setShowInstallmentModal(true)}
-              >
-                Trả góp
-              </button>
-            ) : (
-              <button type="submit" form="checkout-form" className="tp-checkout-submit">
-                Đặt hàng
-              </button>
-            )}
+            <button
+              type="submit"
+              form="checkout-form"
+              className="tp-checkout-submit"
+              disabled={isDemoPaymentBlocked}
+            >
+              Đặt hàng
+            </button>
 
             <p className="tp-checkout-policy">
-              ☑️ Bằng việc tiến hành đặt mua hàng, bạn đồng ý với Điều khoản dịch vụ và Chính sách xử lý dữ liệu cá nhân của FPT Shop.
+              ☑️ Bằng việc tiến hành đặt mua hàng, bạn đồng ý với Điều khoản dịch vụ và Chính sách xử lý dữ liệu cá nhân của TechPhone Shop.
             </p>
 
             <button type="button" className="tp-checkout-choice">
@@ -527,34 +567,6 @@ export default function Checkout() {
         </form>
       </div>
 
-      {showInstallmentModal && (
-        <div className="tp-checkout-modal-mask" role="presentation" onClick={() => setShowInstallmentModal(false)}>
-          <div className="tp-checkout-modal" role="dialog" onClick={(event) => event.stopPropagation()}>
-            <header>
-              <h3>Chọn phương thức trả góp</h3>
-              <button type="button" onClick={() => setShowInstallmentModal(false)}>
-                <X size={24} />
-              </button>
-            </header>
-            <div className="tp-checkout-method-list">
-              {INSTALLMENT_METHODS.map((method) => (
-                <button
-                  key={method.key}
-                  type="button"
-                  onClick={() => {
-                    setShowInstallmentModal(false);
-                    navigate(`/installment?provider=${method.key}`);
-                  }}
-                >
-                  <span className="tp-checkout-method-icon">{method.icon}</span>
-                  <span>{method.label}</span>
-                  <ChevronRight size={16} />
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

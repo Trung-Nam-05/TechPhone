@@ -1,8 +1,10 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { CheckCircle2, XCircle } from 'lucide-react';
 import { OrderStatusBadge, PaymentStatusBadge } from './OrderStatusBadge';
 import ElectronicInvoice from './ElectronicInvoice';
 import { orderRequestedInvoice } from '../utils/orderInvoice';
+import { canCancelVnpayPending, canRetryVnpayPayment } from '../utils/vnpayOrder';
 
 /**
  * Màn hình kết quả đặt hàng / thanh toán — dùng chung cho COD và VNPAY.
@@ -15,10 +17,29 @@ export default function OrderSuccessResult({
   subtitle,
   loadError = null,
   message = '',
+  onRetryVnpay,
+  onCancelVnpay,
+  actionLoading = false,
+  actionError = null,
 }) {
+  const navigate = useNavigate();
+  const [localLoading, setLocalLoading] = useState(false);
+  const loading = actionLoading || localLoading;
+
   const heading = title || (success ? 'Thanh toán thành công' : 'Thanh toán chưa hoàn tất');
   const detailHref = orderId ? `/account/orders/${orderId}` : '/account/orders';
   const showInvoice = success && order && orderRequestedInvoice(order);
+  const showVnpayActions = !success && order && (canRetryVnpayPayment(order) || canCancelVnpayPending(order));
+
+  const runAction = async (handler) => {
+    if (!handler) return;
+    setLocalLoading(true);
+    try {
+      await handler();
+    } finally {
+      setLocalLoading(false);
+    }
+  };
 
   return (
     <div className="container" style={{ maxWidth: showInvoice ? 720 : 560, padding: '40px 16px' }}>
@@ -69,6 +90,9 @@ export default function OrderSuccessResult({
           {message}
         </p>
       )}
+      {actionError && (
+        <p style={{ color: '#dc2626', textAlign: 'center', marginBottom: 12, fontSize: 14 }}>{actionError}</p>
+      )}
       {success && (
         <p style={{ textAlign: 'center', marginBottom: 24 }}>
           {subtitle ||
@@ -81,15 +105,51 @@ export default function OrderSuccessResult({
           <ElectronicInvoice order={order} />
         </>
       )}
+      {showVnpayActions && (
+        <div style={{ display: 'grid', gap: 10, marginBottom: 20 }}>
+          {canRetryVnpayPayment(order) && onRetryVnpay && (
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={loading}
+              onClick={() => runAction(onRetryVnpay)}
+            >
+              {loading ? 'Đang xử lý...' : 'Thanh toán lại VNPAY'}
+            </button>
+          )}
+          {canCancelVnpayPending(order) && onCancelVnpay && (
+            <button
+              type="button"
+              className="btn btn-outline"
+              disabled={loading}
+              onClick={() => runAction(onCancelVnpay)}
+            >
+              Hủy đơn và quay lại giỏ hàng
+            </button>
+          )}
+          {orderId && (
+            <Link className="btn btn-outline" to={detailHref} style={{ textAlign: 'center' }}>
+              Xem chi tiết đơn
+            </Link>
+          )}
+        </div>
+      )}
       <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
         {success && (
           <Link className="btn btn-primary" to={detailHref}>
             Xem đơn hàng của tôi
           </Link>
         )}
-        <Link className="btn btn-outline" to={success ? '/products' : '/'}>
-          {success ? 'Tiếp tục mua sắm' : 'Về trang chủ'}
-        </Link>
+        {!showVnpayActions && (
+          <Link className="btn btn-outline" to={success ? '/products' : '/'}>
+            {success ? 'Tiếp tục mua sắm' : 'Về trang chủ'}
+          </Link>
+        )}
+        {showVnpayActions && (
+          <button type="button" className="btn btn-outline" onClick={() => navigate('/')}>
+            Về trang chủ
+          </button>
+        )}
       </div>
     </div>
   );

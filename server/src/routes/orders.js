@@ -10,6 +10,7 @@ import { getOwnershipFilter, getOwnershipForWrite } from '../utils/ownership.js'
 import { claimSessionOwnership } from '../services/claimSessionOwnership.js';
 import { calculatePricing, consumeCouponsUsage, PricingError } from '../services/pricing.js';
 import { restoreInventoryForCancelledOrder } from '../services/orderCancel.js';
+import { restoreCartFromOrder } from '../services/cartRestore.js';
 import { syncGhnOrderFromApi } from '../services/ghnShipment.js';
 import { isGhnConfigured } from '../services/ghn.js';
 import ShipmentEvent from '../models/ShipmentEvent.js';
@@ -473,6 +474,55 @@ router.post('/:id/request-cancellation', async (req, res, next) => {
   }
 });
 
+router.post('/:id/vnpay/retry-payment', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid order id.' });
+    }
+
+    const ownershipFilter = getOwnershipFilter(req, { includeGuestSession: true });
+    if (!ownershipFilter) {
+      return res.status(400).json({ message: 'Missing order ownership context.' });
+    }
+
+    const order = await Order.findOne({ _id: id, ...ownershipFilter });
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found.' });
+    }
+    if (order.paymentMethod !== 'vnpay') {
+      return res.status(400).json({ message: 'Don khong phai thanh toan VNPAY.' });
+    }
+    if (order.status !== 'pending') {
+      return res.status(400).json({ message: 'Chi co the thanh toan lai khi don dang cho xu ly.' });
+    }
+    if (!['pending', 'failed'].includes(order.paymentStatus)) {
+      return res.status(400).json({ message: 'Trang thai thanh toan khong cho phep thu lai.' });
+    }
+
+    const vnpayStrategy = getPaymentStrategy('vnpay');
+    const validation = vnpayStrategy.validateCheckout();
+    if (!validation.ok) {
+      return res.status(validation.status || 503).json({ message: validation.message });
+    }
+
+    if (order.paymentStatus === 'failed') {
+      order.paymentStatus = 'pending';
+      await order.save();
+    }
+
+    const clientIp =
+      (typeof req.headers['x-forwarded-for'] === 'string' && req.headers['x-forwarded-for'].split(',')[0].trim()) ||
+      req.socket?.remoteAddress ||
+      '127.0.0.1';
+
+    const paymentUrl = await vnpayStrategy.buildPaymentUrl(order, clientIp);
+    return res.json({ paymentUrl, order: sanitizeOrderForCustomer(order.toObject()) });
+  } catch (error) {
+    return next(error);
+  }
+});
+
 router.post('/:id/cancel-immediate', async (req, res, next) => {
   const session = await mongoose.startSession();
   try {
@@ -486,6 +536,7 @@ router.post('/:id/cancel-immediate', async (req, res, next) => {
     }
 
     let resultOrder = null;
+    let cartRestore = null;
     await session.withTransaction(async () => {
       const order = await Order.findOne({ _id: id, ...ownershipFilter }).session(session);
       if (!order) {
@@ -517,10 +568,16 @@ router.post('/:id/cancel-immediate', async (req, res, next) => {
       if (!transition.ok) {
         throw new Error(transition.reason || 'INVALID_TRANSITION');
       }
+      if (order.paymentMethod === 'vnpay') {
+        const ownershipForWrite = getOwnershipForWrite(req);
+        if (ownershipForWrite) {
+          cartRestore = await restoreCartFromOrder(order, ownershipForWrite, { session });
+        }
+      }
       resultOrder = order.toObject();
     });
 
-    return res.json({ order: resultOrder });
+    return res.json({ order: resultOrder, cartRestore });
   } catch (error) {
     if (error.message === 'ORDER_NOT_FOUND') {
       return res.status(404).json({ message: 'Order not found.' });

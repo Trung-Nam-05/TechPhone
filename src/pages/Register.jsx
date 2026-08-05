@@ -9,13 +9,13 @@ export default function Register() {
   const { t } = useI18n();
 
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     try {
-      await register({ name, email, password });
+      await register({ name, username, password });
       navigate('/', { replace: true });
     } catch {
       // Error state is exposed by auth context.
@@ -39,15 +39,21 @@ export default function Register() {
             />
           </div>
           <div className="mb-4">
-            <label className="block text-sm font-medium mb-1">{t('register.email')}</label>
+            <label className="block text-sm font-medium mb-1">Tên đăng nhập</label>
             <input
-              type="email"
+              type="text"
               className="input"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder={t('register.emailPlaceholder')}
+              value={username}
+              onChange={(event) => setUsername(event.target.value.toLowerCase())}
+              placeholder="vd: nam_phone"
+              minLength={6}
+              maxLength={20}
+              pattern="[a-z][a-z0-9_]{5,19}"
               required
             />
+            <p className="text-sm text-muted" style={{ marginTop: 6 }}>
+              6–20 ký tự, chữ thường, số và dấu gạch dưới. Bắt đầu bằng chữ cái.
+            </p>
           </div>
           <div className="mb-4">
             <label className="block text-sm font-medium mb-1">{t('register.password')}</label>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import { useI18n } from '../context/I18nContext';
 import { apiFetch } from '../config/api';
 import { OrderStatusBadge, PaymentStatusBadge } from '../components/OrderStatusBadge';
@@ -13,6 +14,7 @@ import {
 } from '../constants/orderLabels';
 import ElectronicInvoice from '../components/ElectronicInvoice';
 import { orderRequestedInvoice } from '../utils/orderInvoice';
+import { canCancelVnpayPending, canRetryVnpayPayment } from '../utils/vnpayOrder';
 
 const TIMELINE_POLL_STATUSES = new Set(['confirmed', ...ACTIVE_SHIPMENT_STATUSES]);
 
@@ -50,7 +52,9 @@ function OrderStepper({ steps = [], status }) {
 
 export default function OrderDetail() {
   const { orderId } = useParams();
+  const navigate = useNavigate();
   const { authFetch, isAuthenticated } = useAuth();
+  const { reloadCartFromServer } = useCart();
   const { formatPrice, locale } = useI18n();
   const dateLocale = locale === 'en' ? 'en-US' : 'vi-VN';
 
@@ -120,6 +124,38 @@ export default function OrderDetail() {
       else await apiFetch(`/api/orders/${orderId}/request-cancellation`, request);
       setCancelNote('');
       await loadTimeline();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const retryVnpay = async () => {
+    setActionLoading(true);
+    setError(null);
+    try {
+      const payload = await authFetch(`/api/orders/${orderId}/vnpay/retry-payment`, { method: 'POST' });
+      if (payload?.paymentUrl) {
+        window.location.assign(payload.paymentUrl);
+        return;
+      }
+      setError('Không tạo được liên kết thanh toán VNPAY.');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const cancelVnpayAndRestore = async () => {
+    if (!window.confirm('Hủy đơn và đưa sản phẩm trở lại giỏ hàng?')) return;
+    setActionLoading(true);
+    setError(null);
+    try {
+      await authFetch(`/api/orders/${orderId}/cancel-immediate`, { method: 'POST' });
+      await reloadCartFromServer();
+      navigate('/cart');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -236,6 +272,20 @@ export default function OrderDetail() {
 
           <section className="card" style={{ padding: 16 }}>
             <h2 style={{ fontSize: 18, marginBottom: 12 }}>Hành động</h2>
+            {(canRetryVnpayPayment(order) || canCancelVnpayPending(order)) && (
+              <div style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
+                {canRetryVnpayPayment(order) && (
+                  <button type="button" className="btn btn-primary" onClick={retryVnpay} disabled={actionLoading}>
+                    Thanh toán lại VNPAY
+                  </button>
+                )}
+                {canCancelVnpayPending(order) && (
+                  <button type="button" className="btn btn-outline" onClick={cancelVnpayAndRestore} disabled={actionLoading}>
+                    Hủy đơn và quay lại giỏ hàng
+                  </button>
+                )}
+              </div>
+            )}
             {order.cancelRequestStatus === 'pending' && (
               <div style={{ padding: 12, background: '#fffbeb', borderRadius: 8, marginBottom: 12 }}>
                 Yêu cầu hủy đơn đang chờ shop xử lý.
