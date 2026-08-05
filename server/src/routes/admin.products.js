@@ -9,7 +9,7 @@ import {
   assertNewPriceAboveFlashSales,
   parseVndPrice,
 } from '../services/productPrice.js';
-import { getBrandsForCategory, normalizeBrandKey } from '../../../src/data/brandsByCategory.js';
+import { getBrandsForCategory, normalizeBrandKey } from '../data/brandsByCategory.js';
 import { assertProductCanBeDeleted } from '../services/productGuards.js';
 
 const router = express.Router();

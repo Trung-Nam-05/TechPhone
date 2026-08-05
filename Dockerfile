@@ -9,6 +9,7 @@ RUN npm ci
 COPY index.html vite.config.js ./
 COPY public ./public
 COPY src ./src
+COPY server ./server
 
 # Same-origin production: empty = relative /api URLs
 ARG VITE_API_BASE_URL=
