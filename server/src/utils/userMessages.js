@@ -19,7 +19,7 @@ export const MSG = {
   AUTH_RESET_INVALID: 'Liên kết khôi phục không hợp lệ hoặc đã hết hạn.',
   AUTH_RESET_SUCCESS: 'Đã đặt lại mật khẩu thành công. Bạn có thể đăng nhập.',
   AUTH_FORGOT_GENERIC: 'Nếu email đã liên kết và xác minh, bạn sẽ nhận hướng dẫn khôi phục mật khẩu.',
-  AUTH_FORGOT_LOGIN_REQUIRED: 'Vui lòng nhập tên đăng nhập.',
+  AUTH_FORGOT_LOGIN_REQUIRED: 'Vui lòng nhập tên đăng nhập hoặc email liên kết.',
   AUTH_FORGOT_ACCOUNT_NOT_FOUND: 'Không tìm thấy tài khoản.',
   AUTH_FORGOT_METHOD_INVALID: 'Phương thức xác thực không hợp lệ.',
   AUTH_FORGOT_EMAIL_REAL_REQUIRED: 'Vui lòng nhập email thật để nhận liên kết xác thực.',

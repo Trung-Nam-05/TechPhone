@@ -5,6 +5,7 @@ import { writeAdminAuditLog } from '../utils/audit.js';
 import {
   isMailConfigured,
   renderFlashSaleEmail,
+  resetMailTransport,
   sendFlashSaleMarketingEmail,
   verifyMailConnection,
 } from '../services/mail.js';
@@ -12,6 +13,12 @@ import { getDefaultFlashSaleVariables } from '../services/emailTemplates.js';
 import { isDeliverableContactEmail, MSG } from '../utils/userMessages.js';
 
 const router = express.Router();
+
+function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
 
 router.use(requireAuth, requireAdmin);
 
@@ -116,20 +123,16 @@ router.post('/send-campaign', async (req, res, next) => {
 
     for (const recipient of recipients) {
       try {
-        const sendResult = await sendFlashSaleMarketingEmail({
+        await sendFlashSaleMarketingEmail({
           to: recipient.email,
           variables: { ...variables, customerName: recipient.name || variables.customerName },
         });
-        if (!sendResult.accepted?.length) {
-          results.failed.push({
-            email: recipient.email,
-            message: 'SMTP không chấp nhận địa chỉ này.',
-          });
-          continue;
-        }
         results.sent += 1;
+        await sleep(1500);
       } catch (error) {
+        resetMailTransport();
         results.failed.push({ email: recipient.email, message: error?.message || 'send_failed' });
+        await sleep(500);
       }
     }
 

@@ -32,11 +32,40 @@ async function findUserByLoginIdentifier(identifier) {
   const normalized = String(identifier || '').trim().toLowerCase();
   if (!normalized) return null;
   if (normalized.includes('@')) {
+    const byContact = await User.findOne({
+      contactEmail: normalized,
+      contactEmailVerified: true,
+    });
+    if (byContact) return byContact;
     return User.findOne({ email: normalized });
   }
   const byUsername = await User.findOne({ username: normalized });
   if (byUsername) return byUsername;
   return User.findOne({ email: normalized });
+}
+
+async function resolveForgotPasswordUser(body) {
+  const loginRaw = String(body?.login || body?.username || '').trim().toLowerCase();
+  const emailRaw = String(body?.contactEmail || body?.email || '').trim().toLowerCase();
+  const identifier = loginRaw || emailRaw;
+
+  if (!identifier) {
+    return { user: null, identifier: '', login: '' };
+  }
+
+  let user = await findUserByLoginIdentifier(identifier);
+  if (user) {
+    return { user, identifier, login: user.username };
+  }
+
+  if (emailRaw && isDeliverableContactEmail(emailRaw)) {
+    user = await User.findOne({ contactEmail: emailRaw, contactEmailVerified: true });
+    if (user) {
+      return { user, identifier: emailRaw, login: user.username };
+    }
+  }
+
+  return { user: null, identifier, login: loginRaw || emailRaw };
 }
 
 async function issuePasswordReset(user, toEmail) {
@@ -283,12 +312,10 @@ router.get('/verify-email', async (req, res) => {
 
 router.post('/forgot-password/preview', async (req, res, next) => {
   try {
-    const login = String(req.body?.login || req.body?.username || '').trim().toLowerCase();
-    if (!login) {
+    const { user, identifier } = await resolveForgotPasswordUser(req.body);
+    if (!identifier) {
       return res.status(400).json({ message: MSG.AUTH_FORGOT_LOGIN_REQUIRED });
     }
-
-    const user = await findUserByLoginIdentifier(login);
     if (!user) {
       return res.status(404).json({ message: MSG.AUTH_FORGOT_ACCOUNT_NOT_FOUND });
     }
@@ -317,11 +344,11 @@ router.post('/forgot-password/preview', async (req, res, next) => {
 
 router.post('/forgot-password', async (req, res, next) => {
   try {
-    const login = String(req.body?.login || req.body?.username || '').trim().toLowerCase();
     const method = String(req.body?.method || 'email').trim().toLowerCase();
     const contactEmailInput = String(req.body?.contactEmail || req.body?.email || '').trim().toLowerCase();
+    const { user, identifier } = await resolveForgotPasswordUser(req.body);
 
-    if (!login) {
+    if (!identifier) {
       return res.status(400).json({ message: MSG.AUTH_FORGOT_LOGIN_REQUIRED });
     }
     if (method !== 'email') {
@@ -330,8 +357,6 @@ router.post('/forgot-password', async (req, res, next) => {
     if (!isMailConfigured()) {
       return res.status(503).json({ message: MSG.AUTH_MAIL_NOT_CONFIGURED });
     }
-
-    const user = await findUserByLoginIdentifier(login);
     if (!user) {
       return res.status(404).json({ message: MSG.AUTH_FORGOT_ACCOUNT_NOT_FOUND });
     }

@@ -65,13 +65,22 @@ export default function ForgotPassword() {
     event.preventDefault();
     setMessage(null);
     setError(null);
+    const identifier = login.trim().toLowerCase();
+    if (!identifier) {
+      setError('Vui lòng nhập tên đăng nhập hoặc email liên kết.');
+      return;
+    }
     setLoading(true);
     try {
       const payload = await apiFetch('/api/auth/forgot-password/preview', {
         method: 'POST',
-        body: JSON.stringify({ login: login.trim() }),
+        body: JSON.stringify({
+          login: identifier,
+          contactEmail: identifier.includes('@') ? identifier : undefined,
+        }),
       });
       setPreview(payload);
+      setLogin(identifier);
       setStep('confirm');
     } catch (err) {
       setError(toUserFacingError(err.message));
@@ -86,12 +95,15 @@ export default function ForgotPassword() {
     setError(null);
     setLoading(true);
     try {
+      const identifier = login.trim().toLowerCase();
       const payload = await apiFetch('/api/auth/forgot-password', {
         method: 'POST',
         body: JSON.stringify({
-          login: login.trim(),
+          login: identifier,
+          contactEmail: preview?.needsEmailInput
+            ? contactEmail.trim()
+            : (identifier.includes('@') ? identifier : undefined),
           method: 'email',
-          contactEmail: preview?.needsEmailInput ? contactEmail.trim() : undefined,
         }),
       });
       setMessage(payload?.message || 'Đã gửi email hướng dẫn.');
@@ -192,17 +204,17 @@ export default function ForgotPassword() {
         {step === 'login' && (
           <>
             <p className="text-sm text-muted" style={{ marginBottom: 16 }}>
-              Nhập tên đăng nhập. Chúng tôi sẽ gửi hướng dẫn qua email liên kết (hoặc email thật nếu bạn chưa liên kết).
+              Nhập tên đăng nhập hoặc email liên kết đã xác minh. Chúng tôi sẽ gửi hướng dẫn qua email.
             </p>
             <form onSubmit={handlePreview}>
               <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">Tên đăng nhập</label>
+                <label className="block text-sm font-medium mb-1">Tên đăng nhập hoặc email liên kết</label>
                 <input
                   type="text"
                   className="input"
                   value={login}
                   onChange={(e) => setLogin(e.target.value)}
-                  placeholder="vd: ungtrungnam"
+                  placeholder="vd: ungtrungnam hoặc email@gmail.com"
                   required
                 />
               </div>

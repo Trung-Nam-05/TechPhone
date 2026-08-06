@@ -33,7 +33,7 @@ const EXACT = {
   'Current password is incorrect.': 'Mật khẩu hiện tại không đúng.',
   'User not found.': 'Không tìm thấy tài khoản.',
   'contactEmail is required.': 'Vui lòng nhập email liên kết.',
-  'Vui lòng nhập tên đăng nhập.': 'Vui lòng nhập tên đăng nhập.',
+  'Vui lòng nhập tên đăng nhập.': 'Vui lòng nhập tên đăng nhập hoặc email liên kết.',
   'Không tìm thấy tài khoản.': 'Không tìm thấy tài khoản.',
   'Vui lòng nhập email thật để nhận liên kết xác thực.': 'Vui lòng nhập email thật để nhận liên kết xác thực.',
   'Email này đã được liên kết tài khoản khác.': 'Email này đã được liên kết tài khoản khác.',

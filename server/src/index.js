@@ -123,11 +123,19 @@ function shouldServeStatic() {
 }
 
 if (shouldServeStatic()) {
-  app.use(express.static(distPath, { index: false }));
+  app.use(express.static(distPath, {
+    index: false,
+    setHeaders(res, filePath) {
+      if (filePath.endsWith('index.html')) {
+        res.setHeader('Cache-Control', 'no-store');
+      }
+    },
+  }));
   app.get(/^(?!\/api).*/, (req, res, next) => {
     if (req.path === '/sitemap.xml') {
       return next();
     }
+    res.set('Cache-Control', 'no-store');
     res.sendFile(path.join(distPath, 'index.html'), (err) => {
       if (err) next(err);
     });

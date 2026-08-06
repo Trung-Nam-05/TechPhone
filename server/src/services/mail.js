@@ -22,6 +22,10 @@ export function isMailConfigured() {
 
 let transportCache = null;
 
+export function resetMailTransport() {
+  transportCache = null;
+}
+
 function createTransport() {
   const cfg = getMailConfig();
   if (!isMailConfigured()) {
