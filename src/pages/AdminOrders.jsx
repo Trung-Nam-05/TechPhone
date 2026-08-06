@@ -711,6 +711,11 @@ export default function AdminOrders() {
                 {shipmentEvents.map((item) => (
                   <div key={item._id} className="admin-orders-timeline-item">
                     <strong>{item.note || item.carrierStatus || 'GHN'}</strong>
+                    {item.labelId && (
+                      <p className="text-sm" style={{ margin: '2px 0' }}>
+                        Mã vận đơn: <strong>{item.labelId}</strong>
+                      </p>
+                    )}
                     <p className="text-sm text-muted" style={{ margin: '2px 0' }}>
                       {new Date(item.createdAt).toLocaleString('vi-VN')}
                     </p>

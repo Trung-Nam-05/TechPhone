@@ -23,6 +23,7 @@ import {
 } from '../services/orderStateMachine.js';
 import { resolvePaymentStrategy, getPaymentStrategy } from '../patterns/payment/paymentStrategyRegistry.js';
 import { applyOrderCancellation, recordOrderEvent } from '../patterns/state/orderTransitionService.js';
+import { normalizeStreetAddress } from '../utils/shippingAddress.js';
 import { MAX_LINE_QUANTITY } from '../constants/cartLimits.js';
 
 const router = express.Router();
@@ -239,7 +240,7 @@ router.post('/', async (req, res, next) => {
               districtId: Number.isFinite(districtId) && districtId > 0 ? districtId : null,
               ward: ward.trim(),
               wardCode,
-              address: address.trim(),
+              address: normalizeStreetAddress(address, { ward, district, province }),
               note: note.trim(),
             },
           },

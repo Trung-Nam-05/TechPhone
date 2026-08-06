@@ -4,6 +4,7 @@ import {
   fetchGhnProvinces,
   fetchGhnShippingStatus,
   fetchGhnWards,
+  filterGhnAddressItems,
   getDistrictLabels,
   getProvinceLabels,
   getWardLabels,
@@ -45,7 +46,10 @@ function SearchableAddressField({
   }, []);
 
   const filteredItems = useMemo(
-    () => items.filter((item) => matchesAddressQuery(item, query, getLabels)),
+    () => filterGhnAddressItems(
+      items.filter((item) => matchesAddressQuery(item, query, getLabels)),
+      getLabels,
+    ),
     [items, query, getLabels],
   );
 
@@ -137,7 +141,7 @@ export default function GhnAddressSelector({
       setLoadingProvinces(true);
       try {
         const items = await fetchGhnProvinces();
-        if (!cancelled) setProvinces(items);
+        if (!cancelled) setProvinces(filterGhnAddressItems(items, getProvinceLabels));
       } catch {
         if (!cancelled) setGhnReady(false);
       } finally {
@@ -159,7 +163,7 @@ export default function GhnAddressSelector({
     setLoadingDistricts(true);
     fetchGhnDistricts(value.provinceId)
       .then((items) => {
-        if (!cancelled) setDistricts(items);
+        if (!cancelled) setDistricts(filterGhnAddressItems(items, getDistrictLabels));
       })
       .catch(() => {
         if (!cancelled) setDistricts([]);
@@ -181,7 +185,7 @@ export default function GhnAddressSelector({
     setLoadingWards(true);
     fetchGhnWards(value.districtId)
       .then((items) => {
-        if (!cancelled) setWards(items);
+        if (!cancelled) setWards(filterGhnAddressItems(items, getWardLabels));
       })
       .catch(() => {
         if (!cancelled) setWards([]);
@@ -316,7 +320,9 @@ export default function GhnAddressSelector({
           ward: item.WardName,
         })}
       />
-      <p className="ghn-address-hint">Chọn từ danh sách GHN để giao hàng không lỗi địa chỉ.</p>
+      <p className="ghn-address-hint">
+        Ô cuối chỉ nhập <strong>số nhà, tên đường</strong>. Tỉnh / Quận / Phường đã chọn ở trên.
+      </p>
     </div>
   );
 }

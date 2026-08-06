@@ -66,6 +66,22 @@ export function verifyVnpayCallback(query) {
 }
 
 /** yyyyMMddHHmmss in Asia/Ho_Chi_Minh */
+function vnpExpireDate() {
+  const expire = new Date(Date.now() + 15 * 60 * 1000);
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(expire);
+  const g = (t) => parts.find((p) => p.type === t)?.value ?? '';
+  return `${g('year')}${g('month')}${g('day')}${g('hour')}${g('minute')}${g('second')}`;
+}
+
 function vnpCreateDate() {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Ho_Chi_Minh',
@@ -127,10 +143,19 @@ export function buildVnpayPaymentUrl({ amountVnd, orderId, orderInfo, ipAddr }) 
     vnp_ReturnUrl: returnUrl,
     vnp_IpAddr: normalizeIpAddr(ipAddr),
     vnp_CreateDate: vnpCreateDate(),
+    vnp_ExpireDate: vnpExpireDate(),
   };
 
+  if (amount <= 0) {
+    throw new Error('VNPAY_INVALID_AMOUNT');
+  }
+
   // IPN only when API has a public HTTPS URL (optional param — omit for localhost).
-  if (!isLocalApiUrl(apiPublic) && apiPublic.startsWith('https://')) {
+  if (
+    process.env.VNPAY_IPN_ENABLED !== 'false'
+    && !isLocalApiUrl(apiPublic)
+    && apiPublic.startsWith('https://')
+  ) {
     vnp_Params.vnp_IpnUrl = `${apiPublic}/api/payments/vnpay/ipn`;
   }
 

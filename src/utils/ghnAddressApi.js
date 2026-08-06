@@ -49,3 +49,21 @@ export function matchesAddressQuery(item, query, getLabels) {
   const normalizedQuery = normalizeAddressSearch(query);
   return getLabels(item).some((label) => normalizeAddressSearch(label).includes(normalizedQuery));
 }
+
+/** Ẩn bản ghi test/ghi chú lạ từ GHN sandbox (vd "test alert", "Hà Nội 02"). */
+export function isGhnSandboxNoise(label) {
+  const text = normalizeAddressSearch(label);
+  if (!text) return true;
+  if (/test|alert|demo|sample|sandbox|dummy/.test(text)) return true;
+  if (/^ha noi 0\d$/.test(text)) return true;
+  if (/^hcm 0\d$/.test(text)) return true;
+  return false;
+}
+
+export function filterGhnAddressItems(items, getLabels) {
+  return (items || []).filter((item) => {
+    const labels = getLabels(item);
+    if (!labels.length) return false;
+    return labels.every((label) => !isGhnSandboxNoise(label));
+  });
+}

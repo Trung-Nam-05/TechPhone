@@ -71,32 +71,38 @@ export async function createGhnShipmentForOrder(orderId, { force = false } = {})
     const addressIds = await resolveGhnAddress(order.shippingInfo);
     const result = await submitOrder(order, addressIds);
 
-    const transition = await applySystemOrderTransition(order, 'await_pickup', {
-      note: `GHN: tao van don thanh cong (${result.orderCode || 'no code'}).`,
-      beforeSave: (doc) => {
-        doc.shippingInfo = doc.shippingInfo || {};
-        doc.shippingInfo.districtId = addressIds.districtId;
-        doc.shippingInfo.wardCode = addressIds.wardCode;
-        if (addressIds.provinceId) doc.shippingInfo.provinceId = addressIds.provinceId;
-        if (addressIds.provinceName) doc.shippingInfo.province = addressIds.provinceName;
-        if (addressIds.districtName) doc.shippingInfo.district = addressIds.districtName;
-        if (addressIds.wardName) doc.shippingInfo.ward = addressIds.wardName;
-        doc.shipment = {
-          provider: 'ghn',
-          labelId: result.orderCode,
-          partnerId: String(doc._id),
-          carrierStatus: 'ready_to_pick',
-          fee: result.totalFee,
-          submittedAt: new Date(),
-          lastWebhookAt: new Date(),
-          submitError: '',
-          retryCount: doc.shipment?.retryCount || 0,
-        };
-      },
-    });
+    const applyShipmentFields = (doc) => {
+      doc.shippingInfo = doc.shippingInfo || {};
+      doc.shippingInfo.districtId = addressIds.districtId;
+      doc.shippingInfo.wardCode = addressIds.wardCode;
+      if (addressIds.provinceId) doc.shippingInfo.provinceId = addressIds.provinceId;
+      if (addressIds.provinceName) doc.shippingInfo.province = addressIds.provinceName;
+      if (addressIds.districtName) doc.shippingInfo.district = addressIds.districtName;
+      if (addressIds.wardName) doc.shippingInfo.ward = addressIds.wardName;
+      doc.shipment = {
+        provider: 'ghn',
+        labelId: result.orderCode,
+        partnerId: String(doc._id),
+        carrierStatus: 'ready_to_pick',
+        fee: result.totalFee,
+        submittedAt: new Date(),
+        lastWebhookAt: new Date(),
+        submitError: '',
+        retryCount: doc.shipment?.retryCount || 0,
+      };
+    };
 
-    if (!transition.ok) {
-      return { ok: false, reason: transition.reason || 'invalid_transition' };
+    if (order.status === 'await_pickup') {
+      applyShipmentFields(order);
+      await order.save();
+    } else {
+      const transition = await applySystemOrderTransition(order, 'await_pickup', {
+        note: `GHN: tạo vận đơn thành công (${result.orderCode || 'no code'}).`,
+        beforeSave: applyShipmentFields,
+      });
+      if (!transition.ok) {
+        return { ok: false, reason: transition.reason || 'invalid_transition' };
+      }
     }
 
     await ShipmentEvent.create({

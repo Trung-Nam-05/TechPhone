@@ -1,5 +1,6 @@
 import { Printer } from 'lucide-react';
 import { getPaymentMethodLabel } from '../constants/orderLabels';
+import { formatFullShippingAddress } from '../utils/shippingAddress';
 import { formatInvoiceDate, formatInvoiceNumber } from '../utils/orderInvoice';
 import './ElectronicInvoice.css';
 
@@ -13,6 +14,7 @@ export default function ElectronicInvoice({ order }) {
   const invoiceNo = formatInvoiceNumber(order._id);
   const buyer = order.shippingInfo || {};
   const items = order.items || [];
+  const buyerAddress = formatFullShippingAddress(buyer);
 
   const handlePrint = () => {
     window.print();
@@ -44,9 +46,7 @@ export default function ElectronicInvoice({ order }) {
           </div>
           <div>ĐT: {buyer.phone}</div>
           {buyer.email && <div>Email: {buyer.email}</div>}
-          <div>
-            {[buyer.address, buyer.ward, buyer.district, buyer.province].filter(Boolean).join(', ')}
-          </div>
+          {buyerAddress && <div>{buyerAddress}</div>}
         </div>
 
         <p className="e-invoice-section-title">Chi tiết hàng hóa</p>

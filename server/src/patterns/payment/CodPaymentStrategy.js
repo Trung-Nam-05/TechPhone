@@ -17,6 +17,6 @@ export class CodPaymentStrategy extends PaymentStrategy {
   }
 
   getOrderCreatedNote() {
-    return 'Don COD duoc tu dong xac nhan. Thanh toan khi nhan hang.';
+    return 'Đơn COD — thanh toán khi nhận hàng. Shop sẽ xác nhận và đóng gói.';
   }
 }

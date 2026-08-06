@@ -9,6 +9,7 @@ import { calculateCouponPricing, getStoredSelectedCouponIds } from '../data/coup
 import OrderSuccessResult from '../components/OrderSuccessResult';
 import PendingVnpayBanner from '../components/PendingVnpayBanner';
 import GhnAddressSelector from '../components/GhnAddressSelector';
+import { normalizeStreetAddress } from '../utils/shippingAddress';
 import {
   getPrimaryPaymentOptions,
   getSecondaryPaymentOptions,
@@ -157,7 +158,10 @@ export default function Checkout() {
       districtId: shippingForm.districtId || null,
       ward: String(shippingForm.ward || formData.get('ward') || '').trim(),
       wardCode: shippingForm.wardCode || '',
-      address: String(formData.get('address') || shippingForm.address || '').trim(),
+      address: normalizeStreetAddress(
+        String(formData.get('address') || shippingForm.address || '').trim(),
+        shippingForm,
+      ),
       note: noteParts.join(' | '),
     };
 
@@ -379,12 +383,16 @@ export default function Checkout() {
                 onChange={(patch) => setShippingForm((prev) => ({ ...prev, ...patch }))}
               />
               <div className="tp-checkout-address-street">
+                <label className="ghn-address-label" htmlFor="checkout-street-address">
+                  Số nhà, tên đường *
+                </label>
                 <input
+                  id="checkout-street-address"
                   required
                   name="address"
                   type="text"
                   className="input"
-                  placeholder={deliveryMethod === 'home' ? 'Số nhà, tên đường' : 'Chọn cửa hàng gần bạn'}
+                  placeholder="Ví dụ: 29 Nguyễn Trung Ngạn"
                   value={shippingForm.address}
                   onChange={updateShippingField('address')}
                   autoComplete="street-address"

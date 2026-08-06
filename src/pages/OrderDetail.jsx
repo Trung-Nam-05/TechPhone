@@ -13,6 +13,7 @@ import {
   getPaymentMethodLabel,
 } from '../constants/orderLabels';
 import ElectronicInvoice from '../components/ElectronicInvoice';
+import { formatFullShippingAddress } from '../utils/shippingAddress';
 import { orderRequestedInvoice } from '../utils/orderInvoice';
 import { canCancelVnpayPending, canRetryVnpayPayment } from '../utils/vnpayOrder';
 
@@ -255,12 +256,7 @@ export default function OrderDetail() {
             <h2 style={{ fontSize: 18, marginBottom: 12 }}>Thông tin giao hàng</h2>
             <p>{order.shippingInfo?.fullName}</p>
             <p className="text-sm text-muted">{order.shippingInfo?.phone}</p>
-            <p className="text-sm">{order.shippingInfo?.address}</p>
-            {(order.shippingInfo?.ward || order.shippingInfo?.district || order.shippingInfo?.province) && (
-              <p className="text-sm text-muted">
-                {[order.shippingInfo?.ward, order.shippingInfo?.district, order.shippingInfo?.province].filter(Boolean).join(', ')}
-              </p>
-            )}
+            <p className="text-sm">{formatFullShippingAddress(order.shippingInfo)}</p>
           </section>
 
           {orderRequestedInvoice(order) && (
