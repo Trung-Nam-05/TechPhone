@@ -430,7 +430,7 @@ export function SupportChatProvider({ children }) {
     });
 
     socketRef.current = socket;
-  }, [token, isAdmin]);
+  }, [token, isAdmin, loadAdminSupportCustomers]);
 
   const emitTyping = useCallback((typing) => {
     const conversationId = activeConversationIdRef.current;
@@ -514,7 +514,7 @@ export function SupportChatProvider({ children }) {
         setConversation(payload.conversation);
       }
     }
-  }, [activeConversationId, authFetch, isAdmin, loadAdminSupportCustomers]);
+  }, [activeConversationId, authFetch, isAdmin, loadAdminSupportCustomers, loadCustomerMessages]);
 
   const assignToMe = useCallback(async () => {
     const conversationId = activeConversationId;
@@ -578,7 +578,7 @@ export function SupportChatProvider({ children }) {
       .catch(() => {});
   }, [joinConversation, loadCustomerMessages, loadAdminSupportCustomers, markAllCustomerRead]);
 
-  const openWidget = useCallback(async (_orderId) => {
+  const openWidget = useCallback(async () => {
     setIsOpen(true);
     if (!isAuthenticated) return;
     setLoading(true);

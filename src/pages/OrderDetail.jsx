@@ -95,7 +95,7 @@ export default function OrderDetail() {
     }, 10000);
 
     return () => clearInterval(timer);
-  }, [timeline?.order?.status, loadTimeline]);
+  }, [timeline?.order, timeline?.order?.status, loadTimeline]);
 
   const cancelImmediate = async () => {
     if (!window.confirm('Bạn có chắc muốn hủy đơn này?')) return;

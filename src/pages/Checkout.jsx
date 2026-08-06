@@ -89,7 +89,7 @@ export default function Checkout() {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, user?.id, user?.name, user?.phone, user?.email, authFetch]);
+  }, [isAuthenticated, user, user?.id, user?.name, user?.phone, user?.email, authFetch]);
 
   useEffect(() => {
     let cancelled = false;

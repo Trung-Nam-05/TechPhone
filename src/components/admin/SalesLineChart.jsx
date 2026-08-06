@@ -29,7 +29,7 @@ export default function SalesLineChart({
   onDaySelect,
 }) {
   const [hoverIndex, setHoverIndex] = useState(null);
-  const points = data || [];
+  const points = useMemo(() => data || [], [data]);
   const formatAxis = formatAxisMoney || formatTooltipMoney;
   const formatTooltip = formatTooltipMoney || formatAxisMoney;
   const formatDayLabel = formatShortDate || ((date) => date);

@@ -79,7 +79,7 @@ export default function Installment() {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, user?.id, user?.name, user?.phone, user?.email, authFetch]);
+  }, [isAuthenticated, user, user?.id, user?.name, user?.phone, user?.email, authFetch]);
 
   const amountOptions = useMemo(() => {
     const raw = [cartTotal, 50000000, Math.max(Math.round(cartTotal * 0.8), 3000000)];

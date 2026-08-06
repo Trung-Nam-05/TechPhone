@@ -8,7 +8,7 @@ export default function OrdersBarChart({
   onDaySelect,
 }) {
   const [hoverIndex, setHoverIndex] = useState(null);
-  const points = data || [];
+  const points = useMemo(() => data || [], [data]);
   const formatDayLabel = formatShortDate || ((date) => date);
   const formatDayFull = formatFullDate || formatDayLabel;
 
