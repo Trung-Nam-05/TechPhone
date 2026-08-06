@@ -108,7 +108,7 @@ export default function AdminSupport() {
             <input
               className="input"
               style={{ paddingLeft: 34, width: '100%' }}
-              placeholder="Tìm khách, email..."
+              placeholder="Tìm khách..."
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
             />
@@ -134,9 +134,7 @@ export default function AdminSupport() {
                     <span className="admin-support-unread">{item.unreadByAdmin}</span>
                   )}
                 </div>
-                <p>{item.customer?.email}</p>
                 <p className="admin-support-preview">{item.lastMessagePreview || 'Chưa có tin nhắn'}</p>
-                <span>{formatTime(item.lastMessageAt)}</span>
               </button>
             );
           })}

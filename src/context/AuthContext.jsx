@@ -62,7 +62,7 @@ export function AuthProvider({ children }) {
     [token],
   );
 
-  const login = async ({ login: loginId, email, password }) => {
+  const login = useCallback(async ({ login: loginId, email, password }) => {
     setLoading(true);
     setError(null);
     try {
@@ -88,9 +88,9 @@ export function AuthProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const register = async ({ name, username, email, password }) => {
+  const register = useCallback(async ({ name, username, email, password }) => {
     setLoading(true);
     setError(null);
     try {
@@ -116,9 +116,9 @@ export function AuthProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
     if (!token) return null;
     try {
       const payload = await authFetch('/api/auth/me');
@@ -130,9 +130,9 @@ export function AuthProvider({ children }) {
       /* ignore — authFetch clears bad token */
     }
     return null;
-  };
+  }, [token, authFetch]);
 
-  const updateProfile = async (body) => {
+  const updateProfile = useCallback(async (body) => {
     const payload = await authFetch('/api/auth/me', {
       method: 'PATCH',
       body: JSON.stringify(body),
@@ -141,7 +141,7 @@ export function AuthProvider({ children }) {
       setUser(payload.user);
     }
     return payload?.user;
-  };
+  }, [authFetch]);
 
   const value = useMemo(
     () => ({

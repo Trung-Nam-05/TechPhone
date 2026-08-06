@@ -28,17 +28,16 @@ function SearchableAddressField({
 }) {
   const listId = useId();
   const rootRef = useRef(null);
-  const [query, setQuery] = useState(selectedLabel);
+  const [query, setQuery] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
   const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    setQuery(selectedLabel || '');
-  }, [selectedLabel]);
+  const inputValue = isEditing ? query : (selectedLabel || '');
 
   useEffect(() => {
     const handlePointerDown = (event) => {
       if (!rootRef.current?.contains(event.target)) {
         setOpen(false);
+        setIsEditing(false);
       }
     };
     document.addEventListener('mousedown', handlePointerDown);
@@ -47,14 +46,15 @@ function SearchableAddressField({
 
   const filteredItems = useMemo(
     () => filterGhnAddressItems(
-      items.filter((item) => matchesAddressQuery(item, query, getLabels)),
+      items.filter((item) => matchesAddressQuery(item, inputValue, getLabels)),
       getLabels,
     ),
-    [items, query, getLabels],
+    [items, inputValue, getLabels],
   );
 
   const handleInputChange = (event) => {
     const next = event.target.value;
+    setIsEditing(true);
     setQuery(next);
     setOpen(true);
     onManualChange?.(next);
@@ -62,9 +62,16 @@ function SearchableAddressField({
 
   const handlePick = (item) => {
     const label = getLabels(item)[0] || '';
+    setIsEditing(false);
     setQuery(label);
     setOpen(false);
     onSelect(item);
+  };
+
+  const handleFocus = () => {
+    setIsEditing(true);
+    setQuery(selectedLabel || '');
+    setOpen(true);
   };
 
   return (
@@ -77,7 +84,7 @@ function SearchableAddressField({
         type="text"
         className="input ghn-address-input"
         name={name}
-        value={query}
+        value={inputValue}
         placeholder={placeholder}
         required={required}
         disabled={disabled || loading}
@@ -85,7 +92,7 @@ function SearchableAddressField({
         role="combobox"
         aria-expanded={open}
         aria-controls={listId}
-        onFocus={() => setOpen(true)}
+        onFocus={handleFocus}
         onChange={handleInputChange}
       />
       {open && !disabled && (
