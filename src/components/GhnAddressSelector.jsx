@@ -130,11 +130,12 @@ export default function GhnAddressSelector({
 }) {
   const [ghnReady, setGhnReady] = useState(false);
   const [provinces, setProvinces] = useState([]);
-  const [districts, setDistricts] = useState([]);
-  const [wards, setWards] = useState([]);
   const [loadingProvinces, setLoadingProvinces] = useState(false);
-  const [loadingDistricts, setLoadingDistricts] = useState(false);
-  const [loadingWards, setLoadingWards] = useState(false);
+  const [districtCache, setDistrictCache] = useState({ id: null, items: [] });
+  const [wardCache, setWardCache] = useState({ id: null, items: [] });
+
+  const activeProvinceId = ghnReady && value.provinceId ? value.provinceId : null;
+  const activeDistrictId = ghnReady && value.districtId ? value.districtId : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -162,48 +163,53 @@ export default function GhnAddressSelector({
   }, []);
 
   useEffect(() => {
-    if (!ghnReady || !value.provinceId) {
-      setDistricts([]);
+    if (!activeProvinceId || districtCache.id === activeProvinceId) {
       return undefined;
     }
     let cancelled = false;
-    setLoadingDistricts(true);
-    fetchGhnDistricts(value.provinceId)
+    fetchGhnDistricts(activeProvinceId)
       .then((items) => {
-        if (!cancelled) setDistricts(filterGhnAddressItems(items, getDistrictLabels));
+        if (!cancelled) {
+          setDistrictCache({
+            id: activeProvinceId,
+            items: filterGhnAddressItems(items, getDistrictLabels),
+          });
+        }
       })
       .catch(() => {
-        if (!cancelled) setDistricts([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingDistricts(false);
+        if (!cancelled) setDistrictCache({ id: activeProvinceId, items: [] });
       });
     return () => {
       cancelled = true;
     };
-  }, [ghnReady, value.provinceId]);
+  }, [activeProvinceId, districtCache.id]);
 
   useEffect(() => {
-    if (!ghnReady || !value.districtId) {
-      setWards([]);
+    if (!activeDistrictId || wardCache.id === activeDistrictId) {
       return undefined;
     }
     let cancelled = false;
-    setLoadingWards(true);
-    fetchGhnWards(value.districtId)
+    fetchGhnWards(activeDistrictId)
       .then((items) => {
-        if (!cancelled) setWards(filterGhnAddressItems(items, getWardLabels));
+        if (!cancelled) {
+          setWardCache({
+            id: activeDistrictId,
+            items: filterGhnAddressItems(items, getWardLabels),
+          });
+        }
       })
       .catch(() => {
-        if (!cancelled) setWards([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingWards(false);
+        if (!cancelled) setWardCache({ id: activeDistrictId, items: [] });
       });
     return () => {
       cancelled = true;
     };
-  }, [ghnReady, value.districtId]);
+  }, [activeDistrictId, wardCache.id]);
+
+  const districts = activeProvinceId && districtCache.id === activeProvinceId ? districtCache.items : [];
+  const wards = activeDistrictId && wardCache.id === activeDistrictId ? wardCache.items : [];
+  const loadingDistricts = Boolean(activeProvinceId && districtCache.id !== activeProvinceId);
+  const loadingWards = Boolean(activeDistrictId && wardCache.id !== activeDistrictId);
 
   const patch = (next) => onChange?.({ ...value, ...next });
 
