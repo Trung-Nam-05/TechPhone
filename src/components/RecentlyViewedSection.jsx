@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useI18n } from '../context/I18nContext';
 import { getProductPath } from '../utils/productUrl';
@@ -7,11 +7,21 @@ import './RecentlyViewedSection.css';
 
 export default function RecentlyViewedSection({ limit = 4, className = '' }) {
   const { t, formatPrice } = useI18n();
-  const items = useSyncExternalStore(
-    subscribeRecentlyViewed,
-    () => getRecentlyViewedProducts(limit),
-    () => [],
-  );
+  const [items, setItems] = useState(() => getRecentlyViewedProducts(limit));
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.resolve().then(() => {
+      if (!cancelled) setItems(getRecentlyViewedProducts(limit));
+    });
+    const unsubscribe = subscribeRecentlyViewed(() => {
+      setItems(getRecentlyViewedProducts(limit));
+    });
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [limit]);
 
   if (items.length === 0) {
     return null;
