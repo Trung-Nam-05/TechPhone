@@ -1,4 +1,5 @@
 import rateLimit from 'express-rate-limit';
+import { MSG } from '../utils/userMessages.js';
 
 const standardHeaders = true;
 const legacyHeaders = false;
@@ -9,7 +10,7 @@ export const globalApiLimiter = rateLimit({
   max: 300,
   standardHeaders,
   legacyHeaders,
-  message: { message: 'Too many requests. Please try again later.' },
+  message: { message: MSG.RATE_LIMIT_GLOBAL },
 });
 
 /** Auth tier: login + register — 20 / 15 minutes / IP. */
@@ -18,7 +19,7 @@ export const authRouteLimiter = rateLimit({
   max: 20,
   standardHeaders,
   legacyHeaders,
-  message: { message: 'Too many authentication attempts. Please try again later.' },
+  message: { message: MSG.RATE_LIMIT_AUTH },
 });
 
 /** Order creation: 10 POST / minute / IP. */
@@ -28,7 +29,7 @@ export const orderCreateLimiter = rateLimit({
   standardHeaders,
   legacyHeaders,
   skip: (req) => !(req.method === 'POST' && (req.path === '/' || req.path === '')),
-  message: { message: 'Too many order attempts. Please wait a moment.' },
+  message: { message: MSG.RATE_LIMIT_ORDER },
 });
 
 /** AI chat HTTP tier — complements in-service AI_CHAT_RATE_LIMIT. */
@@ -37,5 +38,5 @@ export const aiChatHttpLimiter = rateLimit({
   max: Number(process.env.AI_CHAT_HTTP_RATE_LIMIT || 60),
   standardHeaders,
   legacyHeaders,
-  message: { message: 'AI chat rate limit exceeded. Please try again later.' },
+  message: { message: MSG.RATE_LIMIT_AI },
 });

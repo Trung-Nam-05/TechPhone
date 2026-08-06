@@ -1,3 +1,5 @@
+import { toUserFacingError } from '../utils/userFacingError.js';
+
 function resolveApiBaseUrl() {
   const configured = import.meta.env.VITE_API_BASE_URL;
   if (configured !== undefined && String(configured).trim() !== '') {
@@ -49,7 +51,7 @@ export async function apiFetch(path, options = {}) {
 
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
-    throw new Error(payload?.message || `Request failed with status ${response.status}`);
+    throw new Error(toUserFacingError(payload?.message, response.status));
   }
 
   if (response.status === 204) {

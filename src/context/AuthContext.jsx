@@ -1,12 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { API_BASE_URL, getSessionId } from '../config/api';
+import { toUserFacingError } from '../utils/userFacingError';
 
 const AUTH_STORAGE_KEY = 'techphone-auth';
 const AuthContext = createContext();
 
 async function parseError(response) {
   const payload = await response.json().catch(() => ({}));
-  return payload?.message || `Request failed with status ${response.status}`;
+  return toUserFacingError(payload?.message, response.status);
 }
 
 function readStoredAuth() {

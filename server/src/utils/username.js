@@ -29,25 +29,25 @@ export function normalizeUsername(value) {
 export function validateUsername(rawValue) {
   const username = normalizeUsername(rawValue);
   if (!username) {
-    return { ok: false, message: 'Username is required.' };
+    return { ok: false, message: 'Vui lòng nhập tên đăng nhập.' };
   }
   if (username.length < 6 || username.length > 20) {
-    return { ok: false, message: 'Username must be 6–20 characters.' };
+    return { ok: false, message: 'Tên đăng nhập phải từ 6–20 ký tự.' };
   }
   if (!USERNAME_REGEX.test(username)) {
     return {
       ok: false,
-      message: 'Username must start with a letter and contain only lowercase letters, numbers, and underscores.',
+      message: 'Tên đăng nhập phải bắt đầu bằng chữ cái, chỉ gồm chữ thường, số và dấu gạch dưới.',
     };
   }
   if (/^\d+$/.test(username)) {
-    return { ok: false, message: 'Username cannot be all numbers.' };
+    return { ok: false, message: 'Tên đăng nhập không được toàn số.' };
   }
   if (/(.)\1\1/.test(username)) {
-    return { ok: false, message: 'Username cannot contain three identical characters in a row.' };
+    return { ok: false, message: 'Tên đăng nhập không được có 3 ký tự giống nhau liên tiếp.' };
   }
   if (USERNAME_BLACKLIST.has(username)) {
-    return { ok: false, message: 'This username is not allowed.' };
+    return { ok: false, message: 'Tên đăng nhập này không được phép sử dụng.' };
   }
   return { ok: true, username };
 }

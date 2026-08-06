@@ -6,12 +6,12 @@ import {
 
 function getMailConfig() {
   return {
-    host: process.env.SMTP_HOST || '',
+    host: String(process.env.SMTP_HOST || '').trim(),
     port: Number(process.env.SMTP_PORT || 587),
     secure: process.env.SMTP_SECURE === 'true',
-    user: process.env.SMTP_USER || '',
-    pass: process.env.SMTP_PASS || '',
-    from: process.env.MAIL_FROM || process.env.SMTP_USER || 'noreply@techphone.local',
+    user: String(process.env.SMTP_USER || '').trim(),
+    pass: String(process.env.SMTP_PASS || '').replace(/\s/g, ''),
+    from: String(process.env.MAIL_FROM || process.env.SMTP_USER || 'noreply@techphone.local').trim(),
   };
 }
 

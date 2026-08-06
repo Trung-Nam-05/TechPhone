@@ -8,16 +8,32 @@ import {
   sendFlashSaleMarketingEmail,
 } from '../services/mail.js';
 import { getDefaultFlashSaleVariables } from '../services/emailTemplates.js';
+import { isDeliverableContactEmail, MSG } from '../utils/userMessages.js';
 
 const router = express.Router();
 
 router.use(requireAuth, requireAdmin);
 
-router.get('/status', (_req, res) => {
-  res.json({
-    mailConfigured: isMailConfigured(),
-    templates: ['flash-sale'],
-  });
+router.get('/status', async (_req, res, next) => {
+  try {
+    const users = await User.find({
+      role: 'customer',
+      isActive: true,
+      contactEmailVerified: true,
+    })
+      .select('contactEmail')
+      .lean();
+
+    const eligibleRecipients = users.filter((user) => isDeliverableContactEmail(user.contactEmail)).length;
+
+    res.json({
+      mailConfigured: isMailConfigured(),
+      templates: ['flash-sale'],
+      eligibleRecipients,
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 router.post('/preview', async (req, res, next) => {
@@ -76,14 +92,14 @@ router.post('/send-campaign', async (req, res, next) => {
 
     const recipients = [];
     for (const user of users) {
-      const email = user.contactEmailVerified && user.contactEmail ? user.contactEmail : user.email;
-      if (email && email.includes('@') && !email.endsWith('@techphone.local')) {
-        recipients.push({ userId: String(user._id), email, name: user.name });
-      }
+      if (!user.contactEmailVerified || !user.contactEmail) continue;
+      const email = String(user.contactEmail).trim().toLowerCase();
+      if (!isDeliverableContactEmail(email)) continue;
+      recipients.push({ userId: String(user._id), email, name: user.name });
     }
 
     if (recipients.length === 0) {
-      return res.status(400).json({ message: 'Không có khách hàng nào có email hợp lệ để gửi.' });
+      return res.status(400).json({ message: MSG.MARKETING_NO_RECIPIENTS });
     }
 
     const variables = getDefaultFlashSaleVariables(req.body?.variables || {});

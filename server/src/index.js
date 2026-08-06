@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import cors from 'cors';
 import express from 'express';
 import { connectDatabase } from './config/db.js';
+import { MSG } from './utils/userMessages.js';
 import productRoutes from './routes/products.js';
 import cartRoutes from './routes/cart.js';
 import orderRoutes from './routes/orders.js';
@@ -135,7 +136,7 @@ if (shouldServeStatic()) {
 
 app.use((err, _req, res, _next) => {
   console.error(err);
-  res.status(500).json({ message: 'Internal server error.' });
+  res.status(500).json({ message: MSG.INTERNAL_ERROR });
 });
 
 async function start() {

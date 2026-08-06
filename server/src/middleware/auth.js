@@ -1,5 +1,6 @@
 import User from '../models/User.js';
 import { verifyAccessToken } from '../utils/auth.js';
+import { MSG } from '../utils/userMessages.js';
 
 function extractBearerToken(req) {
   const authHeader = req.header('authorization') || '';
@@ -31,15 +32,15 @@ export async function requireAuth(req, res, next) {
   try {
     const token = extractBearerToken(req);
     if (!token) {
-      return res.status(401).json({ message: 'Unauthorized. Missing access token.' });
+      return res.status(401).json({ message: MSG.UNAUTHORIZED_NO_TOKEN });
     }
     await attachAuthContext(req, token);
     return next();
   } catch (error) {
     if (error?.message === 'USER_INACTIVE') {
-      return res.status(403).json({ message: 'Account is disabled.' });
+      return res.status(403).json({ message: MSG.AUTH_ACCOUNT_DISABLED });
     }
-    return res.status(401).json({ message: 'Unauthorized. Invalid or expired token.' });
+    return res.status(401).json({ message: MSG.UNAUTHORIZED_INVALID_TOKEN });
   }
 }
 
@@ -53,7 +54,7 @@ export async function optionalAuth(req, res, next) {
     return next();
   } catch (error) {
     if (error?.message === 'USER_INACTIVE') {
-      return res.status(403).json({ message: 'Account is disabled.' });
+      return res.status(403).json({ message: MSG.AUTH_ACCOUNT_DISABLED });
     }
     return next();
   }
@@ -61,7 +62,7 @@ export async function optionalAuth(req, res, next) {
 
 export function requireAdmin(req, res, next) {
   if (!req.auth || req.auth.role !== 'admin') {
-    return res.status(403).json({ message: 'Forbidden. Admin access required.' });
+    return res.status(403).json({ message: MSG.FORBIDDEN_ADMIN });
   }
   return next();
 }

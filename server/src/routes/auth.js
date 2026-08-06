@@ -17,6 +17,7 @@ import {
 } from '../utils/username.js';
 import { claimSessionOwnership } from '../services/claimSessionOwnership.js';
 import { isMailConfigured, sendContactEmailVerification, sendPasswordResetEmail } from '../services/mail.js';
+import { MSG } from '../utils/userMessages.js';
 
 const router = express.Router();
 const clientOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
@@ -37,10 +38,10 @@ router.post('/register', async (req, res, next) => {
   try {
     const { name, username, password } = req.body || {};
     if (!name?.trim() || !username?.trim() || !password?.trim()) {
-      return res.status(400).json({ message: 'name, username, password are required.' });
+      return res.status(400).json({ message: MSG.AUTH_FIELDS_REQUIRED });
     }
     if (password.length < 6) {
-      return res.status(400).json({ message: 'Password must be at least 6 characters.' });
+      return res.status(400).json({ message: MSG.AUTH_PASSWORD_MIN });
     }
 
     const usernameValidation = validateUsername(username);
@@ -53,11 +54,11 @@ router.post('/register', async (req, res, next) => {
 
     const existingUsername = await User.findOne({ username: normalizedUsername }).select('_id');
     if (existingUsername) {
-      return res.status(409).json({ message: 'Username is already in use.' });
+      return res.status(409).json({ message: MSG.AUTH_USERNAME_TAKEN });
     }
     const existingEmail = await User.findOne({ email: internalEmail }).select('_id');
     if (existingEmail) {
-      return res.status(409).json({ message: 'Username is already in use.' });
+      return res.status(409).json({ message: MSG.AUTH_USERNAME_TAKEN });
     }
 
     const passwordHash = hashPassword(password);
@@ -86,7 +87,7 @@ router.post('/login', async (req, res, next) => {
     const identifier = req.body?.login || req.body?.email;
     const { password } = req.body || {};
     if (!identifier?.trim() || !password?.trim()) {
-      return res.status(400).json({ message: 'login and password are required.' });
+      return res.status(400).json({ message: MSG.AUTH_LOGIN_REQUIRED });
     }
 
     const normalizedIdentifier = String(identifier).trim().toLowerCase();
@@ -94,18 +95,18 @@ router.post('/login', async (req, res, next) => {
     const throttleState = getLoginThrottleState(throttleKey);
     if (throttleState.blocked) {
       return res.status(429).json({
-        message: `Too many failed login attempts. Try again in ${throttleState.retryAfterSeconds}s.`,
+        message: MSG.AUTH_LOGIN_LOCKED(throttleState.retryAfterSeconds),
       });
     }
 
     const user = await findUserByLoginIdentifier(normalizedIdentifier);
     if (!user) {
       registerLoginAttempt(throttleKey, false);
-      return res.status(401).json({ message: 'Invalid username/email or password.' });
+      return res.status(401).json({ message: MSG.AUTH_INVALID_CREDENTIALS });
     }
     if (user.isActive === false) {
       registerLoginAttempt(throttleKey, false);
-      return res.status(403).json({ message: 'Account is disabled.' });
+      return res.status(403).json({ message: MSG.AUTH_ACCOUNT_DISABLED });
     }
 
     const isValidPassword = verifyPassword(password, user.passwordHash);
@@ -113,10 +114,10 @@ router.post('/login', async (req, res, next) => {
       const result = registerLoginAttempt(throttleKey, false);
       if (result.blocked) {
         return res.status(429).json({
-          message: `Too many failed login attempts. Try again in ${result.retryAfterSeconds}s.`,
+          message: MSG.AUTH_LOGIN_LOCKED(result.retryAfterSeconds),
         });
       }
-      return res.status(401).json({ message: 'Invalid username/email or password.' });
+      return res.status(401).json({ message: MSG.AUTH_INVALID_CREDENTIALS });
     }
     registerLoginAttempt(throttleKey, true);
 
@@ -142,13 +143,13 @@ router.patch('/me', requireAuth, async (req, res, next) => {
   try {
     const user = await User.findById(req.auth.userId);
     if (!user || user.isActive === false) {
-      return res.status(403).json({ message: 'Account is disabled.' });
+      return res.status(403).json({ message: MSG.AUTH_ACCOUNT_DISABLED });
     }
     const { name, phone, avatar, currentPassword, newPassword } = req.body || {};
     if (name !== undefined) {
       const nextName = String(name || '').trim();
       if (!nextName) {
-        return res.status(400).json({ message: 'name cannot be empty.' });
+        return res.status(400).json({ message: MSG.AUTH_NAME_EMPTY });
       }
       user.name = nextName;
     }
@@ -158,20 +159,20 @@ router.patch('/me', requireAuth, async (req, res, next) => {
     if (avatar !== undefined) {
       const nextAvatar = String(avatar || '').trim();
       if (nextAvatar && !nextAvatar.startsWith('data:image/')) {
-        return res.status(400).json({ message: 'Avatar must be an image data URL.' });
+        return res.status(400).json({ message: MSG.AUTH_AVATAR_INVALID });
       }
       if (nextAvatar.length > 220_000) {
-        return res.status(400).json({ message: 'Avatar file is too large (max ~150KB).' });
+        return res.status(400).json({ message: MSG.AUTH_AVATAR_TOO_LARGE });
       }
       user.avatar = nextAvatar;
     }
     if (newPassword !== undefined && String(newPassword).trim()) {
       const pwd = String(newPassword);
       if (pwd.length < 6) {
-        return res.status(400).json({ message: 'New password must be at least 6 characters.' });
+        return res.status(400).json({ message: MSG.AUTH_PASSWORD_MIN });
       }
       if (!currentPassword || !verifyPassword(String(currentPassword), user.passwordHash)) {
-        return res.status(400).json({ message: 'Current password is incorrect.' });
+        return res.status(400).json({ message: MSG.AUTH_CURRENT_PASSWORD_WRONG });
       }
       user.passwordHash = hashPassword(pwd);
     }
@@ -195,7 +196,7 @@ router.post('/link-email', requireAuth, async (req, res, next) => {
 
     const user = await User.findById(req.auth.userId);
     if (!user) {
-      return res.status(404).json({ message: 'User not found.' });
+      return res.status(404).json({ message: MSG.AUTH_USER_NOT_FOUND });
     }
 
     const taken = await User.findOne({
@@ -264,10 +265,14 @@ router.post('/forgot-password', async (req, res, next) => {
   try {
     const contactEmail = String(req.body?.contactEmail || req.body?.email || '').trim().toLowerCase();
     if (!contactEmail) {
-      return res.status(400).json({ message: 'contactEmail is required.' });
+      return res.status(400).json({ message: MSG.AUTH_CONTACT_EMAIL_REQUIRED });
     }
 
-    const genericMessage = 'Nếu email đã liên kết và xác minh, bạn sẽ nhận hướng dẫn khôi phục mật khẩu.';
+    if (!isMailConfigured()) {
+      return res.status(503).json({ message: MSG.AUTH_MAIL_NOT_CONFIGURED });
+    }
+
+    const genericMessage = MSG.AUTH_FORGOT_GENERIC;
     const user = await User.findOne({ contactEmail, contactEmailVerified: true });
 
     if (user && isMailConfigured()) {
@@ -295,10 +300,10 @@ router.post('/reset-password', async (req, res, next) => {
     const token = String(req.body?.token || '').trim();
     const newPassword = String(req.body?.newPassword || req.body?.password || '').trim();
     if (!token || !newPassword) {
-      return res.status(400).json({ message: 'token and newPassword are required.' });
+      return res.status(400).json({ message: MSG.AUTH_RESET_FIELDS_REQUIRED });
     }
     if (newPassword.length < 6) {
-      return res.status(400).json({ message: 'Password must be at least 6 characters.' });
+      return res.status(400).json({ message: MSG.AUTH_PASSWORD_MIN });
     }
 
     const user = await User.findOne({
@@ -306,7 +311,7 @@ router.post('/reset-password', async (req, res, next) => {
       resetPasswordExpires: { $gt: new Date() },
     });
     if (!user) {
-      return res.status(400).json({ message: 'Liên kết khôi phục không hợp lệ hoặc đã hết hạn.' });
+      return res.status(400).json({ message: MSG.AUTH_RESET_INVALID });
     }
 
     user.passwordHash = hashPassword(newPassword);
@@ -314,7 +319,7 @@ router.post('/reset-password', async (req, res, next) => {
     user.resetPasswordExpires = null;
     await user.save();
 
-    return res.json({ message: 'Đã đặt lại mật khẩu thành công. Bạn có thể đăng nhập.' });
+    return res.json({ message: MSG.AUTH_RESET_SUCCESS });
   } catch (error) {
     return next(error);
   }

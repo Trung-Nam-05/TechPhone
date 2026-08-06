@@ -20,6 +20,7 @@ function defaultExpiresAt() {
 export default function AdminMarketing() {
   const { authFetch, user } = useAuth();
   const [mailConfigured, setMailConfigured] = useState(false);
+  const [eligibleRecipients, setEligibleRecipients] = useState(0);
   const [loadingStatus, setLoadingStatus] = useState(true);
   const [variables, setVariables] = useState({ ...DEFAULT_VARIABLES, expiresAt: defaultExpiresAt() });
   const [testEmail, setTestEmail] = useState(user?.email || '');
@@ -46,6 +47,7 @@ export default function AdminMarketing() {
     try {
       const payload = await authFetch('/api/admin/marketing/status');
       setMailConfigured(Boolean(payload.mailConfigured));
+      setEligibleRecipients(Number(payload.eligibleRecipients) || 0);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -99,7 +101,7 @@ export default function AdminMarketing() {
 
   const handleSendCampaign = async () => {
     const confirmed = window.confirm(
-      'Gửi email Flash Sale tới TẤT CẢ khách hàng có email hợp lệ? Hãy chắc chắn đã xem preview trước.',
+      `Gửi email Flash Sale tới ${eligibleRecipients} khách có email liên kết đã xác minh? Hãy chắc chắn đã xem preview trước.`,
     );
     if (!confirmed) return;
 
@@ -124,7 +126,7 @@ export default function AdminMarketing() {
     <div className="admin-page admin-marketing-page">
       <AdminPageHeader
         title="Email marketing"
-        subtitle="Preview và gửi email Flash Sale tới khách hàng qua SMTP Gmail."
+        subtitle="Gửi email Flash Sale tới khách đã liên kết và xác minh email thật (Bảo mật tài khoản)."
         actions={(
           <span className={`admin-marketing-status ${mailConfigured ? 'is-ready' : 'is-pending'}`}>
             {loadingStatus ? 'Đang kiểm tra SMTP...' : mailConfigured ? 'SMTP sẵn sàng' : 'SMTP chưa cấu hình'}
@@ -137,7 +139,7 @@ export default function AdminMarketing() {
 
       {!loadingStatus && !mailConfigured && (
         <div className="admin-alert admin-alert-error">
-          SMTP chưa cấu hình. Điền `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS` trong `.env` rồi restart server.
+          SMTP chưa cấu hình trên server. Thêm `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` trên Render rồi redeploy.
         </div>
       )}
 
@@ -228,16 +230,16 @@ export default function AdminMarketing() {
 
           <h3 className="admin-marketing-subtitle">Gửi campaign</h3>
           <p className="admin-marketing-note">
-            Gửi tới tất cả khách hàng đang hoạt động (ưu tiên email liên kết đã xác minh).
+            Chỉ gửi tới khách đã liên kết và xác minh email thật. Hiện có {eligibleRecipients} người nhận.
           </p>
           <button
             type="button"
             className="btn btn-outline admin-marketing-campaign-btn"
             onClick={handleSendCampaign}
-            disabled={!mailConfigured || sendingCampaign}
+            disabled={!mailConfigured || sendingCampaign || eligibleRecipients === 0}
           >
             <Users size={16} />
-            {sendingCampaign ? 'Đang gửi campaign...' : 'Gửi tới tất cả khách hàng'}
+            {sendingCampaign ? 'Đang gửi campaign...' : `Gửi tới ${eligibleRecipients} khách`}
           </button>
         </div>
 

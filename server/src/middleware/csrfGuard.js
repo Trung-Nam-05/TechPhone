@@ -1,4 +1,5 @@
 import { isAllowedOrigin } from '../utils/allowedOrigins.js';
+import { MSG } from '../utils/userMessages.js';
 
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
@@ -28,7 +29,7 @@ export function csrfGuard(req, res, next) {
 
   const requestedWith = String(req.get('x-requested-with') || '').trim();
   if (requestedWith !== 'TechPhone') {
-    return res.status(403).json({ message: 'Missing or invalid X-Requested-With header.' });
+    return res.status(403).json({ message: MSG.CSRF_HEADER });
   }
 
   const origin = req.get('origin');
@@ -36,7 +37,7 @@ export function csrfGuard(req, res, next) {
   const originOk = isAllowedOrigin(origin) || isAllowedOrigin(referer);
 
   if (!originOk) {
-    return res.status(403).json({ message: 'Origin not allowed.' });
+    return res.status(403).json({ message: MSG.CSRF_ORIGIN });
   }
 
   return next();

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '../config/api';
+import { toUserFacingError } from '../utils/userFacingError';
 
 export default function ForgotPassword() {
   const [contactEmail, setContactEmail] = useState('');
@@ -20,7 +21,7 @@ export default function ForgotPassword() {
       });
       setMessage(payload?.message || 'Nếu email đã liên kết và xác minh, bạn sẽ nhận hướng dẫn khôi phục mật khẩu.');
     } catch (err) {
-      setError(err.message);
+      setError(toUserFacingError(err.message));
     } finally {
       setLoading(false);
     }
@@ -31,7 +32,7 @@ export default function ForgotPassword() {
       <div className="card" style={{ padding: 20 }}>
         <h1 style={{ fontSize: 28, marginBottom: 8 }}>Quên mật khẩu</h1>
         <p className="text-sm text-muted" style={{ marginBottom: 16 }}>
-          Nhập email liên kết đã xác minh. Chúng tôi sẽ gửi liên kết đặt lại mật khẩu.
+          Nhập email liên kết đã xác minh tại mục Bảo mật tài khoản. Chúng tôi sẽ gửi liên kết đặt lại mật khẩu.
         </p>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
