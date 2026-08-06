@@ -73,6 +73,26 @@ CLIENT_ORIGIN=http://localhost:5173
 | Invalid login / 535 | Dùng mật khẩu Gmail thường | Dùng **App Password** |
 | Không nhận mail | Spam / chưa restart server | Restart API; kiểm tra Spam |
 | Link xác minh lỗi | API không chạy | Chạy server port 4000; `API_PUBLIC_URL` đúng |
+| Timeout / không kết nối smtp.gmail.com trên Render | **Render free chặn cổng SMTP** | Dùng `BREVO_API_KEY` (HTTPS) — xem mục Render bên dưới |
+
+---
+
+## Deploy Render (free tier)
+
+Render **chặn outbound SMTP** (cổng 25, 465, 587). Gmail SMTP chạy local nhưng **timeout trên Render free** — không phải lỗi App Password.
+
+**Giải pháp khuyến nghị:** Brevo API (miễn phí, gửi qua HTTPS port 443):
+
+```env
+BREVO_API_KEY=xkeysib-your_api_key
+MAIL_FROM=TechPhone <shoptechphone99@gmail.com>
+```
+
+1. Đăng ký [brevo.com](https://www.brevo.com) → **SMTP & API** → tạo API key
+2. **Senders** → xác minh email người gửi
+3. Thêm 2 biến trên Render → Redeploy
+
+Hoặc nâng cấp Render **paid** để dùng Gmail SMTP trên cloud.
 
 ---
 

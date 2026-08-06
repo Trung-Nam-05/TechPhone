@@ -91,7 +91,22 @@ Hoặc copy toàn bộ block `GHN_*` từ `.env` nếu cần demo vận chuyển
 | `AI_CHAT_RATE_LIMIT` | `20` |
 | `AI_CHAT_HTTP_RATE_LIMIT` | `60` |
 
-### SMTP email (tuỳ chọn)
+### Email trên Render free (Bắt buộc dùng Brevo, không dùng Gmail SMTP)
+
+**Render free tier chặn cổng SMTP 25/465/587** — Gmail SMTP sẽ timeout dù App Password đúng.
+
+| Key | Value |
+|-----|-------|
+| `BREVO_API_KEY` | API key từ [brevo.com](https://www.brevo.com) → SMTP & API |
+| `MAIL_FROM` | `TechPhone <shoptechphone99@gmail.com>` (email đã xác minh trong Brevo → Senders) |
+
+**Cách lấy Brevo (miễn phí ~300 email/ngày):**
+1. Đăng ký Brevo → **SMTP & API** → tạo API key (`xkeysib-...`)
+2. **Senders** → thêm và xác minh email gửi (vd `shoptechphone99@gmail.com`)
+3. Trên Render: thêm `BREVO_API_KEY` + `MAIL_FROM` → Save → Redeploy
+4. Admin Marketing → trạng thái **Email sẵn sàng**
+
+### SMTP Gmail (chỉ local dev)
 
 | Key | Value |
 |-----|-------|
@@ -101,6 +116,8 @@ Hoặc copy toàn bộ block `GHN_*` từ `.env` nếu cần demo vận chuyển
 | `SMTP_USER` | Gmail của bạn |
 | `SMTP_PASS` | App Password |
 | `MAIL_FROM` | `TechPhone <email@gmail.com>` |
+
+Hoặc nâng cấp Render **paid** nếu muốn tiếp tục dùng Gmail SMTP trên cloud.
 
 ### Không cần nhập
 

@@ -22,6 +22,7 @@ export default function AdminMarketing() {
   const [mailConfigured, setMailConfigured] = useState(false);
   const [mailVerified, setMailVerified] = useState(false);
   const [mailVerifyHint, setMailVerifyHint] = useState('');
+  const [mailProvider, setMailProvider] = useState('');
   const [mailEnvKeys, setMailEnvKeys] = useState(null);
   const [eligibleRecipients, setEligibleRecipients] = useState(0);
   const [campaignFailures, setCampaignFailures] = useState([]);
@@ -53,6 +54,7 @@ export default function AdminMarketing() {
       setMailConfigured(Boolean(payload.mailConfigured));
       setMailVerified(Boolean(payload.mailVerified));
       setMailVerifyHint(payload.mailVerifyReason || '');
+      setMailProvider(payload.mailProvider || payload.mailEnv?.provider || '');
       setMailEnvKeys(payload.mailEnv?.keys || null);
       setEligibleRecipients(Number(payload.eligibleRecipients) || 0);
     } catch (err) {
@@ -140,12 +142,12 @@ export default function AdminMarketing() {
         actions={(
           <span className={`admin-marketing-status ${mailConfigured && mailVerified ? 'is-ready' : 'is-pending'}`}>
             {loadingStatus
-              ? 'Đang kiểm tra SMTP...'
+              ? 'Đang kiểm tra email...'
               : mailConfigured && mailVerified
-                ? 'SMTP sẵn sàng'
+                ? 'Email sẵn sàng'
                 : mailConfigured
-                  ? 'SMTP cấu hình sai — kiểm tra App Password'
-                  : 'SMTP chưa cấu hình'}
+                  ? 'Email chưa kết nối được'
+                  : 'Email chưa cấu hình'}
           </span>
         )}
       />
@@ -165,8 +167,15 @@ export default function AdminMarketing() {
 
       {!loadingStatus && mailConfigured && !mailVerified && (
         <div className="admin-alert admin-alert-error">
-          <strong>SMTP đã khai báo nhưng kết nối thất bại.</strong>
-          <p style={{ margin: '8px 0 0' }}>{mailVerifyHint || 'Kiểm tra App Password Gmail trên Render.'}</p>
+          <strong>Email đã khai báo nhưng chưa kết nối được{mailProvider ? ` (${mailProvider})` : ''}.</strong>
+          <p style={{ margin: '8px 0 0' }}>{mailVerifyHint || 'Kiểm tra cấu hình email trên Render.'}</p>
+          {mailProvider === 'smtp' && (
+            <p style={{ margin: '8px 0 0' }}>
+              <strong>Render free chặn Gmail SMTP.</strong> Đăng ký miễn phí tại{' '}
+              <a href="https://www.brevo.com" target="_blank" rel="noreferrer">brevo.com</a>
+              {' '}→ lấy API key → thêm <code>BREVO_API_KEY</code> và <code>MAIL_FROM</code> trên Render → redeploy.
+            </p>
+          )}
           {mailEnvKeys && !mailEnvKeys.MAIL_FROM && (
             <p style={{ margin: '8px 0 0' }}>Gợi ý: thêm biến <code>MAIL_FROM=TechPhone &lt;shoptechphone99@gmail.com&gt;</code></p>
           )}
@@ -175,7 +184,8 @@ export default function AdminMarketing() {
 
       {!loadingStatus && !mailConfigured && (
         <div className="admin-alert admin-alert-error">
-          SMTP chưa cấu hình trên server. Thêm `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` trên Render rồi redeploy.
+          Email chưa cấu hình trên server. Trên Render free: thêm <code>BREVO_API_KEY</code> + <code>MAIL_FROM</code>.
+          Local dev: dùng <code>SMTP_HOST</code>, <code>SMTP_USER</code>, <code>SMTP_PASS</code>.
         </div>
       )}
 

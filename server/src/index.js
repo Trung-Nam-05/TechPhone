@@ -40,7 +40,7 @@ import { isGhnConfigured, isGhnDevApi, isGhnProductionApi } from './services/ghn
 import { ensureDefaultCategories } from './services/ensureCategories.js';
 import { ensureDefaultCoupons } from './services/ensureCoupons.js';
 import { buildSitemapXml } from './services/sitemap.js';
-import { isMailConfigured } from './services/mail.js';
+import { getMailProvider, isMailConfigured } from './services/mail.js';
 import { csrfGuard } from './middleware/csrfGuard.js';
 import {
   createCorsOriginCallback,
@@ -73,7 +73,7 @@ app.get('/api/health', (_req, res) => {
     ok: true,
     service: 'techphone-api',
     shipping: isGhnConfigured() ? 'ghn-dev' : 'none',
-    mail: isMailConfigured() ? 'smtp' : 'none',
+    mail: isMailConfigured() ? getMailProvider() : 'none',
   });
 });
 

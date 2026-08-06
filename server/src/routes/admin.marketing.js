@@ -36,12 +36,15 @@ router.get('/status', async (_req, res, next) => {
 
     const eligibleRecipients = users.filter((user) => isDeliverableContactEmail(user.contactEmail)).length;
     const mailEnv = getMailEnvStatus();
-    const mailCheck = isMailConfigured() ? await verifyMailConnection() : { ok: false, reason: 'not_configured', hint: 'Thiếu SMTP_HOST / SMTP_USER / SMTP_PASS.' };
+    const mailCheck = isMailConfigured()
+      ? await verifyMailConnection()
+      : { ok: false, reason: 'not_configured', hint: 'Thiếu BREVO_API_KEY hoặc SMTP_HOST / SMTP_USER / SMTP_PASS.' };
 
     res.json({
       mailConfigured: mailEnv.configured,
       mailVerified: mailCheck.ok,
-      mailVerifyReason: mailCheck.ok ? '' : translateSmtpError(mailCheck.reason),
+      mailVerifyReason: mailCheck.ok ? '' : (mailCheck.hint || translateSmtpError(mailCheck.reason)),
+      mailProvider: mailEnv.provider,
       mailEnv,
       templates: ['flash-sale'],
       eligibleRecipients,
