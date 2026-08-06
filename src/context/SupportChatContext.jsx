@@ -578,7 +578,7 @@ export function SupportChatProvider({ children }) {
       .catch(() => {});
   }, [joinConversation, loadCustomerMessages, loadAdminSupportCustomers, markAllCustomerRead]);
 
-  const openWidget = useCallback(async (orderId) => {
+  const openWidget = useCallback(async (_orderId) => {
     setIsOpen(true);
     if (!isAuthenticated) return;
     setLoading(true);

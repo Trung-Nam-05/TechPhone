@@ -281,7 +281,6 @@ router.patch('/:id/status', async (req, res, next) => {
 
     const previousOrderStatus = order.status;
     const previousSupportStatus = order.supportStatus;
-    let statusValidation = null;
 
     if (status && status !== previousOrderStatus) {
       const transition = await applyAdminOrderTransition(order, status, {
@@ -290,7 +289,6 @@ router.patch('/:id/status', async (req, res, next) => {
         note,
         actor: req.auth.userId,
       });
-      statusValidation = transition.validation;
       if (!transition.ok) {
         const messages = {
           OVERRIDE_REASON_REQUIRED: 'Override requires a reason (min 10 characters).',

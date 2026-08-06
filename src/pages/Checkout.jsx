@@ -62,31 +62,27 @@ export default function Checkout() {
   useEffect(() => {
     if (!isAuthenticated || !user) return undefined;
 
-    setShippingForm((prev) => ({
-      ...prev,
-      fullName: prev.fullName || user.name || '',
-      phone: prev.phone || user.phone || '',
-      email: prev.email || user.email || '',
-    }));
-
     let cancelled = false;
+    const applyShipping = (lastShipping = null) => {
+      if (cancelled) return;
+      setShippingForm((prev) => ({
+        fullName: prev.fullName || user.name || lastShipping?.fullName || '',
+        phone: prev.phone || user.phone || lastShipping?.phone || '',
+        email: prev.email || user.email || lastShipping?.email || '',
+        province: prev.province || lastShipping?.province || '',
+        district: prev.district || lastShipping?.district || '',
+        ward: prev.ward || lastShipping?.ward || '',
+        address: prev.address || lastShipping?.address || '',
+      }));
+    };
+
     const loadLastShipping = async () => {
       try {
         const payload = await authFetch('/api/orders');
         if (cancelled) return;
-        const lastShipping = payload?.items?.[0]?.shippingInfo;
-        if (!lastShipping) return;
-        setShippingForm((prev) => ({
-          fullName: prev.fullName || lastShipping.fullName || '',
-          phone: prev.phone || lastShipping.phone || '',
-          email: prev.email || lastShipping.email || '',
-          province: prev.province || lastShipping.province || '',
-          district: prev.district || lastShipping.district || '',
-          ward: prev.ward || lastShipping.ward || '',
-          address: prev.address || lastShipping.address || '',
-        }));
+        applyShipping(payload?.items?.[0]?.shippingInfo);
       } catch {
-        /* ignore — form still usable with profile defaults */
+        applyShipping();
       }
     };
     loadLastShipping();

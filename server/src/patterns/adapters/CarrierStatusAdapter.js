@@ -14,7 +14,7 @@ export class CarrierStatusAdapter {
    * @param {string} carrierStatus
    * @returns {string|null} internal order status or null if unknown
    */
-  toOrderStatus(carrierStatus) {
+  toOrderStatus(_carrierStatus) {
     throw new Error('CarrierStatusAdapter.toOrderStatus must be implemented');
   }
 

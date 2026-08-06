@@ -15,7 +15,7 @@ export class DiscountStrategy {
    * @param {number} baseAmount
    * @returns {number}
    */
-  calculate(coupon, baseAmount) {
+  calculate(_coupon, _baseAmount) {
     throw new Error('DiscountStrategy.calculate must be implemented');
   }
 }

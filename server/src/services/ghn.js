@@ -6,9 +6,6 @@
  */
 import { ghnStatusAdapter } from '../patterns/adapters/GhnStatusAdapter.js';
 
-const DEV_API_V2 = 'https://dev-online-gateway.ghn.vn/shiip/public-api/v2';
-const DEV_API_MASTER = 'https://dev-online-gateway.ghn.vn/shiip/public-api/master-data';
-
 function getConfig() {
   const raw = String(process.env.GHN_API_URL || 'https://dev-online-gateway.ghn.vn').replace(/\/$/, '');
   const root = raw.includes('/shiip/') ? raw.split('/shiip/')[0] : raw;

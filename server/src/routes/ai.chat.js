@@ -25,7 +25,7 @@ router.get('/session', async (req, res, next) => {
   }
 });
 
-router.post('/', async (req, res, next) => {
+router.post('/', async (req, res, _next) => {
   try {
     if (!isGeminiConfigured()) {
       return res.status(503).json({ message: 'Gemini AI chưa được cấu hình.' });

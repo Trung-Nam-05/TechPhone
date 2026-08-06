@@ -1,5 +1,4 @@
 import Order from '../models/Order.js';
-import OrderEvent from '../models/OrderEvent.js';
 import ShipmentEvent from '../models/ShipmentEvent.js';
 import {
   isGhnConfigured,

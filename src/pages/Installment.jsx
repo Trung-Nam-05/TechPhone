@@ -50,33 +50,29 @@ export default function Installment() {
   useEffect(() => {
     if (!isAuthenticated || !user) return undefined;
 
-    setShippingForm((prev) => ({
-      ...prev,
-      fullName: prev.fullName || user.name || '',
-      phone: prev.phone || user.phone || '',
-      email: prev.email || user.email || '',
-    }));
-
     let cancelled = false;
+    const applyShipping = (lastShipping = null) => {
+      if (cancelled) return;
+      setShippingForm((prev) => ({
+        fullName: prev.fullName || user.name || lastShipping?.fullName || '',
+        phone: prev.phone || user.phone || lastShipping?.phone || '',
+        email: prev.email || user.email || lastShipping?.email || '',
+        address:
+          prev.address ||
+          [lastShipping?.address, lastShipping?.ward, lastShipping?.district, lastShipping?.province]
+            .filter(Boolean)
+            .join(', ') ||
+          '',
+      }));
+    };
+
     const loadLastShipping = async () => {
       try {
         const payload = await authFetch('/api/orders');
         if (cancelled) return;
-        const lastShipping = payload?.items?.[0]?.shippingInfo;
-        if (!lastShipping) return;
-        setShippingForm((prev) => ({
-          fullName: prev.fullName || lastShipping.fullName || '',
-          phone: prev.phone || lastShipping.phone || '',
-          email: prev.email || lastShipping.email || '',
-          address:
-            prev.address ||
-            [lastShipping.address, lastShipping.ward, lastShipping.district, lastShipping.province]
-              .filter(Boolean)
-              .join(', ') ||
-            '',
-        }));
+        applyShipping(payload?.items?.[0]?.shippingInfo);
       } catch {
-        /* ignore */
+        applyShipping();
       }
     };
     loadLastShipping();
