@@ -101,6 +101,7 @@ const orderSchema = new mongoose.Schema(
       phone: { type: String, required: true, trim: true },
       email: { type: String, default: '', trim: true },
       province: { type: String, default: '', trim: true },
+      provinceId: { type: Number, default: null },
       district: { type: String, default: '', trim: true },
       ward: { type: String, default: '', trim: true },
       districtId: { type: Number, default: null },

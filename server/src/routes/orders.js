@@ -44,6 +44,9 @@ router.post('/', async (req, res, next) => {
 
     const shippingInfo = req.body?.shippingInfo || {};
     const { fullName, phone, email = '', province = '', district = '', ward = '', address, note = '' } = shippingInfo;
+    const provinceId = Number(shippingInfo?.provinceId) || null;
+    const districtId = Number(shippingInfo?.districtId) || null;
+    const wardCode = String(shippingInfo?.wardCode || '').trim();
     const rawPaymentMethod = String(req.body?.paymentMethod || 'cod').trim();
     const paymentStrategy = resolvePaymentStrategy(rawPaymentMethod);
     if (!paymentStrategy) {
@@ -231,8 +234,11 @@ router.post('/', async (req, res, next) => {
               phone: phone.trim(),
               email: email.trim(),
               province: province.trim(),
+              provinceId: Number.isFinite(provinceId) && provinceId > 0 ? provinceId : null,
               district: district.trim(),
+              districtId: Number.isFinite(districtId) && districtId > 0 ? districtId : null,
               ward: ward.trim(),
+              wardCode,
               address: address.trim(),
               note: note.trim(),
             },

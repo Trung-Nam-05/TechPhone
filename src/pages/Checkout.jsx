@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { calculateCouponPricing, getStoredSelectedCouponIds } from '../data/coupons';
 import OrderSuccessResult from '../components/OrderSuccessResult';
 import PendingVnpayBanner from '../components/PendingVnpayBanner';
+import GhnAddressSelector from '../components/GhnAddressSelector';
 import {
   getPrimaryPaymentOptions,
   getSecondaryPaymentOptions,
@@ -23,8 +24,11 @@ const EMPTY_SHIPPING_FORM = {
   phone: '',
   email: '',
   province: '',
+  provinceId: null,
   district: '',
+  districtId: null,
   ward: '',
+  wardCode: '',
   address: '',
 };
 
@@ -70,8 +74,11 @@ export default function Checkout() {
         phone: prev.phone || user.phone || lastShipping?.phone || '',
         email: prev.email || user.email || lastShipping?.email || '',
         province: prev.province || lastShipping?.province || '',
+        provinceId: prev.provinceId || lastShipping?.provinceId || null,
         district: prev.district || lastShipping?.district || '',
+        districtId: prev.districtId || lastShipping?.districtId || null,
         ward: prev.ward || lastShipping?.ward || '',
+        wardCode: prev.wardCode || lastShipping?.wardCode || '',
         address: prev.address || lastShipping?.address || '',
       }));
     };
@@ -141,15 +148,27 @@ export default function Checkout() {
     ].filter(Boolean);
 
     const shippingInfo = {
-      fullName: String(formData.get('fullName') || '').trim(),
-      phone: String(formData.get('phone') || '').trim(),
-      email: String(formData.get('email') || '').trim(),
-      province: String(formData.get('province') || '').trim(),
-      district: String(formData.get('district') || '').trim(),
-      ward: String(formData.get('ward') || '').trim(),
-      address: String(formData.get('address') || '').trim(),
+      fullName: String(formData.get('fullName') || shippingForm.fullName || '').trim(),
+      phone: String(formData.get('phone') || shippingForm.phone || '').trim(),
+      email: String(formData.get('email') || shippingForm.email || '').trim(),
+      province: String(shippingForm.province || formData.get('province') || '').trim(),
+      provinceId: shippingForm.provinceId || null,
+      district: String(shippingForm.district || formData.get('district') || '').trim(),
+      districtId: shippingForm.districtId || null,
+      ward: String(shippingForm.ward || formData.get('ward') || '').trim(),
+      wardCode: shippingForm.wardCode || '',
+      address: String(formData.get('address') || shippingForm.address || '').trim(),
       note: noteParts.join(' | '),
     };
+
+    if (
+      deliveryMethod === 'home'
+      && shippingForm.provinceId
+      && (!shippingForm.districtId || !shippingForm.wardCode)
+    ) {
+      setOrderError('Vui lòng chọn đủ Quận/Huyện và Phường/Xã từ danh sách GHN.');
+      return;
+    }
 
     try {
       await syncCartNow();
@@ -354,35 +373,12 @@ export default function Checkout() {
                   <span>Nhận tại cửa hàng</span>
                 </label>
               </div>
-              <div className="tp-checkout-input-grid">
-                <input
-                  required
-                  name="province"
-                  type="text"
-                  className="input"
-                  placeholder="Tỉnh/Thành phố (vd: Hồ Chí Minh)"
-                  value={shippingForm.province}
-                  onChange={updateShippingField('province')}
-                  autoComplete="address-level1"
-                />
-                <input
-                  required
-                  name="district"
-                  type="text"
-                  className="input"
-                  placeholder="Quận/Huyện (vd: Quận 1)"
-                  value={shippingForm.district}
-                  onChange={updateShippingField('district')}
-                  autoComplete="address-level2"
-                />
-                <input
-                  name="ward"
-                  type="text"
-                  className="input"
-                  placeholder="Phường/Xã (vd: Phuong Ben Nghe)"
-                  value={shippingForm.ward}
-                  onChange={updateShippingField('ward')}
-                />
+              <GhnAddressSelector
+                value={shippingForm}
+                disabled={deliveryMethod !== 'home'}
+                onChange={(patch) => setShippingForm((prev) => ({ ...prev, ...patch }))}
+              />
+              <div className="tp-checkout-address-street">
                 <input
                   required
                   name="address"

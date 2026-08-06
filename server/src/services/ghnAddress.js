@@ -76,7 +76,23 @@ async function getWards(districtId) {
 }
 
 export async function resolveGhnAddress(shippingInfo) {
-  const { province = '', district = '', ward = '' } = shippingInfo || {};
+  const info = shippingInfo || {};
+  const districtId = Number(info.districtId);
+  const wardCode = String(info.wardCode || '').trim();
+  const provinceId = Number(info.provinceId);
+
+  if (Number.isFinite(districtId) && districtId > 0 && wardCode) {
+    return {
+      provinceId: Number.isFinite(provinceId) && provinceId > 0 ? provinceId : null,
+      districtId,
+      wardCode,
+      provinceName: String(info.province || '').trim(),
+      districtName: String(info.district || '').trim(),
+      wardName: String(info.ward || '').trim(),
+    };
+  }
+
+  const { province = '', district = '', ward = '' } = info;
   if (!province?.trim() || !district?.trim()) {
     throw new Error('GHN_MISSING_ADDRESS: province and district are required.');
   }

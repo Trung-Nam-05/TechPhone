@@ -1,0 +1,74 @@
+.ghn-address-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.ghn-address-field {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ghn-address-label {
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.ghn-address-input {
+  width: 100%;
+}
+
+.ghn-address-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 220px;
+  overflow: auto;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+}
+
+.ghn-address-option {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  color: #111827;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.ghn-address-option:hover,
+.ghn-address-option:focus-visible {
+  background: #eff6ff;
+}
+
+.ghn-address-option.is-muted {
+  color: #6b7280;
+  cursor: default;
+}
+
+.ghn-address-hint {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+@media (max-width: 768px) {
+  .ghn-address-grid {
+    grid-template-columns: 1fr;
+  }
+}

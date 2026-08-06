@@ -94,6 +94,14 @@
   font-size: 12px;
 }
 
+.tp-checkout-address-street {
+  margin-top: 10px;
+}
+
+.tp-checkout-address-street .input {
+  width: 100%;
+}
+
 .tp-checkout-input-grid {
   display: grid;
   gap: 8px;

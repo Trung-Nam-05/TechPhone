@@ -77,6 +77,10 @@ export async function createGhnShipmentForOrder(orderId, { force = false } = {})
         doc.shippingInfo = doc.shippingInfo || {};
         doc.shippingInfo.districtId = addressIds.districtId;
         doc.shippingInfo.wardCode = addressIds.wardCode;
+        if (addressIds.provinceId) doc.shippingInfo.provinceId = addressIds.provinceId;
+        if (addressIds.provinceName) doc.shippingInfo.province = addressIds.provinceName;
+        if (addressIds.districtName) doc.shippingInfo.district = addressIds.districtName;
+        if (addressIds.wardName) doc.shippingInfo.ward = addressIds.wardName;
         doc.shipment = {
           provider: 'ghn',
           labelId: result.orderCode,
