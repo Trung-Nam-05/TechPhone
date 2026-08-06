@@ -3,10 +3,12 @@ import User from '../models/User.js';
 import { requireAdmin, requireAuth } from '../middleware/auth.js';
 import { writeAdminAuditLog } from '../utils/audit.js';
 import {
+  getMailEnvStatus,
   isMailConfigured,
   renderFlashSaleEmail,
   resetMailTransport,
   sendFlashSaleMarketingEmail,
+  translateSmtpError,
   verifyMailConnection,
 } from '../services/mail.js';
 import { getDefaultFlashSaleVariables } from '../services/emailTemplates.js';
@@ -33,12 +35,14 @@ router.get('/status', async (_req, res, next) => {
       .lean();
 
     const eligibleRecipients = users.filter((user) => isDeliverableContactEmail(user.contactEmail)).length;
-    const mailCheck = isMailConfigured() ? await verifyMailConnection() : { ok: false, reason: 'not_configured' };
+    const mailEnv = getMailEnvStatus();
+    const mailCheck = isMailConfigured() ? await verifyMailConnection() : { ok: false, reason: 'not_configured', hint: 'Thiếu SMTP_HOST / SMTP_USER / SMTP_PASS.' };
 
     res.json({
-      mailConfigured: isMailConfigured(),
+      mailConfigured: mailEnv.configured,
       mailVerified: mailCheck.ok,
-      mailVerifyReason: mailCheck.ok ? '' : (mailCheck.reason || 'verify_failed'),
+      mailVerifyReason: mailCheck.ok ? '' : translateSmtpError(mailCheck.reason),
+      mailEnv,
       templates: ['flash-sale'],
       eligibleRecipients,
     });

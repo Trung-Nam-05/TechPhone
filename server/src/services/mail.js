@@ -20,6 +20,41 @@ export function isMailConfigured() {
   return Boolean(cfg.host && cfg.user && cfg.pass);
 }
 
+/** Which SMTP env keys are present (for admin diagnostics — never exposes secrets). */
+export function getMailEnvStatus() {
+  const cfg = getMailConfig();
+  return {
+    configured: isMailConfigured(),
+    keys: {
+      SMTP_HOST: Boolean(String(process.env.SMTP_HOST || '').trim()),
+      SMTP_PORT: Boolean(String(process.env.SMTP_PORT || '').trim()),
+      SMTP_SECURE: process.env.SMTP_SECURE !== undefined,
+      SMTP_USER: Boolean(String(process.env.SMTP_USER || '').trim()),
+      SMTP_PASS: Boolean(String(process.env.SMTP_PASS || '').trim()),
+      MAIL_FROM: Boolean(String(process.env.MAIL_FROM || '').trim()),
+    },
+    host: cfg.host,
+    port: cfg.port,
+    secure: cfg.secure,
+    from: cfg.from,
+    user: cfg.user,
+  };
+}
+
+export function translateSmtpError(raw) {
+  const msg = String(raw || '').toLowerCase();
+  if (msg.includes('invalid login') || msg.includes('535') || msg.includes('username and password')) {
+    return 'Gmail từ chối đăng nhập — tạo lại App Password (16 ký tự) và dán vào SMTP_PASS trên Render.';
+  }
+  if (msg.includes('timeout') || msg.includes('timed out') || msg.includes('etimedout')) {
+    return 'Không kết nối được tới smtp.gmail.com — thử redeploy hoặc kiểm tra mạng Render.';
+  }
+  if (msg.includes('self signed') || msg.includes('certificate')) {
+    return 'Lỗi chứng chỉ TLS — kiểm tra SMTP_PORT=587 và SMTP_SECURE=false.';
+  }
+  return raw || 'Không xác minh được SMTP.';
+}
+
 let transportCache = null;
 
 export function resetMailTransport() {
@@ -31,11 +66,26 @@ function createTransport() {
   if (!isMailConfigured()) {
     throw new Error('MAIL_NOT_CONFIGURED');
   }
+
+  const auth = { user: cfg.user, pass: cfg.pass };
+
+  // Gmail: dùng preset nodemailer ổn định hơn cấu hình host/port thủ công trên cloud.
+  if (cfg.host === 'smtp.gmail.com' || cfg.user.endsWith('@gmail.com')) {
+    return nodemailer.createTransport({
+      service: 'gmail',
+      auth,
+    });
+  }
+
   return nodemailer.createTransport({
     host: cfg.host,
     port: cfg.port,
     secure: cfg.secure,
-    auth: { user: cfg.user, pass: cfg.pass },
+    requireTLS: !cfg.secure && cfg.port === 587,
+    auth,
+    connectionTimeout: 20_000,
+    greetingTimeout: 20_000,
+    socketTimeout: 25_000,
   });
 }
 
@@ -55,7 +105,7 @@ export async function verifyMailConnection() {
     return { ok: true };
   } catch (error) {
     transportCache = null;
-    return { ok: false, reason: error?.message || 'verify_failed' };
+    return { ok: false, reason: error?.message || 'verify_failed', hint: translateSmtpError(error?.message) };
   }
 }
 

@@ -21,6 +21,8 @@ export default function AdminMarketing() {
   const { authFetch, user } = useAuth();
   const [mailConfigured, setMailConfigured] = useState(false);
   const [mailVerified, setMailVerified] = useState(false);
+  const [mailVerifyHint, setMailVerifyHint] = useState('');
+  const [mailEnvKeys, setMailEnvKeys] = useState(null);
   const [eligibleRecipients, setEligibleRecipients] = useState(0);
   const [campaignFailures, setCampaignFailures] = useState([]);
   const [loadingStatus, setLoadingStatus] = useState(true);
@@ -50,6 +52,8 @@ export default function AdminMarketing() {
       const payload = await authFetch('/api/admin/marketing/status');
       setMailConfigured(Boolean(payload.mailConfigured));
       setMailVerified(Boolean(payload.mailVerified));
+      setMailVerifyHint(payload.mailVerifyReason || '');
+      setMailEnvKeys(payload.mailEnv?.keys || null);
       setEligibleRecipients(Number(payload.eligibleRecipients) || 0);
     } catch (err) {
       setError(err.message);
@@ -161,7 +165,11 @@ export default function AdminMarketing() {
 
       {!loadingStatus && mailConfigured && !mailVerified && (
         <div className="admin-alert admin-alert-error">
-          SMTP đã khai báo nhưng kết nối thất bại. Kiểm tra App Password Gmail và biến môi trường trên Render.
+          <strong>SMTP đã khai báo nhưng kết nối thất bại.</strong>
+          <p style={{ margin: '8px 0 0' }}>{mailVerifyHint || 'Kiểm tra App Password Gmail trên Render.'}</p>
+          {mailEnvKeys && !mailEnvKeys.MAIL_FROM && (
+            <p style={{ margin: '8px 0 0' }}>Gợi ý: thêm biến <code>MAIL_FROM=TechPhone &lt;shoptechphone99@gmail.com&gt;</code></p>
+          )}
         </div>
       )}
 
