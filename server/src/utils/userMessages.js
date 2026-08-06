@@ -19,6 +19,13 @@ export const MSG = {
   AUTH_RESET_INVALID: 'Liên kết khôi phục không hợp lệ hoặc đã hết hạn.',
   AUTH_RESET_SUCCESS: 'Đã đặt lại mật khẩu thành công. Bạn có thể đăng nhập.',
   AUTH_FORGOT_GENERIC: 'Nếu email đã liên kết và xác minh, bạn sẽ nhận hướng dẫn khôi phục mật khẩu.',
+  AUTH_FORGOT_LOGIN_REQUIRED: 'Vui lòng nhập tên đăng nhập.',
+  AUTH_FORGOT_ACCOUNT_NOT_FOUND: 'Không tìm thấy tài khoản.',
+  AUTH_FORGOT_METHOD_INVALID: 'Phương thức xác thực không hợp lệ.',
+  AUTH_FORGOT_EMAIL_REAL_REQUIRED: 'Vui lòng nhập email thật để nhận liên kết xác thực.',
+  AUTH_FORGOT_EMAIL_TAKEN: 'Email này đã được liên kết tài khoản khác.',
+  AUTH_FORGOT_SENT_MASKED: (masked) => `Đã gửi liên kết đặt lại mật khẩu tới ${masked}. Kiểm tra hộp thư (cả mục Spam).`,
+  AUTH_FORGOT_VERIFY_SENT: (masked) => `Đã gửi email xác thực tới ${masked}. Bấm liên kết trong email để đặt mật khẩu mới.`,
   AUTH_MAIL_NOT_CONFIGURED: 'Hệ thống email chưa sẵn sàng. Vui lòng thử lại sau hoặc liên hệ shop.',
 
   // Username validation
@@ -66,7 +73,16 @@ export const MSG = {
 
   // Marketing
   MARKETING_NO_RECIPIENTS: 'Không có khách hàng nào có email liên kết đã xác minh để gửi.',
+  MARKETING_SEND_FAILED: 'Không gửi được email nào. Kiểm tra cấu hình SMTP hoặc hộp thư Spam.',
 };
+
+export function maskContactEmail(email) {
+  const normalized = String(email || '').trim().toLowerCase();
+  const [local, domain] = normalized.split('@');
+  if (!local || !domain) return '***';
+  const visible = local.length <= 2 ? local.slice(0, 1) : `${local.slice(0, 2)}***`;
+  return `${visible}@${domain}`;
+}
 
 export function isDeliverableContactEmail(email) {
   const normalized = String(email || '').trim().toLowerCase();

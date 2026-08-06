@@ -16,8 +16,13 @@ import {
   validateUsername,
 } from '../utils/username.js';
 import { claimSessionOwnership } from '../services/claimSessionOwnership.js';
-import { isMailConfigured, sendContactEmailVerification, sendPasswordResetEmail } from '../services/mail.js';
-import { MSG } from '../utils/userMessages.js';
+import {
+  isMailConfigured,
+  sendContactEmailVerification,
+  sendForgotPasswordVerifyEmail,
+  sendPasswordResetEmail,
+} from '../services/mail.js';
+import { isDeliverableContactEmail, MSG, maskContactEmail } from '../utils/userMessages.js';
 
 const router = express.Router();
 const clientOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
@@ -32,6 +37,21 @@ async function findUserByLoginIdentifier(identifier) {
   const byUsername = await User.findOne({ username: normalized });
   if (byUsername) return byUsername;
   return User.findOne({ email: normalized });
+}
+
+async function issuePasswordReset(user, toEmail) {
+  const rawToken = randomBytes(32).toString('hex');
+  user.resetPasswordTokenHash = hashOpaqueToken(rawToken);
+  user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000);
+  await user.save();
+
+  const resetUrl = `${clientOrigin}/forgot-password?token=${encodeURIComponent(rawToken)}`;
+  await sendPasswordResetEmail({
+    to: toEmail,
+    resetUrl,
+    username: user.username || user.name,
+  });
+  return rawToken;
 }
 
 router.post('/register', async (req, res, next) => {
@@ -261,38 +281,162 @@ router.get('/verify-email', async (req, res) => {
   return res.redirect(`${clientOrigin}/email-verified?status=success`);
 });
 
-router.post('/forgot-password', async (req, res, next) => {
+router.post('/forgot-password/preview', async (req, res, next) => {
   try {
-    const contactEmail = String(req.body?.contactEmail || req.body?.email || '').trim().toLowerCase();
-    if (!contactEmail) {
-      return res.status(400).json({ message: MSG.AUTH_CONTACT_EMAIL_REQUIRED });
+    const login = String(req.body?.login || req.body?.username || '').trim().toLowerCase();
+    if (!login) {
+      return res.status(400).json({ message: MSG.AUTH_FORGOT_LOGIN_REQUIRED });
     }
 
+    const user = await findUserByLoginIdentifier(login);
+    if (!user) {
+      return res.status(404).json({ message: MSG.AUTH_FORGOT_ACCOUNT_NOT_FOUND });
+    }
+    if (user.isActive === false) {
+      return res.status(403).json({ message: MSG.AUTH_ACCOUNT_DISABLED });
+    }
+
+    const hasVerifiedEmail = Boolean(
+      user.contactEmailVerified
+      && user.contactEmail
+      && isDeliverableContactEmail(user.contactEmail),
+    );
+
+    return res.json({
+      login: user.username,
+      name: user.name,
+      hasVerifiedEmail,
+      maskedEmail: hasVerifiedEmail ? maskContactEmail(user.contactEmail) : '',
+      needsEmailInput: !hasVerifiedEmail,
+      methods: ['email'],
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.post('/forgot-password', async (req, res, next) => {
+  try {
+    const login = String(req.body?.login || req.body?.username || '').trim().toLowerCase();
+    const method = String(req.body?.method || 'email').trim().toLowerCase();
+    const contactEmailInput = String(req.body?.contactEmail || req.body?.email || '').trim().toLowerCase();
+
+    if (!login) {
+      return res.status(400).json({ message: MSG.AUTH_FORGOT_LOGIN_REQUIRED });
+    }
+    if (method !== 'email') {
+      return res.status(400).json({ message: MSG.AUTH_FORGOT_METHOD_INVALID });
+    }
     if (!isMailConfigured()) {
       return res.status(503).json({ message: MSG.AUTH_MAIL_NOT_CONFIGURED });
     }
 
-    const genericMessage = MSG.AUTH_FORGOT_GENERIC;
-    const user = await User.findOne({ contactEmail, contactEmailVerified: true });
+    const user = await findUserByLoginIdentifier(login);
+    if (!user) {
+      return res.status(404).json({ message: MSG.AUTH_FORGOT_ACCOUNT_NOT_FOUND });
+    }
+    if (user.isActive === false) {
+      return res.status(403).json({ message: MSG.AUTH_ACCOUNT_DISABLED });
+    }
 
-    if (user && isMailConfigured()) {
-      const rawToken = randomBytes(32).toString('hex');
-      user.resetPasswordTokenHash = hashOpaqueToken(rawToken);
-      user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000);
-      await user.save();
+    const hasVerifiedEmail = Boolean(
+      user.contactEmailVerified
+      && user.contactEmail
+      && isDeliverableContactEmail(user.contactEmail),
+    );
 
-      const resetUrl = `${clientOrigin}/reset-password?token=${encodeURIComponent(rawToken)}`;
-      await sendPasswordResetEmail({
-        to: contactEmail,
-        resetUrl,
-        username: user.username || user.name,
+    if (hasVerifiedEmail) {
+      await issuePasswordReset(user, user.contactEmail);
+      return res.json({
+        message: MSG.AUTH_FORGOT_SENT_MASKED(maskContactEmail(user.contactEmail)),
+        sentTo: maskContactEmail(user.contactEmail),
       });
     }
 
-    return res.json({ message: genericMessage });
+    if (!contactEmailInput || !isDeliverableContactEmail(contactEmailInput)) {
+      return res.status(400).json({
+        message: MSG.AUTH_FORGOT_EMAIL_REAL_REQUIRED,
+        needsEmailInput: true,
+      });
+    }
+
+    const taken = await User.findOne({
+      _id: { $ne: user._id },
+      contactEmail: contactEmailInput,
+      contactEmailVerified: true,
+    }).select('_id');
+    if (taken) {
+      return res.status(409).json({ message: MSG.AUTH_FORGOT_EMAIL_TAKEN });
+    }
+
+    const rawToken = randomBytes(32).toString('hex');
+    user.contactEmail = contactEmailInput;
+    user.contactEmailVerified = false;
+    user.emailVerifyTokenHash = hashOpaqueToken(rawToken);
+    user.emailVerifyExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    user.resetPasswordTokenHash = hashOpaqueToken(rawToken);
+    user.resetPasswordExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await user.save();
+
+    const openUrl = `${apiPublic}/api/auth/forgot-password/open?token=${encodeURIComponent(rawToken)}`;
+    await sendForgotPasswordVerifyEmail({
+      to: contactEmailInput,
+      openUrl,
+      username: user.username || user.name,
+    });
+
+    return res.json({
+      message: MSG.AUTH_FORGOT_VERIFY_SENT(maskContactEmail(contactEmailInput)),
+      sentTo: maskContactEmail(contactEmailInput),
+      needsVerification: true,
+    });
   } catch (error) {
+    if (error.message === 'MAIL_NOT_CONFIGURED') {
+      return res.status(503).json({ message: MSG.AUTH_MAIL_NOT_CONFIGURED });
+    }
     return next(error);
   }
+});
+
+router.get('/forgot-password/open', async (req, res) => {
+  const token = String(req.query.token || '').trim();
+  if (!token) {
+    return res.redirect(`${clientOrigin}/forgot-password?error=missing`);
+  }
+
+  const user = await User.findOne({
+    emailVerifyTokenHash: hashOpaqueToken(token),
+    emailVerifyExpires: { $gt: new Date() },
+  });
+
+  if (!user) {
+    return res.redirect(`${clientOrigin}/forgot-password?error=invalid`);
+  }
+
+  user.contactEmailVerified = true;
+  user.emailVerifyTokenHash = null;
+  user.emailVerifyExpires = null;
+  await user.save();
+
+  return res.redirect(`${clientOrigin}/forgot-password?token=${encodeURIComponent(token)}`);
+});
+
+router.get('/forgot-password/validate', async (req, res) => {
+  const token = String(req.query.token || '').trim();
+  if (!token) {
+    return res.status(400).json({ ok: false, message: MSG.AUTH_RESET_INVALID });
+  }
+
+  const user = await User.findOne({
+    resetPasswordTokenHash: hashOpaqueToken(token),
+    resetPasswordExpires: { $gt: new Date() },
+  });
+
+  if (!user) {
+    return res.status(400).json({ ok: false, message: MSG.AUTH_RESET_INVALID });
+  }
+
+  return res.json({ ok: true, username: user.username, name: user.name });
 });
 
 router.post('/reset-password', async (req, res, next) => {

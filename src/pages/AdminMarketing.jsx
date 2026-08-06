@@ -20,7 +20,9 @@ function defaultExpiresAt() {
 export default function AdminMarketing() {
   const { authFetch, user } = useAuth();
   const [mailConfigured, setMailConfigured] = useState(false);
+  const [mailVerified, setMailVerified] = useState(false);
   const [eligibleRecipients, setEligibleRecipients] = useState(0);
+  const [campaignFailures, setCampaignFailures] = useState([]);
   const [loadingStatus, setLoadingStatus] = useState(true);
   const [variables, setVariables] = useState({ ...DEFAULT_VARIABLES, expiresAt: defaultExpiresAt() });
   const [testEmail, setTestEmail] = useState(user?.email || '');
@@ -47,6 +49,7 @@ export default function AdminMarketing() {
     try {
       const payload = await authFetch('/api/admin/marketing/status');
       setMailConfigured(Boolean(payload.mailConfigured));
+      setMailVerified(Boolean(payload.mailVerified));
       setEligibleRecipients(Number(payload.eligibleRecipients) || 0);
     } catch (err) {
       setError(err.message);
@@ -108,13 +111,16 @@ export default function AdminMarketing() {
     setSendingCampaign(true);
     setError(null);
     setSuccess(null);
+    setCampaignFailures([]);
     try {
       const payload = await authFetch('/api/admin/marketing/send-campaign', {
         method: 'POST',
         body: JSON.stringify({ role: 'customer', variables: payloadVariables }),
       });
-      const failedNote = payload.failed?.length ? ` (${payload.failed.length} lỗi)` : '';
-      setSuccess(`${payload.message || 'Đã gửi campaign.'}${failedNote}`);
+      setSuccess(payload.message || 'Đã gửi campaign.');
+      if (payload.failed?.length) {
+        setCampaignFailures(payload.failed);
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -128,14 +134,36 @@ export default function AdminMarketing() {
         title="Email marketing"
         subtitle="Gửi email Flash Sale tới khách đã liên kết và xác minh email thật (Bảo mật tài khoản)."
         actions={(
-          <span className={`admin-marketing-status ${mailConfigured ? 'is-ready' : 'is-pending'}`}>
-            {loadingStatus ? 'Đang kiểm tra SMTP...' : mailConfigured ? 'SMTP sẵn sàng' : 'SMTP chưa cấu hình'}
+          <span className={`admin-marketing-status ${mailConfigured && mailVerified ? 'is-ready' : 'is-pending'}`}>
+            {loadingStatus
+              ? 'Đang kiểm tra SMTP...'
+              : mailConfigured && mailVerified
+                ? 'SMTP sẵn sàng'
+                : mailConfigured
+                  ? 'SMTP cấu hình sai — kiểm tra App Password'
+                  : 'SMTP chưa cấu hình'}
           </span>
         )}
       />
 
       {error && <div className="admin-alert admin-alert-error">{error}</div>}
       {success && <div className="admin-alert admin-alert-success">{success}</div>}
+      {campaignFailures.length > 0 && (
+        <div className="admin-alert admin-alert-error">
+          <strong>Email gửi lỗi:</strong>
+          <ul style={{ margin: '8px 0 0', paddingLeft: 18 }}>
+            {campaignFailures.map((item) => (
+              <li key={item.email}>{item.email}: {item.message}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {!loadingStatus && mailConfigured && !mailVerified && (
+        <div className="admin-alert admin-alert-error">
+          SMTP đã khai báo nhưng kết nối thất bại. Kiểm tra App Password Gmail và biến môi trường trên Render.
+        </div>
+      )}
 
       {!loadingStatus && !mailConfigured && (
         <div className="admin-alert admin-alert-error">
